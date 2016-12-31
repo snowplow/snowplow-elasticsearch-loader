@@ -22,15 +22,13 @@ package elasticsearch.loader
 
 // Amazon
 import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
-import com.amazonaws.services.kinesis.connectors.elasticsearch.{
-  ElasticsearchEmitter,
-  ElasticsearchObject
-}
 import com.amazonaws.services.kinesis.connectors.interfaces.IEmitter
 import com.amazonaws.services.kinesis.connectors.{
   KinesisConnectorConfiguration,
   UnmodifiableBuffer
 }
+
+import scala.collection.mutable.ListBuffer
 
 // Java
 import java.io.IOException
@@ -42,24 +40,17 @@ import org.joda.time.format.DateTimeFormat
 
 // Scala
 import scala.collection.JavaConversions._
-import scala.annotation.tailrec
 
 // Scalaz
 import scalaz._
 import Scalaz._
 
-// json4s
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
-import org.json4s.JsonDSL._
-
 // Tracker
-import snowplow.scalatracker.{SelfDescribingJson, Tracker}
+import snowplow.scalatracker.Tracker
 
 // This project
 import sinks._
 import clients._
-import generated._
 
 /**
  * Class to send valid records to Elasticsearch and invalid records to Kinesis
@@ -126,9 +117,7 @@ class SnowplowElasticsearchEmitter(
   private def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput] = {
     val failures = for {
       recordSlice <- splitBuffer(configuration, records)
-    } yield {
-      elasticsearchSender.sendToElasticsearch(recordSlice)
-    }
+    } yield elasticsearchSender.sendToElasticsearch(recordSlice)
     failures.flatten
   }
 
@@ -140,60 +129,45 @@ class SnowplowElasticsearchEmitter(
    * @returns a list of buffers
    */
   protected def splitBuffer(
-    configuration: KinesisConnectorConfiguration, 
-    records: List[EmitterInput]): List[List[EmitterInput]] = {
-
+    configuration: KinesisConnectorConfiguration,
+    records: List[EmitterInput]
+  ): List[List[EmitterInput]] = {
     val byteLimit: Long   = configuration.BUFFER_BYTE_SIZE_LIMIT
     val recordLimit: Long = configuration.BUFFER_RECORD_COUNT_LIMIT
 
-    /**
-     * Add to the accumulator while conditions are met,
-     * Once conditions exceeded close buffer and increment the index.
-     *
-     * @param records The window of records to be split
-     * @param index The index of the buffer to add to
-     * @param accumulator The recursive accumulator of buffers
-     * @return the List of buffers to send
-     */
-    @scala.annotation.tailrec
-    def splitBufferRec(
-      records: List[EmitterInput],
-      totalByteCount: Long = 0,
-      index: Int = 0,
-      accumulator: List[List[EmitterInput]] = Nil): List[List[EmitterInput]] = {
+    // partition the records in
+    val remaining: ListBuffer[EmitterInput] = records.to[ListBuffer]
+    val buffers: ListBuffer[List[EmitterInput]] = new ListBuffer
+    val curBuffer: ListBuffer[EmitterInput] = new ListBuffer
+    var runningByteCount: Long = 0L
 
-      if (records.length <= 0) {
-        accumulator
+    while (remaining.nonEmpty) {
+      val record = remaining.remove(0)
+
+      val byteCount: Long = record match {
+        case (_, Success(obj)) => obj.toString.getBytes("UTF-8").length.toLong
+        case (_, Failure(_))   => 0L // This record will be ignored in the sender
+      }
+
+      if ((curBuffer.length + 1) > recordLimit || (runningByteCount + byteCount) > byteLimit) {
+        // add this buffer to the output and start a new one with this record
+        // (if the first record is larger than the byte limit the buffer will be empty)
+        if (curBuffer.nonEmpty) {
+          buffers += curBuffer.toList
+          curBuffer.clear()
+        }
+        curBuffer += record
+        runningByteCount = byteCount
       } else {
-        val currentBuffer: List[EmitterInput] = accumulator match {
-          case Nil   => List()
-          case accum => accum(index)
-        }
-
-        val record: EmitterInput = records(0)
-        val byteCount: Long = record match {
-          case (_, Success(obj)) => obj.toString.getBytes("UTF-8").length.toLong
-          case (_, Failure(_))   => 0L // This record will be ignored in the sender
-        }
-        val updatedRecords: List[EmitterInput] = records.drop(1)
-
-        if ((currentBuffer.length + 1) <= recordLimit && (totalByteCount + byteCount) <= byteLimit) {
-          val finalBuffer: List[EmitterInput] = currentBuffer ++ List(record)
-          val finalAccumulator = (
-            if (accumulator == Nil) {
-              List(finalBuffer)
-            } else {
-              accumulator.patch(index, List(finalBuffer), 1)
-            }
-          )
-          splitBufferRec(updatedRecords, (totalByteCount + byteCount), index, finalAccumulator)
-        } else {
-          splitBufferRec(updatedRecords, byteCount, index + 1, accumulator ++ List(List(record)))
-        }
+        curBuffer += record
+        runningByteCount += byteCount
       }
     }
 
-    splitBufferRec(records)
+    // add any remaining items to the final buffer
+    if (curBuffer.nonEmpty) buffers += curBuffer.toList
+
+    buffers.toList
   }
 
   /**
