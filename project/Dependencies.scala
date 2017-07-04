@@ -45,7 +45,7 @@ object Dependencies {
     val scalaz7              = "7.2.14"
     val snowplowTracker      = "0.3.0"
     // Scala (test only)
-    val specs2               = "2.2"
+    val specs2               = "3.9.2"
     // Scala (compile only)
     val commonsLang3         = "3.1"
   }
@@ -78,7 +78,7 @@ object Dependencies {
     // Since Common Enrich is intransitive, we explicitly add Iglu Scala Client as a dependency
     val igluClient           = "com.snowplowanalytics"      %  "iglu-scala-client"         % V.igluClient
     // Scala (test only)
-    val specs2               = "org.specs2"                 %% "specs2"                    % V.specs2         % "test"
+    val specs2               = "org.specs2"                 %% "specs2-core"               % V.specs2         % "test"
     // Scala (compile only)
     val commonsLang3         = "org.apache.commons"         % "commons-lang3"              % V.commonsLang3   % "compile"
   }

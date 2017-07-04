@@ -51,7 +51,7 @@ import sinks._
  */
 class SnowplowElasticsearchEmitterSpec extends Specification {
 
-  "The emit method" should {
+  "The emitter method" should {
     "return all invalid records" in {
 
       val kcc = new KinesisConnectorConfiguration(new Properties, new DefaultAWSCredentialsProviderChain)
