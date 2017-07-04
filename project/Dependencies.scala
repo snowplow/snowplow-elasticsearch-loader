@@ -48,7 +48,7 @@ object Dependencies {
     val snowplowCommonEnrich = "0.22.0"
     val igluClient           = "0.3.2"
     val scalazon             = "0.11"
-    val scalaz7              = "7.0.0"
+    val scalaz7              = "7.2.14"
     val snowplowTracker      = "0.3.0"
     // Scala (test only)
     val specs2               = "2.2"
