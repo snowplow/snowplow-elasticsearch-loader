@@ -24,10 +24,7 @@ import java.io.File
 import java.util.Properties
 
 // Config
-import com.typesafe.config.{Config,ConfigFactory}
-
-// Argot
-import org.clapper.argot.ArgotParser
+import com.typesafe.config.{Config, ConfigFactory}
 
 // AWS libs
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
@@ -67,42 +64,34 @@ object StreamType extends Enumeration {
  * Main entry point for the Elasticsearch sink
  */
 object ElasticsearchSinkApp extends App {
-  val parser = new ArgotParser(
-    programName = generated.Settings.name,
-    compactUsage = true,
-    preUsage = Some("%s: Version %s. Copyright (c) 2013, %s.".format(
-      generated.Settings.name,
-      generated.Settings.version,
-      generated.Settings.organization)
-    )
-  )
-
-  // Optional config argument
-  val config = parser.option[Config](
-      List("config"), "filename", """
-        |Configuration file""".stripMargin) {
-    (c, opt) =>
-      val file = new File(c)
-      if (file.exists) {
-        ConfigFactory.parseFile(file).resolve()
-      } else {
-        parser.usage("Configuration file \"%s\" does not exist".format(c))
-        ConfigFactory.empty()
-      }
+  case class FileConfig(config: File = new File("."))
+  val parser = new scopt.OptionParser[FileConfig](generated.Settings.name) {
+    head(generated.Settings.name, generated.Settings.version)
+    opt[File]("config").required().valueName("<filename>")
+      .action((f: File, c: FileConfig) => c.copy(config = f))
+      .validate(f =>
+        if (f.exists) success
+        else failure(s"Configurationfile $f does not exist")
+      )
   }
 
-  parser.parse(args)
+  val conf = parser.parse(args, FileConfig()) match {
+    case Some(c) => ConfigFactory.parseFile(c.config).resolve()
+    case None    => ConfigFactory.empty()
+  }
 
-  val configValue: Config = config.value.getOrElse(
-    throw new RuntimeException("--config argument must be provided")).resolve.getConfig("sink")
+  if (conf.isEmpty()) {
+    System.err.println("Empty configuration file")
+    System.exit(1)
+  }
 
-  val streamType = configValue.getString("stream-type") match {
+  val streamType = conf.getString("stream-type") match {
     case "good" => StreamType.Good
     case "bad" => StreamType.Bad
     case _ => throw new RuntimeException("\"stream-type\" must be set to \"good\" or \"bad\"")
   }
 
-  val elasticsearch = configValue.getConfig("elasticsearch")
+  val elasticsearch = conf.getConfig("elasticsearch")
   val esClient = elasticsearch.getConfig("client")
   val esCluster = elasticsearch.getConfig("cluster")
   val clientType = esClient.getString("type")
@@ -111,25 +100,25 @@ object ElasticsearchSinkApp extends App {
   val documentIndex = esCluster.getString("index")
   val documentType = esCluster.getString("type")
 
-  val tracker = if (configValue.hasPath("monitoring.snowplow")) {
-    SnowplowTracking.initializeTracker(configValue.getConfig("monitoring.snowplow")).some
+  val tracker = if (conf.hasPath("monitoring.snowplow")) {
+    SnowplowTracking.initializeTracker(conf.getConfig("monitoring.snowplow")).some
   } else {
     None
   }
 
-  val maxConnectionTime = configValue.getConfig("elasticsearch.client").getLong("max-timeout")
-  val finalConfig = convertConfig(configValue)
+  val maxConnectionTime = conf.getConfig("elasticsearch.client").getLong("max-timeout")
+  val finalConfig = convertConfig(conf)
 
-  val goodSink = configValue.getString("sink.good") match {
+  val goodSink = conf.getString("sink.good") match {
     case "stdout" => Some(new StdouterrSink)
     case "elasticsearch" => None
   }
 
-  val badSink = configValue.getString("sink.bad") match {
+  val badSink = conf.getString("sink.bad") match {
     case "stderr" => new StdouterrSink
     case "none" => new NullSink
     case "kinesis" => {
-      val kinesis = configValue.getConfig("kinesis")
+      val kinesis = conf.getConfig("kinesis")
       val kinesisSink = kinesis.getConfig("out")
       val kinesisSinkName = kinesisSink.getString("stream-name")
       val kinesisSinkShards = kinesisSink.getInt("shards")
@@ -139,7 +128,7 @@ object ElasticsearchSinkApp extends App {
     }
   }
 
-  val executor = configValue.getString("source") match {
+  val executor = conf.getString("source") match {
 
     // Read records from Kinesis
     case "kinesis" => {

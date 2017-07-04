@@ -16,9 +16,8 @@ import sbt._
 object Dependencies {
 
   val resolutionRepos = Seq(
-    // For Snowplow and amazon-kinesis-connectors
+    // For Snowplow
     "Snowplow Analytics Maven releases repo" at "http://maven.snplow.com/releases/",
-    "Snowplow Analytics Maven snapshot repo" at "http://maven.snplow.com/snapshots/",
     // For Scalazon
     "BintrayJCenter"                         at "http://jcenter.bintray.com",
     // For user-agent-utils
@@ -43,7 +42,7 @@ object Dependencies {
     }
 
     // Scala
-    val argot                = "1.0.1"
+    val scopt                = "3.6.0"
     val config               = "1.0.2"
     val scalaUtil            = "0.1.0"
     val snowplowCommonEnrich = "0.22.0"
@@ -77,7 +76,7 @@ object Dependencies {
     }
 
     // Scala
-    val argot                = "org.clapper"                %% "argot"                     % V.argot
+    val scopt                = "com.github.scopt"           %% "scopt"                     % V.scopt
     val config               = "com.typesafe"               %  "config"                    % V.config
     val scalaUtil            = "com.snowplowanalytics"      %  "scala-util"                % V.scalaUtil
     val scalazon             = "io.github.cloudify"         %% "scalazon"                  % V.scalazon

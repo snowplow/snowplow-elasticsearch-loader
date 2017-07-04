@@ -31,7 +31,7 @@ object SnowplowElasticsearchSinkBuild extends Build {
       libraryDependencies ++= Dependencies.onVersion(
         all = Seq(
           Libraries.logging,
-          Libraries.argot,
+          Libraries.scopt,
           Libraries.config,
           Libraries.scalaUtil,
           Libraries.snowplowCommonEnrich,
