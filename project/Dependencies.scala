@@ -46,7 +46,6 @@ object Dependencies {
     val snowplowTracker      = "0.3.0"
     // Scala (test only)
     val specs2               = "2.2"
-    val scalazSpecs2         = "0.1.2"
     // Scala (compile only)
     val commonsLang3         = "3.1"
   }
@@ -80,7 +79,6 @@ object Dependencies {
     val igluClient           = "com.snowplowanalytics"      %  "iglu-scala-client"         % V.igluClient
     // Scala (test only)
     val specs2               = "org.specs2"                 %% "specs2"                    % V.specs2         % "test"
-    val scalazSpecs2         = "org.typelevel"              %% "scalaz-specs2"             % V.scalazSpecs2   % "test"
     // Scala (compile only)
     val commonsLang3         = "org.apache.commons"         % "commons-lang3"              % V.commonsLang3   % "compile"
   }

@@ -24,7 +24,6 @@ import org.json4s.jackson.JsonMethods._
 
 // Specs2
 import org.specs2.mutable.Specification
-import org.specs2.scalaz.ValidationMatchers
 
 // Snowplow
 import enrich.common.utils.ScalazJson4sUtils
@@ -32,7 +31,7 @@ import enrich.common.utils.ScalazJson4sUtils
 /**
  * Tests SnowplowElasticsearchTransformer
  */
-class SnowplowElasticsearchTransformerSpec extends Specification with ValidationMatchers {
+class SnowplowElasticsearchTransformerSpec extends Specification {
 
   val unstructJson = """{
     "schema": "iglu:com.snowplowanalytics.snowplow/contexts/jsonschema/1-0-0",
@@ -253,7 +252,7 @@ class SnowplowElasticsearchTransformerSpec extends Specification with Validation
       "event_version" -> "1-0-0",
       "event_fingerprint" -> "e3dbfa9cca0412c3d4052863cefb547f",
       "true_tstamp" -> "2013-11-26 00:03:57.886"
-      )
+    )
 
       val eventValues = nvPairs.unzip._2.toArray
 
@@ -449,14 +448,14 @@ class SnowplowElasticsearchTransformerSpec extends Specification with Validation
       }""")
 
       // Specific fields
-      ScalazJson4sUtils.extract[String](result, "platform") must beSuccessful("web")
-      ScalazJson4sUtils.extract[Int](result, "domain_sessionidx") must beSuccessful(3)
-      ScalazJson4sUtils.extract[Double](result, "geo_latitude") must beSuccessful(37.443604)
-      ScalazJson4sUtils.extract[Boolean](result, "br_features_pdf") must beSuccessful(true)
-      ScalazJson4sUtils.extract[Boolean](result, "br_features_flash") must beSuccessful(false)
-      ScalazJson4sUtils.extract[String](result, "collector_tstamp") must beSuccessful("2013-11-26T00:02:05Z")
-      ScalazJson4sUtils.extract[String](result, "geo_location") must beSuccessful("37.443604,-122.4124")
-      ScalazJson4sUtils.extract[String](result, "ti_sku") must beSuccessful(null)
+      ScalazJson4sUtils.extract[String](result, "platform") must_== Success("web")
+      ScalazJson4sUtils.extract[Int](result, "domain_sessionidx") must_== Success(3)
+      ScalazJson4sUtils.extract[Double](result, "geo_latitude") must_== Success(37.443604)
+      ScalazJson4sUtils.extract[Boolean](result, "br_features_pdf") must_== Success(true)
+      ScalazJson4sUtils.extract[Boolean](result, "br_features_flash") must_== Success(false)
+      ScalazJson4sUtils.extract[String](result, "collector_tstamp") must_== Success("2013-11-26T00:02:05Z")
+      ScalazJson4sUtils.extract[String](result, "geo_location") must_== Success("37.443604,-122.4124")
+      ScalazJson4sUtils.extract[String](result, "ti_sku") must_== Success(null)
 
       // Unstructured event shredding
       result \ "unstruct_event_com_snowplowanalytics_snowplow_link_click_1" \ "elementId" must_== JString("exampleLink")

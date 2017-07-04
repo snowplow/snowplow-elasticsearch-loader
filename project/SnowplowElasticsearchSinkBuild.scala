@@ -37,7 +37,6 @@ object SnowplowElasticsearchSinkBuild extends Build {
           Libraries.igluClient,
           Libraries.scalaz7,
           Libraries.specs2,
-          Libraries.scalazSpecs2,
           Libraries.commonsLang3,
           Libraries.slf4j,
           Libraries.log4jOverSlf4j,

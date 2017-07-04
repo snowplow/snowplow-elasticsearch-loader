@@ -42,7 +42,6 @@ import org.json4s.JsonDSL._
 
 // Specs2
 import org.specs2.mutable.Specification
-import org.specs2.scalaz.ValidationMatchers
 
 // This project
 import sinks._
@@ -50,7 +49,7 @@ import sinks._
 /**
  * Tests Shredder
  */
-class SnowplowElasticsearchEmitterSpec extends Specification with ValidationMatchers {
+class SnowplowElasticsearchEmitterSpec extends Specification {
 
   "The emit method" should {
     "return all invalid records" in {

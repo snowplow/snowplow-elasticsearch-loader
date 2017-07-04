@@ -24,7 +24,6 @@ import org.json4s.jackson.JsonMethods._
 
 // Specs2
 import org.specs2.mutable.Specification
-import org.specs2.scalaz.ValidationMatchers
 
 // Snowplow
 import enrich.common.utils.ScalazJson4sUtils
@@ -32,7 +31,7 @@ import enrich.common.utils.ScalazJson4sUtils
 /**
  * Tests BadEventTransformer
  */
-class BadEventTransformerSpec extends Specification with ValidationMatchers {
+class BadEventTransformerSpec extends Specification {
 
   "The from method" should {
     "successfully convert a bad event JSON to an ElasticsearchObject" in {
