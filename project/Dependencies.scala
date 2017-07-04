@@ -44,7 +44,6 @@ object Dependencies {
     // Scala
     val scopt                = "3.6.0"
     val config               = "1.0.2"
-    val scalaUtil            = "0.1.0"
     val snowplowCommonEnrich = "0.22.0"
     val igluClient           = "0.3.2"
     val scalazon             = "0.11"
@@ -78,7 +77,6 @@ object Dependencies {
     // Scala
     val scopt                = "com.github.scopt"           %% "scopt"                     % V.scopt
     val config               = "com.typesafe"               %  "config"                    % V.config
-    val scalaUtil            = "com.snowplowanalytics"      %  "scala-util"                % V.scalaUtil
     val scalazon             = "io.github.cloudify"         %% "scalazon"                  % V.scalazon
     val scalaz7              = "org.scalaz"                 %% "scalaz-core"               % V.scalaz7
     val snowplowTracker      = "com.snowplowanalytics"      %% "snowplow-scala-tracker"    % V.snowplowTracker
