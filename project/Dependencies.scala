@@ -40,7 +40,7 @@ object Dependencies {
     // Scala
     val scopt                = "3.6.0"
     val config               = "1.0.2"
-    val snowplowCommonEnrich = "0.22.0"
+    val snowplowCommonEnrich = "0.25.0"
     val igluClient           = "0.3.2"
     val scalaz7              = "7.2.14"
     val snowplowTracker      = "0.3.0"
@@ -74,7 +74,7 @@ object Dependencies {
     val scalaz7              = "org.scalaz"                 %% "scalaz-core"               % V.scalaz7
     val snowplowTracker      = "com.snowplowanalytics"      %% "snowplow-scala-tracker"    % V.snowplowTracker
     // Intransitive to prevent the jar containing more than 2^16 files
-    val snowplowCommonEnrich = "com.snowplowanalytics"      % "snowplow-common-enrich"     % V.snowplowCommonEnrich intransitive
+    val snowplowCommonEnrich = "com.snowplowanalytics"      %% "snowplow-common-enrich"    % V.snowplowCommonEnrich intransitive
     // Since Common Enrich is intransitive, we explicitly add Iglu Scala Client as a dependency
     val igluClient           = "com.snowplowanalytics"      %  "iglu-scala-client"         % V.igluClient
     // Scala (test only)
