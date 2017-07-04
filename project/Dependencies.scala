@@ -17,11 +17,7 @@ object Dependencies {
 
   val resolutionRepos = Seq(
     // For Snowplow
-    "Snowplow Analytics Maven releases repo" at "http://maven.snplow.com/releases/",
-    // For Scalazon
-    "BintrayJCenter"                         at "http://jcenter.bintray.com",
-    // For user-agent-utils
-    "user-agent-utils repo"                  at "https://raw.github.com/HaraldWalker/user-agent-utils/mvn-repo/"
+    "Snowplow Analytics Maven releases repo" at "http://maven.snplow.com/releases/"
   )
 
   object V {
@@ -46,7 +42,6 @@ object Dependencies {
     val config               = "1.0.2"
     val snowplowCommonEnrich = "0.22.0"
     val igluClient           = "0.3.2"
-    val scalazon             = "0.11"
     val scalaz7              = "7.2.14"
     val snowplowTracker      = "0.3.0"
     // Scala (test only)
@@ -77,7 +72,6 @@ object Dependencies {
     // Scala
     val scopt                = "com.github.scopt"           %% "scopt"                     % V.scopt
     val config               = "com.typesafe"               %  "config"                    % V.config
-    val scalazon             = "io.github.cloudify"         %% "scalazon"                  % V.scalazon
     val scalaz7              = "org.scalaz"                 %% "scalaz-core"               % V.scalaz7
     val snowplowTracker      = "com.snowplowanalytics"      %% "snowplow-scala-tracker"    % V.snowplowTracker
     // Intransitive to prevent the jar containing more than 2^16 files

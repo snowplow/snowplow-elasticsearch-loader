@@ -35,7 +35,6 @@ object SnowplowElasticsearchSinkBuild extends Build {
           Libraries.config,
           Libraries.snowplowCommonEnrich,
           Libraries.igluClient,
-          Libraries.scalazon,
           Libraries.scalaz7,
           Libraries.specs2,
           Libraries.scalazSpecs2,
