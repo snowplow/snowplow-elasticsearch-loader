@@ -32,7 +32,6 @@ lazy val root = project.in(file("."))
         Dependencies.Libraries.scalaz7,
         Dependencies.Libraries.snowplowTracker,
         Dependencies.Libraries.snowplowCommonEnrich,
-        Dependencies.Libraries.igluClient,
         // Scala (test only)
         Dependencies.Libraries.specs2
       ),
