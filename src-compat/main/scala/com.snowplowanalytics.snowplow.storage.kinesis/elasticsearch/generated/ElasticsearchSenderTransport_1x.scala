@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2016 Snowplow Analytics Ltd.
+ * Copyright (c) 2014-2017 Snowplow Analytics Ltd.
  * All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
@@ -160,7 +160,7 @@ class ElasticsearchSenderTransport(
    * The amount of time to wait in between unsuccessful index requests (in milliseconds).
    * 10 seconds = 10 * 1000 = 10000
    */
-  private val BackoffPeriod = 10000
+  private val BackoffPeriod = 10000L
 
   elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(elasticsearchEndpoint, elasticsearchPort))
        
@@ -236,7 +236,7 @@ class ElasticsearchSenderTransport(
         Log.info("Emitted " + (records.size - failures.size - numberOfSkippedRecords) + " records to Elasticsearch")
 
         if (!failures.isEmpty) {
-          printClusterStatus
+          printClusterStatus()
           Log.warn("Returning " + failures.size + " records as failed")
         }
 
@@ -270,14 +270,12 @@ class ElasticsearchSenderTransport(
   /**
    * Shuts the client down
    */
-  def close(): Unit = {
-    elasticsearchClient.close
-  }
+  def close(): Unit = elasticsearchClient.close
 
   /**
    * Logs the Elasticsearch cluster's health
    */
-  private def printClusterStatus: Unit = {
+  private def printClusterStatus(): Unit = {
     val healthRequestBuilder = elasticsearchClient.admin.cluster.prepareHealth()
     val response = healthRequestBuilder.execute.actionGet
     if (response.getStatus.equals(ClusterHealthStatus.RED)) {
@@ -294,7 +292,7 @@ class ElasticsearchSenderTransport(
    *
    * Prevents shutdown hooks from running
    */
-  private def forceShutdown() {
+  private def forceShutdown(): Unit = {
     Log.error(s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms")
 
     tracker foreach {

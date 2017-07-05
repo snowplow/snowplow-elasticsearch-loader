@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2016 Snowplow Analytics Ltd.
+ * Copyright (c) 2014-2017 Snowplow Analytics Ltd.
  * All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
@@ -197,8 +197,8 @@ class SnowplowElasticsearchEmitter(
 
         val record: EmitterInput = records(0)
         val byteCount: Long = record match {
-          case (_, Success(obj)) => obj.toString.getBytes("UTF-8").length
-          case (_, Failure(_))   => 0 // This record will be ignored in the sender
+          case (_, Success(obj)) => obj.toString.getBytes("UTF-8").length.toLong
+          case (_, Failure(_))   => 0L // This record will be ignored in the sender
         }
         val updatedRecords: List[EmitterInput] = records.drop(1)
 
@@ -226,7 +226,7 @@ class SnowplowElasticsearchEmitter(
    *
    * @param records List of failed records
    */
-  override def fail(records: JList[EmitterInput]) {
+  override def fail(records: JList[EmitterInput]): Unit = {
     records foreach {
       record => {
         val output = FailureUtils.getBadRow(record._1, record._2.swap.getOrElse(Nil))
@@ -238,9 +238,7 @@ class SnowplowElasticsearchEmitter(
   /**
    * Closes the Elasticsearch client when the KinesisConnectorRecordProcessor is shut down
    */
-  override def shutdown {
-    newInstance.close
-  }
+  override def shutdown(): Unit = newInstance.close
 
   /**
    * Returns an ISO valid timestamp
