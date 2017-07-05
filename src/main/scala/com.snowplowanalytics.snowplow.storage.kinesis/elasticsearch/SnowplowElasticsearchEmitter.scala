@@ -53,12 +53,6 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.JsonDSL._
 
-// Logging
-import org.apache.commons.logging.{
-  Log,
-  LogFactory
-}
-
 // Tracker
 import scalatracker.Tracker
 import scalatracker.SelfDescribingJson
@@ -92,8 +86,6 @@ class SnowplowElasticsearchEmitter(
   connTimeout: Int = 300000,
   readTimeout: Int = 300000
 ) extends IEmitter[EmitterInput] {
-
-  private val Log = LogFactory.getLog(getClass)
 
   private val newInstance: ElasticsearchSender = (
     if (elasticsearchClientType == "http") {
