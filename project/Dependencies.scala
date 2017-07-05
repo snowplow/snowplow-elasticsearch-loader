@@ -26,7 +26,6 @@ object Dependencies {
     val slf4j                = "1.7.5"
     val kinesisClient        = "1.6.1"
     val kinesisConnector     = "1.1.2"
-    val commonsLang3         = "3.1"
 
     object jest {
       val _1x                = "1.0.3"
@@ -55,7 +54,6 @@ object Dependencies {
     val log4jOverSlf4j       = "org.slf4j"                  %  "log4j-over-slf4j"          % V.slf4j
     val kinesisClient        = "com.amazonaws"              %  "amazon-kinesis-client"     % V.kinesisClient
     val kinesisConnector     = "com.amazonaws"              %  "amazon-kinesis-connectors" % V.kinesisConnector
-    val commonsLang3         = "org.apache.commons"         %  "commons-lang3"             % V.commonsLang3
 
     object jest {
       val _1x                = "io.searchbox"               %  "jest"                      % V.jest._1x
