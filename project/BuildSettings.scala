@@ -95,17 +95,21 @@ object BuildSettings {
   lazy val buildSettings = basicSettings ++ scalifySettings
 
   // sbt-assembly settings for building an executable
-  import sbtassembly.Plugin._
-  import AssemblyKeys._
-  lazy val sbtAssemblySettings = assemblySettings ++ Seq(
+  import sbtassembly.AssemblyPlugin.autoImport._
+  lazy val sbtAssemblySettings = Seq(
     // Executable jarfile
-    assemblyOption in assembly ~= { _.copy(prependShellScript = Some(defaultShellScript)) },
+    assemblyOption in assembly :=
+      (assemblyOption in assembly).value.copy(prependShellScript = Some(
+        Seq("#!/usr/bin/env sh", """exec java -jar "$0" "$@"""" + "\n")
+      )),
     // Name it as an executable
-    jarName in assembly := { s"${name.value}-${version.value}-${ElasticsearchVersion}" },
+    assemblyJarName in assembly := { s"${name.value}-${version.value}-${ElasticsearchVersion}" },
     // Merge duplicate class in JodaTime and Elasticsearch 2.4
-    mergeStrategy in assembly := {
+    assemblyMergeStrategy in assembly := {
       case PathList("org", "joda", "time", "base", "BaseDateTime.class") => MergeStrategy.first
-      case x => (mergeStrategy in assembly).value(x)
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy(x)
     }
   )
 }
