@@ -124,7 +124,8 @@ object ElasticsearchSinkApp extends App {
       val kinesisSinkShards = kinesisSink.getInt("shards")
       val kinesisSinkRegion = kinesis.getString("region")
       val kinesisSinkEndpoint = s"https://kinesis.${kinesisSinkRegion}.amazonaws.com"
-      new KinesisSink(finalConfig.AWS_CREDENTIALS_PROVIDER, kinesisSinkEndpoint, kinesisSinkName, kinesisSinkShards)
+      new KinesisSink(finalConfig.AWS_CREDENTIALS_PROVIDER,
+        kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName, kinesisSinkShards)
     }
   }
 

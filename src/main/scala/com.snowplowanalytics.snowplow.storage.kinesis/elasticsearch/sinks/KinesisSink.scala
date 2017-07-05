@@ -29,7 +29,8 @@ import scala.util.Random
 // Amazon
 import com.amazonaws.services.kinesis.model._
 import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.services.kinesis.AmazonKinesisClient
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
+import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder
 
 // Concurrent libraries
 import scala.concurrent.Future
@@ -44,18 +45,27 @@ import org.slf4j.LoggerFactory
  *
  * @param provider AWSCredentialsProvider
  * @param endpoint Kinesis stream endpoint
+ * @param region Kinesis region
  * @param name Kinesis stream name
  * @param shards Number of shards with which to initialize the stream
  * @param config Configuration for the Kinesis stream
  */
-class KinesisSink(provider: AWSCredentialsProvider, endpoint: String, name: String, shards: Int)
-  extends ISink {
+class KinesisSink(
+  provider: AWSCredentialsProvider,
+  endpoint: String,
+  region: String,
+  name: String,
+  shards: Int
+) extends ISink {
 
   private lazy val log = LoggerFactory.getLogger(getClass)
 
   // Explicitly create a client so we can configure the end point
-  val client = new AmazonKinesisClient(provider)
-  client.setEndpoint(endpoint)
+  val client = AmazonKinesisClientBuilder
+    .standard()
+    .withCredentials(provider)
+    .withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
+    .build()
 
   require(streamExists(name))
 
