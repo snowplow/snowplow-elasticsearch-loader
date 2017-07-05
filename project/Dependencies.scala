@@ -15,11 +15,6 @@ import sbt._
 
 object Dependencies {
 
-  val resolutionRepos = Seq(
-    // For Snowplow
-    "Snowplow Analytics Maven releases repo" at "http://maven.snplow.com/releases/"
-  )
-
   object V {
     // Java
     val config               = "1.0.2"
