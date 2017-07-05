@@ -27,7 +27,6 @@ lazy val root = project.in(file("."))
         Dependencies.Libraries.log4jOverSlf4j,
         Dependencies.Libraries.kinesisClient,
         Dependencies.Libraries.kinesisConnector,
-        Dependencies.Libraries.commonsLang3,
         // Scala
         Dependencies.Libraries.scopt,
         Dependencies.Libraries.scalaz7,
