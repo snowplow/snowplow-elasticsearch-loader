@@ -22,7 +22,6 @@ lazy val root = project.in(file("."))
     libraryDependencies ++= Dependencies.onVersion(
       all = Seq(
         // Java
-        Dependencies.Libraries.logging,
         Dependencies.Libraries.config,
         Dependencies.Libraries.slf4j,
         Dependencies.Libraries.log4jOverSlf4j,

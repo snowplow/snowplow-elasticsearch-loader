@@ -46,7 +46,7 @@ import org.json4s.JsonDSL._
 // Jackson
 import com.fasterxml.jackson.core.JsonParseException
 
-// Logging
+// SLF4j
 import org.slf4j.LoggerFactory
 
 object SnowplowElasticsearchTransformer {
@@ -231,7 +231,7 @@ object SnowplowElasticsearchTransformer {
 class SnowplowElasticsearchTransformer(documentIndex: String, documentType: String)
   extends ITransformer[ValidatedRecord, EmitterInput] with StdinTransformer {
 
-  private lazy val log = LoggerFactory.getLogger(getClass())
+  private lazy val log = LoggerFactory.getLogger(getClass)
 
   /**
    * Convert the value of a field to a JValue based on the name of the field

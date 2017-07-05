@@ -36,7 +36,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Success, Failure}
 
-// Logging
+// SLF4j
 import org.slf4j.LoggerFactory
 
 /**
@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory
 class KinesisSink(provider: AWSCredentialsProvider, endpoint: String, name: String, shards: Int)
   extends ISink {
 
-  private lazy val log = LoggerFactory.getLogger(getClass())
+  private lazy val log = LoggerFactory.getLogger(getClass)
 
   // Explicitly create a client so we can configure the end point
   val client = new AmazonKinesisClient(provider)

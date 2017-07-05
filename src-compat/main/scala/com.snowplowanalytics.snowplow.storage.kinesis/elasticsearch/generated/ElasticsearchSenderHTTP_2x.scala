@@ -52,11 +52,8 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.JsonDSL._
 
-// Logging
-import org.apache.commons.logging.{
-  Log,
-  LogFactory
-}
+// SLF4j
+import org.slf4j.LoggerFactory
 
 // Tracker
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
@@ -77,7 +74,7 @@ class ElasticsearchSenderHTTP(
   readTimeout: Int
 ) extends ElasticsearchSender {
 
-  private val Log = LogFactory.getLog(getClass)
+  private val log = LoggerFactory.getLogger(getClass)
 
   // An ISO valid timestamp formatter
   private val TstampFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(DateTimeZone.UTC)
@@ -113,7 +110,7 @@ class ElasticsearchSenderHTTP(
    */
   private val BackoffPeriod = 10000L
        
-  Log.info("ElasticsearchSender using elasticsearch endpoint " + elasticsearchEndpoint + ":" + elasticsearchPort)
+  log.info(s"ElasticsearchSender using elasticsearch endpoint $elasticsearchEndpoint:$elasticsearchPort")
 
   /**
    * Emits good records to Elasticsearch and bad records to Kinesis.
@@ -160,7 +157,7 @@ class ElasticsearchSenderHTTP(
           val (response, record) = pair
           val failure = response.error
 
-          Log.error("Record failed with message: " + failure)
+          log.error(s"Record failed with message: $failure")
 
           if (failure.contains("DocumentAlreadyExistsException") || failure.contains("VersionConflictEngineException")) {
             None
@@ -172,17 +169,17 @@ class ElasticsearchSenderHTTP(
         val numberOfSkippedRecords = allFailures.count(_.isEmpty)
         val failures = allFailures.flatten
 
-        Log.info("Emitted " + (records.size - failures.size - numberOfSkippedRecords) + " records to Elasticsearch")
+        log.info(s"Emitted ${records.size - failures.size - numberOfSkippedRecords} records to Elasticsearch")
 
         if (!failures.isEmpty) {
           printClusterStatus()
-          Log.warn("Returning " + failures.size + " records as failed")
+          log.warn(s"Returning ${failures.size} records as failed")
         }
 
         failures
       } catch {
         case e: Exception => {
-          Log.error("ElasticsearchEmitter threw an unexpected exception ", e)
+          log.error("ElasticsearchEmitter threw an unexpected exception ", e)
           e.printStackTrace()
           
           sleep(BackoffPeriod)
@@ -209,11 +206,11 @@ class ElasticsearchSenderHTTP(
     val response = elasticsearchClient.execute(new Health.Builder().build())
     val status = response.getValue("status").toString
     if (status == "red") {
-      Log.error("Cluster health is RED. Indexing ability will be limited")
+      log.error("Cluster health is RED. Indexing ability will be limited")
     } else if (status == "yellow") {
-      Log.warn("Cluster health is YELLOW.")
+      log.warn("Cluster health is YELLOW.")
     } else if (status == "green") {
-      Log.info("Cluster health is GREEN.")
+      log.info("Cluster health is GREEN.")
     }
   }
 
@@ -223,7 +220,7 @@ class ElasticsearchSenderHTTP(
    * Prevents shutdown hooks from running
    */
   private def forceShutdown(): Unit = {
-    Log.error(s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms")
+    log.error(s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms")
 
     tracker foreach {
       t =>

@@ -22,7 +22,6 @@ object Dependencies {
 
   object V {
     // Java
-    val logging              = "1.1.3"
     val config               = "1.0.2"
     val slf4j                = "1.7.5"
     val kinesisClient        = "1.6.1"
@@ -51,7 +50,6 @@ object Dependencies {
 
   object Libraries {
     // Java
-    val logging              = "commons-logging"            %  "commons-logging"           % V.logging
     val config               = "com.typesafe"               %  "config"                    % V.config
     val slf4j                = "org.slf4j"                  %  "slf4j-simple"              % V.slf4j
     val log4jOverSlf4j       = "org.slf4j"                  %  "log4j-over-slf4j"          % V.slf4j
