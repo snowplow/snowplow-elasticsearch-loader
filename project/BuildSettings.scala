@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2016 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2014-2017 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -14,7 +14,7 @@
 // SBT
 import sbt._
 import Keys._
-import scala.io.Source._
+import scala.io.Source
 
 object BuildSettings {
 
@@ -22,54 +22,72 @@ object BuildSettings {
   val ElasticsearchVersion = sys.env("ELASTICSEARCH_VERSION")
 
   // Basic settings for our app
-  lazy val basicSettings = Seq[Setting[_]](
+  lazy val basicSettings = Seq(
     organization          :=  "com.snowplowanalytics",
     version               :=  "0.8.0",
     description           :=  "Kinesis sink for Elasticsearch",
     scalaVersion          :=  "2.11.11",
-    scalacOptions         :=  Seq("-deprecation", "-encoding", "utf8",
-                                  "-feature", "-target:jvm-1.7"),
-    scalacOptions in Test :=  Seq("-Yrangepos"),
+    scalacOptions         :=  compilerOptions,
     resolvers             ++= Dependencies.resolutionRepos
   )
 
+  lazy val compilerOptions = Seq(
+    "-deprecation",
+    "-encoding", "UTF-8",
+    "-feature",
+    "-language:existentials",
+    "-language:higherKinds",
+    "-language:implicitConversions",
+    "-unchecked",
+    "-Yno-adapted-args",
+    "-Ywarn-dead-code",
+    "-Ywarn-numeric-widen",
+    "-Xfuture",
+    "-Xlint"
+  )
+
   // Makes our SBT app settings available from within the app
-  lazy val scalifySettings = Seq(sourceGenerators in Compile <+= (sourceManaged in Compile, version, name, organization) map { (d, v, n, o) =>
-    val settingsFile = d / "settings.scala"
-    IO.write(settingsFile, """package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch.generated
-      |object Settings {
-      |  val organization = "%s"
-      |  val version = "%s"
-      |  val name = "%s"
-      |}
-      |""".stripMargin.format(o, v, n)
-    )
+  lazy val scalifySettings = Seq(
+    sourceGenerators in Compile += Def.task {
+      val dir = (sourceManaged in Compile).value
+      val file = dir / "settings.scala"
+      IO.write(file, """package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch.generated
+        |object Settings {
+        |  val organization = "%s"
+        |  val version = "%s"
+        |  val name = "%s"
+        |}
+        |""".stripMargin.format(organization.value, version.value, name.value))
 
-    // Dynamically load ElasticsearchClients
-    val genDir = new java.io.File("").getAbsolutePath + "/src-compat/main/scala/com.snowplowanalytics.snowplow.storage.kinesis/elasticsearch/generated/"
+      // Dynamically load ElasticsearchClients
+      val genDir = new java.io.File("").getAbsolutePath +
+        "/src-compat/main/scala/com.snowplowanalytics.snowplow.storage.kinesis/elasticsearch/generated/"
 
-    val esHttpClientFile = d / "ElasticsearchSenderHTTP.scala"
-    val esHttpClientLines = (if (ElasticsearchVersion.equals("1x")) {
-      fromFile(genDir + "ElasticsearchSenderHTTP_1x.scala")
-    } else {
-      fromFile(genDir + "ElasticsearchSenderHTTP_2x.scala")
-    })
-    IO.write(esHttpClientFile, esHttpClientLines.mkString)
+      val esHttpClientFile = dir / "ElasticsearchSenderHTTP.scala"
+      val esHttpClientLines = (if (ElasticsearchVersion.equals("1x")) {
+        Source.fromFile(genDir + "ElasticsearchSenderHTTP_1x.scala")
+      } else {
+        Source.fromFile(genDir + "ElasticsearchSenderHTTP_2x.scala")
+      })
+      IO.write(esHttpClientFile, esHttpClientLines.mkString)
 
-    val esTransportClientFile = d / "ElasticsearchSenderTransport.scala"
-    val esTransportClientLines = (if (ElasticsearchVersion.equals("1x")) {
-      fromFile(genDir + "ElasticsearchSenderTransport_1x.scala")
-    } else {
-      fromFile(genDir + "ElasticsearchSenderTransport_2x.scala")
-    })
-    IO.write(esTransportClientFile, esTransportClientLines.mkString)
+      val esTransportClientFile = dir / "ElasticsearchSenderTransport.scala"
+      val esTransportClientLines = (if (ElasticsearchVersion.equals("1x")) {
+        Source.fromFile(genDir + "ElasticsearchSenderTransport_1x.scala")
+      } else {
+        Source.fromFile(genDir + "ElasticsearchSenderTransport_2x.scala")
+      })
+      IO.write(esTransportClientFile, esTransportClientLines.mkString)
 
-    Seq(
-      settingsFile,
-      esHttpClientFile,
-      esTransportClientFile
-    )
-  })
+      Seq(
+        file,
+        esHttpClientFile,
+        esTransportClientFile
+      )
+    }.taskValue
+  )
+
+  lazy val buildSettings = basicSettings ++ scalifySettings
 
   // sbt-assembly settings for building an executable
   import sbtassembly.Plugin._
@@ -85,6 +103,4 @@ object BuildSettings {
       case x => (mergeStrategy in assembly).value(x)
     }
   )
-
-  lazy val buildSettings = basicSettings ++ scalifySettings ++ sbtAssemblySettings
 }
