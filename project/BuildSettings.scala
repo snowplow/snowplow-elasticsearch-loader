@@ -23,12 +23,12 @@ object BuildSettings {
 
   // Basic settings for our app
   lazy val basicSettings = Seq(
-    organization          :=  "com.snowplowanalytics",
-    version               :=  "0.8.0",
-    description           :=  "Kinesis sink for Elasticsearch",
-    scalaVersion          :=  "2.11.11",
-    scalacOptions         :=  compilerOptions,
-    resolvers             ++= Dependencies.resolutionRepos
+    organization  := "com.snowplowanalytics",
+    version       := "0.8.0",
+    description   := "Kinesis sink for Elasticsearch",
+    scalaVersion  := "2.11.11",
+    scalacOptions := compilerOptions,
+    javacOptions  := javaCompilerOptions
   )
 
   lazy val compilerOptions = Seq(
@@ -44,6 +44,11 @@ object BuildSettings {
     "-Ywarn-numeric-widen",
     "-Xfuture",
     "-Xlint"
+  )
+
+  lazy val javaCompilerOptions = Seq(
+    "-source", "1.8",
+    "-target", "1.8"
   )
 
   // Makes our SBT app settings available from within the app
