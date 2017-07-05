@@ -17,7 +17,7 @@ object Dependencies {
 
   object V {
     // Java
-    val config               = "1.0.2"
+    val config               = "1.3.1"
     val slf4j                = "1.7.5"
     val kinesisClient        = "1.6.1"
     val kinesisConnector     = "1.1.2"
