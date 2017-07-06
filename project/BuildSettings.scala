@@ -68,14 +68,6 @@ object BuildSettings {
       val genDir = new java.io.File("").getAbsolutePath +
         "/src-compat/main/scala/com.snowplowanalytics.snowplow.storage.kinesis/elasticsearch/generated/"
 
-      val esHttpClientFile = dir / "ElasticsearchSenderHTTP.scala"
-      val esHttpClientLines = (if (ElasticsearchVersion.equals("1x")) {
-        Source.fromFile(genDir + "ElasticsearchSenderHTTP_1x.scala")
-      } else {
-        Source.fromFile(genDir + "ElasticsearchSenderHTTP_2x.scala")
-      })
-      IO.write(esHttpClientFile, esHttpClientLines.mkString)
-
       val esTransportClientFile = dir / "ElasticsearchSenderTransport.scala"
       val esTransportClientLines = (if (ElasticsearchVersion.equals("1x")) {
         Source.fromFile(genDir + "ElasticsearchSenderTransport_1x.scala")

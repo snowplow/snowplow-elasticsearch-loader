@@ -29,10 +29,10 @@ import com.amazonaws.services.kinesis.connectors.elasticsearch.{
 import com.amazonaws.services.kinesis.connectors.interfaces.IEmitter
 
 // Elasticsearch
+import org.elasticsearch.cluster.health.ClusterHealthStatus
 import org.elasticsearch.action.admin.cluster.health.{
   ClusterHealthRequestBuilder,
-  ClusterHealthResponse,
-  ClusterHealthStatus
+  ClusterHealthResponse
 }
 import org.elasticsearch.action.bulk.{
   BulkItemResponse,
@@ -41,13 +41,9 @@ import org.elasticsearch.action.bulk.{
 }
 import org.elasticsearch.action.bulk.BulkItemResponse.Failure
 import org.elasticsearch.action.index.IndexRequestBuilder
-import org.elasticsearch.client.transport.{
-  NoNodeAvailableException,
-  TransportClient
-}
-import org.elasticsearch.common.settings.{
-  ImmutableSettings
-}
+import org.elasticsearch.transport.client.PreBuiltTransportClient
+import org.elasticsearch.client.transport.NoNodeAvailableException
+import org.elasticsearch.common.settings.{Settings => ESSettings}
 import org.elasticsearch.common.transport.InetSocketTransportAddress
 
 import com.amazonaws.services.kinesis.connectors.{
@@ -130,7 +126,7 @@ class ElasticsearchSenderTransport(
    */
   private val ElasticsearchClientTransportNodesSamplerIntervalKey = "client.transport.nodes_sampler_interval"
 
-  private val settings = ImmutableSettings.settingsBuilder
+  private val settings = ESSettings.builder()
     .put(ElasticsearchClusterNameKey,                         configuration.ELASTICSEARCH_CLUSTER_NAME)
     .put(ElasticsearchClientTransportSniffKey,                configuration.ELASTICSEARCH_TRANSPORT_SNIFF)
     .put(ElasticsearchClientTransportIgnoreClusterNameKey,    configuration.ELASTICSEARCH_IGNORE_CLUSTER_NAME)
@@ -141,7 +137,7 @@ class ElasticsearchSenderTransport(
   /**
    * The Elasticsearch client.
    */
-  private val elasticsearchClient = new TransportClient(settings)
+  private val elasticsearchClient = new PreBuiltTransportClient(settings)
 
   /**
    * The Elasticsearch endpoint.
@@ -159,7 +155,7 @@ class ElasticsearchSenderTransport(
    */
   private val BackoffPeriod = 10000L
 
-  elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(elasticsearchEndpoint, elasticsearchPort))
+  elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(java.net.InetAddress.getByName(elasticsearchEndpoint), elasticsearchPort))
        
   log.info(s"ElasticsearchSender using elasticsearch endpoint $elasticsearchEndpoint:$elasticsearchPort")
 

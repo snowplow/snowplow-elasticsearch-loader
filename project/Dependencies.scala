@@ -22,11 +22,6 @@ object Dependencies {
     val kinesisClient        = "1.7.5"
     val kinesisConnector     = "1.3.0"
 
-    object jest {
-      val _1x                = "1.0.3"
-      val _2x                = "2.0.3"
-    }
-
     object elasticsearch {
       val _1x                = "1.7.5"
       val _2x                = "2.4.0"
@@ -37,35 +32,34 @@ object Dependencies {
     val snowplowCommonEnrich = "0.22.0"
     val scalaz7              = "7.2.14"
     val snowplowTracker      = "0.3.0"
+    val elastic4s            = "5.4.6"
     // Scala (test only)
     val specs2               = "3.9.2"
   }
 
   object Libraries {
     // Java
-    val config               = "com.typesafe"               %  "config"                    % V.config
-    val slf4j                = "org.slf4j"                  %  "slf4j-simple"              % V.slf4j
-    val log4jOverSlf4j       = "org.slf4j"                  %  "log4j-over-slf4j"          % V.slf4j
-    val kinesisClient        = "com.amazonaws"              %  "amazon-kinesis-client"     % V.kinesisClient
-    val kinesisConnector     = "com.amazonaws"              %  "amazon-kinesis-connectors" % V.kinesisConnector
-
-    object jest {
-      val _1x                = "io.searchbox"               %  "jest"                      % V.jest._1x
-      val _2x                = "io.searchbox"               %  "jest"                      % V.jest._2x
-    }
+    val config               = "com.typesafe"           %  "config"                    % V.config
+    val slf4j                = "org.slf4j"              %  "slf4j-simple"              % V.slf4j
+    val log4jOverSlf4j       = "org.slf4j"              %  "log4j-over-slf4j"          % V.slf4j
+    val kinesisClient        = "com.amazonaws"          %  "amazon-kinesis-client"     % V.kinesisClient
+    val kinesisConnector     = "com.amazonaws"          %  "amazon-kinesis-connectors" % V.kinesisConnector
 
     object elasticsearch {
-      val _1x                = "org.elasticsearch"          %  "elasticsearch"             % V.elasticsearch._1x
-      val _2x                = "org.elasticsearch"          %  "elasticsearch"             % V.elasticsearch._2x
+      val _1x                = "org.elasticsearch"      %  "elasticsearch"             % V.elasticsearch._1x
+      val _2x                = "org.elasticsearch"      %  "elasticsearch"             % V.elasticsearch._2x
     }
+    val transportClient      = "org.elasticsearch.client" % "transport" % "5.4.3"
 
     // Scala
-    val scopt                = "com.github.scopt"           %% "scopt"                     % V.scopt
-    val scalaz7              = "org.scalaz"                 %% "scalaz-core"               % V.scalaz7
-    val snowplowTracker      = "com.snowplowanalytics"      %% "snowplow-scala-tracker"    % V.snowplowTracker
-    val snowplowCommonEnrich = "com.snowplowanalytics"      % "snowplow-common-enrich"     % V.snowplowCommonEnrich
+    val scopt                = "com.github.scopt"       %% "scopt"                     % V.scopt
+    val scalaz7              = "org.scalaz"             %% "scalaz-core"               % V.scalaz7
+    val scalazC7              = "org.scalaz"            %% "scalaz-concurrent"         % V.scalaz7
+    val snowplowTracker      = "com.snowplowanalytics"  %% "snowplow-scala-tracker"    % V.snowplowTracker
+    val snowplowCommonEnrich = "com.snowplowanalytics"  %  "snowplow-common-enrich"    % V.snowplowCommonEnrich
+    val elastic4s            = "com.sksamuel.elastic4s" %% "elastic4s-http"            % V.elastic4s
     // Scala (test only)
-    val specs2               = "org.specs2"                 %% "specs2-core"               % V.specs2 % "test"
+    val specs2               = "org.specs2"             %% "specs2-core"               % V.specs2 % "test"
   }
 
   def onVersion[A](all: Seq[A] = Seq(), on1x: => Seq[A] = Seq(), on2x: => Seq[A] = Seq()) = {
