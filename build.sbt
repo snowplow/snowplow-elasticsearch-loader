@@ -27,20 +27,21 @@ lazy val root = project.in(file("."))
         Dependencies.Libraries.log4jOverSlf4j,
         Dependencies.Libraries.kinesisClient,
         Dependencies.Libraries.kinesisConnector,
+        Dependencies.Libraries.transportClient,
         // Scala
         Dependencies.Libraries.scopt,
         Dependencies.Libraries.scalaz7,
+        Dependencies.Libraries.scalazC7,
         Dependencies.Libraries.snowplowTracker,
         Dependencies.Libraries.snowplowCommonEnrich,
+        Dependencies.Libraries.elastic4s,
         // Scala (test only)
         Dependencies.Libraries.specs2
       ),
       on1x = Seq(
-        Dependencies.Libraries.jest._1x,
         Dependencies.Libraries.elasticsearch._1x
       ),
       on2x = Seq(
-        Dependencies.Libraries.jest._2x,
         Dependencies.Libraries.elasticsearch._2x
       )
     )
