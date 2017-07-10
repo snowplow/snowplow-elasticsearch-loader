@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2016 Snowplow Analytics Ltd.
+ * Copyright (c) 2014-2017 Snowplow Analytics Ltd.
  * All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
@@ -17,24 +17,18 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch
-package clients
+package com.snowplowanalytics.elasticsearch.loader.sinks
 
 /**
- * Abstract class for Elasticsearch clients
+ * Shared interface for all sinks
  */
-abstract class ElasticsearchSender extends IElasticsearchSender {
+trait ISink {
+  def store(output: String, key: Option[String], good: Boolean): Unit
+}
 
-  /**
-   * Period between retrying sending events to Elasticsearch
-   *
-   * @param sleepTime Length of time between tries
-   */
-  protected def sleep(sleepTime: Long): Unit = {
-    try {
-      Thread.sleep(sleepTime)
-    } catch {
-      case e: InterruptedException => ()
-    }
-  }
+/**
+ * Sink which ignores all input
+ */
+class NullSink extends ISink {
+  def store(output: String, key: Option[String], good: Boolean): Unit = ()
 }

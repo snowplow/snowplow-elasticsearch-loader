@@ -17,17 +17,14 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch
+package com.snowplowanalytics.elasticsearch.loader
 
 // Java
 import java.nio.charset.StandardCharsets.UTF_8
 
 // Amazon
 import com.amazonaws.services.kinesis.connectors.interfaces.ITransformer
-import com.amazonaws.services.kinesis.connectors.elasticsearch.{
-  ElasticsearchObject,
-  ElasticsearchTransformer
-}
+import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
 import com.amazonaws.services.kinesis.model.Record
 
 // Scalaz

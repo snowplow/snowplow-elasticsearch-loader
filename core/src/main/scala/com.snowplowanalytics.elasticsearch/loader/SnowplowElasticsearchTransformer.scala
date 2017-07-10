@@ -17,8 +17,7 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow
-package storage.kinesis.elasticsearch
+package com.snowplowanalytics.elasticsearch.loader
 
 // Java
 import java.nio.charset.StandardCharsets.UTF_8

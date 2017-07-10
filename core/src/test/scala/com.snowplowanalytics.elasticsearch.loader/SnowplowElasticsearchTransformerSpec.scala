@@ -11,8 +11,7 @@
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow
-package storage.kinesis.elasticsearch
+package com.snowplowanalytics.elasticsearch.loader
 
 // Scalaz
 import scalaz._

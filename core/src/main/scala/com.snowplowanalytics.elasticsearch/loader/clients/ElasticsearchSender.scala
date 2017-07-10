@@ -17,13 +17,23 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch
-package clients
+package com.snowplowanalytics.elasticsearch.loader.clients
 
 /**
- * Common interface for Elasticsearch clients
+ * Abstract class for Elasticsearch clients
  */
-trait IElasticsearchSender {
-  def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput]
-  def close(): Unit
+abstract class ElasticsearchSender extends IElasticsearchSender {
+
+  /**
+   * Period between retrying sending events to Elasticsearch
+   *
+   * @param sleepTime Length of time between tries
+   */
+  protected def sleep(sleepTime: Long): Unit = {
+    try {
+      Thread.sleep(sleepTime)
+    } catch {
+      case e: InterruptedException => ()
+    }
+  }
 }

@@ -22,7 +22,6 @@ object BuildSettings {
   lazy val basicSettings = Seq(
     organization  := "com.snowplowanalytics",
     version       := "0.8.0",
-    description   := "Kinesis sink for Elasticsearch",
     scalaVersion  := "2.11.11",
     scalacOptions := compilerOptions,
     javacOptions  := javaCompilerOptions
@@ -53,7 +52,7 @@ object BuildSettings {
     sourceGenerators in Compile += Def.task {
       val dir = (sourceManaged in Compile).value
       val file = dir / "settings.scala"
-      IO.write(file, """package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch.generated
+      IO.write(file, """package com.snowplowanalytics.elasticsearch.loader.generated
         |object Settings {
         |  val organization = "%s"
         |  val version = "%s"

@@ -17,7 +17,7 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch.sinks
+package com.snowplowanalytics.elasticsearch.loader.sinks
 
 // Java
 import java.nio.ByteBuffer
