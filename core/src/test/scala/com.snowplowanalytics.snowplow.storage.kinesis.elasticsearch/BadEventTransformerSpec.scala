@@ -25,9 +25,6 @@ import org.json4s.jackson.JsonMethods._
 // Specs2
 import org.specs2.mutable.Specification
 
-// Snowplow
-import enrich.common.utils.ScalazJson4sUtils
-
 /**
  * Tests BadEventTransformer
  */

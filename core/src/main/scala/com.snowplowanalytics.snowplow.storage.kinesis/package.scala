@@ -37,12 +37,12 @@ package object elasticsearch {
    * if the creation process failed)
    * Can't use NonEmptyList as it isn't serializable
    */
-  type ValidatedRecord = (String, Validation[List[String], JsonRecord])
+  type ValidatedRecord = (String, ValidationNel[String, JsonRecord])
 
   /**
    * The input type for the ElasticsearchSender objects
    */
-  type EmitterInput = (String, Validation[List[String], ElasticsearchObject])
+  type EmitterInput = (String, ValidationNel[String, ElasticsearchObject])
 
   /**
    * Functions used to change a TSV pair to a JObject
