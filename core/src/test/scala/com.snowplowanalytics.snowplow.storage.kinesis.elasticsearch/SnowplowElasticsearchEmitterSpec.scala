@@ -65,7 +65,7 @@ class SnowplowElasticsearchEmitterSpec extends Specification {
         fakeSender)
 
       val validInput: EmitterInput = "good" -> new ElasticsearchObject("index", "type", "{}").success
-      val invalidInput: EmitterInput = "bad" -> List("malformed event").fail
+      val invalidInput: EmitterInput = "bad" -> "malformed event".failureNel
 
       val input = List(validInput, invalidInput)
 

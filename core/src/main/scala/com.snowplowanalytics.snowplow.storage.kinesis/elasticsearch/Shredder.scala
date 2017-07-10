@@ -67,7 +67,7 @@ object Shredder {
 
         s"${prefix}_${snakeCaseOrganization}_${snakeCaseName}_${model}".successNel
       }
-      case _ => "Schema %s does not conform to regular expression %s".format(schema, schemaPattern.toString).failNel
+      case _ => "Schema %s does not conform to regular expression %s".format(schema, schemaPattern.toString).failureNel
     }
   }
 
@@ -153,12 +153,12 @@ object Shredder {
         case head :: tail => {
           val context = head
           val innerData = context \ "data" match {
-            case JNothing => "Could not extract inner data field from custom context".failNel // TODO: decide whether to enforce object type of data
-            case d => (fixInnerData(d)).successNel
+            case JNothing => "Could not extract inner data field from custom context".failureNel // TODO: decide whether to enforce object type of data
+            case d => (fixInnerData(d)).successNel[String]
           }
           val fixedSchema: ValidationNel[String, String] = context \ "schema" match {
             case JString(schema) => fixSchema("contexts", schema)
-            case _ => "Context JSON did not contain a stringly typed schema field".failNel
+            case _ => "Context JSON did not contain a stringly typed schema field".failureNel
           }
 
           val schemaDataPair = (fixedSchema |@| innerData) {_ -> _}
@@ -172,14 +172,14 @@ object Shredder {
     val data = json \ "data"
 
     data match {
-      case JArray(Nil) => "Custom contexts data array is empty".failNel
+      case JArray(Nil) => "Custom contexts data array is empty".failureNel
       case JArray(ls) => {
         val innerContexts: ValidationNel[String, List[(String, JValue)]] = innerParseContexts(ls, Nil).sequenceU
 
         // Group contexts with the same schema together
         innerContexts.map(_.groupBy(_._1).map(pair => (pair._1, pair._2.map(_._2))))
       }
-      case _ => "Could not extract contexts data field as an array".failNel
+      case _ => "Could not extract contexts data field as an array".failureNel
     }
 
   }
@@ -212,12 +212,12 @@ object Shredder {
     val data = json \ "data"
     val schema = data \ "schema"
     val innerData = data \ "data" match {
-      case JNothing => "Could not extract inner data field from unstructured event".failNel // TODO: decide whether to enforce object type of data
-      case d => (fixInnerData(d)).successNel
+      case JNothing => "Could not extract inner data field from unstructured event".failureNel // TODO: decide whether to enforce object type of data
+      case d => (fixInnerData(d)).successNel[String]
     }
     val fixedSchema = schema match {
       case JString(s) => fixSchema("unstruct_event", s)
-      case _ => "Unstructured event JSON did not contain a stringly typed schema field".failNel
+      case _ => "Unstructured event JSON did not contain a stringly typed schema field".failureNel
     }
 
     (fixedSchema |@| innerData) {_ -> _}

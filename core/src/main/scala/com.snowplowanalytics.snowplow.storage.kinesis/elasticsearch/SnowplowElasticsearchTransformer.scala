@@ -217,7 +217,7 @@ object SnowplowElasticsearchTransformer {
     value match {
       case "1" => JObject(key -> JBool(true)).successNel
       case "0" => JObject(key -> JBool(false)).successNel
-      case _   => "Value [%s] is not valid for field [%s]: expected 0 or 1".format(value, key).failNel
+      case _   => "Value [%s] is not valid for field [%s]: expected 0 or 1".format(value, key).failureNel
     }
 
 }
@@ -250,7 +250,7 @@ class SnowplowElasticsearchTransformer(documentIndex: String, documentType: Stri
         fieldConversionFunction(safeFieldName, fieldValue)
       } catch {
         case e @ (_ : IllegalArgumentException | _: JsonParseException) =>
-          "Value [%s] is not valid for field [%s]: %s".format(fieldValue, safeFieldName, e.getMessage).failNel
+          "Value [%s] is not valid for field [%s]: %s".format(fieldValue, safeFieldName, e.getMessage).failureNel
       }
 
     }
@@ -270,7 +270,7 @@ class SnowplowElasticsearchTransformer(documentIndex: String, documentType: Stri
     }
 
     if (event.size <= SnowplowElasticsearchTransformer.GeopointIndexes.latitude.max(SnowplowElasticsearchTransformer.GeopointIndexes.longitude)) {
-      s"Event contained only ${event.size} tab-separated fields".failNel
+      s"Event contained only ${event.size} tab-separated fields".failureNel
     } else {
 
       val geoLocation: JObject = {
