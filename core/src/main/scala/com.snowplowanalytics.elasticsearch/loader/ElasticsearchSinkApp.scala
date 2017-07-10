@@ -95,8 +95,6 @@ trait ElasticsearchSinkApp {
   val esClient = elasticsearch.getConfig("client")
   val esCluster = elasticsearch.getConfig("cluster")
   val clientType = esClient.getString("type")
-  val connTimeout: Int = configGetOrElse(esClient, "http.conn-timeout", "300000").toInt
-  val readTimeout: Int = configGetOrElse(esClient, "http.read-timeout", "300000").toInt
   val documentIndex = esCluster.getString("index")
   val documentType = esCluster.getString("type")
 

@@ -28,15 +28,17 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.specs2
 )
 
+lazy val allSettings = BuildSettings.buildSettings ++
+  BuildSettings.sbtAssmelbySettings ++
+  Seq(libraryDependencies ++= commonDepepdencies)
+
 lazy val root = project.in(file("."))
   .settings(
     name        := "snowplow-elasticsearch-loader",
     version     := "0.8.0",
     description := "Load the contents of a Kinesis stream to Elasticsearch"
   )
-  .settings(BuildSettings.buildSettings)
-  .settings(BuildSettings.sbtAssemblySettings)
-  .settings(libraryDependencies ++= commonDependencies)
+  .settings(allSettings)
   .aggregate(core, http, tcp)
 
 lazy val core = project
@@ -46,17 +48,13 @@ lazy val core = project
 
 lazy val http = project
   .settings(moduleName := "snowplow-elasticsearch-loader-http")
-  .settings(BuildSettings.buildSettings)
-  .settings(BuildSettings.sbtAssemblySettings)
-  .settings(libraryDependencies ++= commonDependencies)
+  .settings(allSettings)
   .settings(libraryDependencies += Dependencies.Libraries.elastic4sHttp)
   .dependsOn(core)
 
 lazy val tcp = project
   .settings(moduleName := "snowplow-elasticsearch-loader-tcp")
-  .settings(BuildSettings.buildSettings)
-  .settings(BuildSettings.sbtAssemblySettings)
-  .settings(libraryDependencies ++= commonDependencies)
+  .settings(allSettings)
   .settings(libraryDependencies += Dependencies.Libraries.elastic4sTcp)
   .dependsOn(core)
 
