@@ -301,7 +301,7 @@ class SnowplowElasticsearchTransformer(documentIndex: String, documentType: Stri
     val recordString = new String(record.getData.array, UTF_8)
 
     // The -1 is necessary to prevent trailing empty strings from being discarded
-    (recordString, jsonifyGoodEvent(recordString.split("\t", -1)).leftMap(_.toList))
+    (recordString, jsonifyGoodEvent(recordString.split("\t", -1)).leftMap(identity))
   }
 
   /**
@@ -337,6 +337,6 @@ class SnowplowElasticsearchTransformer(documentIndex: String, documentType: Stri
    * @return Line as an EmitterInput
    */
   def consumeLine(line: String): EmitterInput =
-    fromClass(line -> jsonifyGoodEvent(line.split("\t", -1)).leftMap(_.list))
+    fromClass(line -> jsonifyGoodEvent(line.split("\t", -1)).leftMap(identity))
 
 }

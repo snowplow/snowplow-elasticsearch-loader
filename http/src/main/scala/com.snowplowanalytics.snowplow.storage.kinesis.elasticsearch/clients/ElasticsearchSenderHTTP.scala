@@ -22,6 +22,7 @@ import scala.util.{Success => SSuccess, Failure => SFailure}
 
 // Amazon
 import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
+import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
 
 // elastic4s
 import com.sksamuel.elastic4s.ElasticsearchClientUri
@@ -122,7 +123,7 @@ class ElasticsearchSenderHTTP(
       if (e.reason.contains("DocumentAlreadyExistsException") || e.reason.contains("VersionConflictEngineException"))
         None
       else 
-        Some(record._1 -> List(s"Elasticsearch rejected record with message ${e.reason}").fail)
+        Some(record._1 -> s"Elasticsearch rejected record with message ${e.reason}".failureNel[ElasticsearchObject])
     }.getOrElse(None)
   }
 

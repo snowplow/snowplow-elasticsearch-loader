@@ -45,6 +45,7 @@ import org.specs2.mutable.Specification
 
 // This project
 import sinks._
+import clients.ElasticsearchSender
 
 /**
  * Tests Shredder
@@ -54,8 +55,14 @@ class SnowplowElasticsearchEmitterSpec extends Specification {
   "The emitter method" should {
     "return all invalid records" in {
 
+      val fakeSender = new ElasticsearchSender {
+        override def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput] = records
+        override def close(): Unit = ()
+      }
+
       val kcc = new KinesisConnectorConfiguration(new Properties, new DefaultAWSCredentialsProviderChain)
-      val eem = new SnowplowElasticsearchEmitter(kcc, Some(new StdouterrSink), new StdouterrSink)
+      val eem = new SnowplowElasticsearchEmitter(kcc, Some(new StdouterrSink), new StdouterrSink,
+        fakeSender)
 
       val validInput: EmitterInput = "good" -> new ElasticsearchObject("index", "type", "{}").success
       val invalidInput: EmitterInput = "bad" -> List("malformed event").fail

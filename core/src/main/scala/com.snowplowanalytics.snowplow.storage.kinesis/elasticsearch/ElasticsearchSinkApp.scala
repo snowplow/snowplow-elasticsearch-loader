@@ -46,9 +46,6 @@ import com.snowplowanalytics.snowplow.scalatracker.Tracker
 import com.snowplowanalytics.snowplow.scalatracker.SelfDescribingJson
 import com.snowplowanalytics.snowplow.scalatracker.emitters.AsyncEmitter
 
-// Common Enrich
-import com.snowplowanalytics.snowplow.enrich.common.outputs.BadRow
-
 // This project
 import sinks._
 import clients._
@@ -63,7 +60,10 @@ object StreamType extends Enumeration {
 /**
  * Main entry point for the Elasticsearch sink
  */
-object ElasticsearchSinkApp extends App {
+trait ElasticsearchSinkApp {
+  val arguments: Array[String]
+  val elasticsearchSender: ElasticsearchSender
+
   case class FileConfig(config: File = new File("."))
   val parser = new scopt.OptionParser[FileConfig](generated.Settings.name) {
     head(generated.Settings.name, generated.Settings.version)
@@ -75,7 +75,7 @@ object ElasticsearchSinkApp extends App {
       )
   }
 
-  val conf = parser.parse(args, FileConfig()) match {
+  val conf = parser.parse(arguments, FileConfig()) match {
     case Some(c) => ConfigFactory.parseFile(c.config).resolve()
     case None    => ConfigFactory.empty()
   }
@@ -132,9 +132,8 @@ object ElasticsearchSinkApp extends App {
   val executor = conf.getString("source") match {
 
     // Read records from Kinesis
-    case "kinesis" => {
-      new ElasticsearchSinkExecutor(streamType, documentIndex, documentType, finalConfig, goodSink, badSink, tracker, maxConnectionTime, clientType, connTimeout, readTimeout).success
-    }
+    case "kinesis" =>
+      new ElasticsearchSinkExecutor(streamType, documentIndex, documentType, finalConfig, goodSink, badSink, elasticsearchSender, tracker).success
 
     // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
     // TODO reduce code duplication
@@ -144,18 +143,10 @@ object ElasticsearchSinkApp extends App {
         case StreamType.Bad => new BadEventTransformer(documentIndex, documentType)
       }
 
-      lazy val elasticsearchSender: ElasticsearchSender = (
-        if (clientType == "http") {
-          new ElasticsearchSenderHTTP(finalConfig, None, maxConnectionTime, connTimeout, readTimeout)
-        } else {
-          new ElasticsearchSenderTransport(finalConfig, None, maxConnectionTime)
-        }
-      )
-
       def run = for (ln <- scala.io.Source.stdin.getLines) {
         val emitterInput = transformer.consumeLine(ln)
         emitterInput._2.bimap(
-          f => badSink.store(FailureUtils.getBadRow(emitterInput._1, f), None, false),
+          f => badSink.store(BadRow(emitterInput._1, f).toCompactJson, None, false),
           s => goodSink match {
             case Some(gs) => gs.store(s.getSource, None, true)
             case None => elasticsearchSender.sendToElasticsearch(List(ln -> s.success))
@@ -164,7 +155,7 @@ object ElasticsearchSinkApp extends App {
       }
     }.success
 
-    case _ => "Source must be set to 'stdin' or 'kinesis'".fail
+    case _ => "Source must be set to 'stdin' or 'kinesis'".failure
   }
 
   executor.fold(

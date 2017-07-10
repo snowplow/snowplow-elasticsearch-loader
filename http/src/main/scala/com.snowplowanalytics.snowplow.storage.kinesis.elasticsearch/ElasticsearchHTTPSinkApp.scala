@@ -19,23 +19,15 @@
 
 package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch
 
-// Scalaz
-import scalaz._
-import Scalaz._
+import clients.{ElasticsearchSender, ElasticsearchSenderHTTP}
 
-// Common Enrich
-import com.snowplowanalytics.snowplow.enrich.common.outputs.BadRow
+/**
+ * Main entry point for the Elasticsearch HTTP sink
+ */
+object ElasticsearchHTTPSinkApp extends App with ElasticsearchSinkApp {
+  override val arguments = args
 
-object FailureUtils {
+  override lazy val elasticsearchSender: ElasticsearchSender =
+    new ElasticsearchSenderHTTP(finalConfig, None, maxConnectionTime)
 
-  /**
-   * Due to serialization issues we use List instead of NonEmptyList
-   * so we need this method to convert the errors back to a NonEmptyList
-   *
-   * @param line
-   * @param errors
-   * @return Compact bad row JSON string
-   */
-  def getBadRow(line: String, errors: List[String]): String =
-    BadRow(line, NonEmptyList(errors.head, errors.tail: _*)).toCompactJson
 }

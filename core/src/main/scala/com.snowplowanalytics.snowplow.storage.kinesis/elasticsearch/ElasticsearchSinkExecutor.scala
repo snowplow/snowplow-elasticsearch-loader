@@ -32,6 +32,7 @@ import com.amazonaws.services.kinesis.connectors.{
 import scalatracker.Tracker
 
 // This project
+import clients.ElasticsearchSender
 import sinks._
 import StreamType._
 
@@ -56,16 +57,13 @@ class ElasticsearchSinkExecutor(
   config: KinesisConnectorConfiguration,
   goodSink: Option[ISink],
   badSink: ISink,
-  tracker: Option[Tracker] = None,
-  maxConnectionTimeout: Long = 60000,
-  elasticsearchClientType: String,
-  connTimeout: Int,
-  readTimeout: Int
+  elasticsearchSender: ElasticsearchSender,
+  tracker: Option[Tracker] = None
 ) extends KinesisConnectorExecutorBase[ValidatedRecord, EmitterInput] {
 
   initialize(config)
   override def getKinesisConnectorRecordProcessorFactory = {
     new KinesisConnectorRecordProcessorFactory[ValidatedRecord, EmitterInput](
-      new ElasticsearchPipeline(streamType, documentIndex, documentType, goodSink, badSink, tracker, maxConnectionTimeout, elasticsearchClientType, connTimeout, readTimeout), config)
+      new ElasticsearchPipeline(streamType, documentIndex, documentType, goodSink, badSink, elasticsearchSender, tracker), config)
   }
 }

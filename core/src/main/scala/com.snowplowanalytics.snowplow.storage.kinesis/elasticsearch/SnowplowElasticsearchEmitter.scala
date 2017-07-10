@@ -57,9 +57,6 @@ import org.json4s.JsonDSL._
 import scalatracker.Tracker
 import scalatracker.SelfDescribingJson
 
-// Common Enrich
-import com.snowplowanalytics.snowplow.enrich.common.outputs.BadRow
-
 // This project
 import sinks._
 import clients._
@@ -71,29 +68,16 @@ import generated._
  * @param configuration the KCL configuration
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
+ * @param elasticsearchSender ES Client to use
  * @param tracker a Tracker instance
- * @param maxConnectionWaitTimeMs the maximum amount of time
- *        we can attempt to send to elasticsearch
- * @param elasticsearchClientType The type of ES Client to use
  */
 class SnowplowElasticsearchEmitter(
   configuration: KinesisConnectorConfiguration,
   goodSink: Option[ISink],
   badSink: ISink,
-  tracker: Option[Tracker] = None,
-  maxConnectionWaitTimeMs: Long = 60000,
-  elasticsearchClientType: String = "transport",
-  connTimeout: Int = 300000,
-  readTimeout: Int = 300000
+  elasticsearchSender: ElasticsearchSender,
+  tracker: Option[Tracker] = None
 ) extends IEmitter[EmitterInput] {
-
-  private val newInstance: ElasticsearchSender = (
-    if (elasticsearchClientType == "http") {
-      new ElasticsearchSenderHTTP(configuration, tracker, maxConnectionWaitTimeMs, connTimeout, readTimeout)
-    } else {
-      new ElasticsearchSenderTransport(configuration, tracker, maxConnectionWaitTimeMs)
-    }
-  )
 
   // An ISO valid timestamp formatter
   private val TstampFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(DateTimeZone.UTC)
@@ -144,7 +128,7 @@ class SnowplowElasticsearchEmitter(
     val failures = for {
       recordSlice <- splitBuffer(configuration, records)
     } yield {
-      newInstance.sendToElasticsearch(recordSlice)
+      elasticsearchSender.sendToElasticsearch(recordSlice)
     }
     failures.flatten
   }
@@ -218,19 +202,18 @@ class SnowplowElasticsearchEmitter(
    *
    * @param records List of failed records
    */
-  override def fail(records: JList[EmitterInput]): Unit = {
-    records foreach {
-      record => {
-        val output = FailureUtils.getBadRow(record._1, record._2.swap.getOrElse(Nil))
+  override def fail(records: JList[EmitterInput]): Unit =
+    records.foreach { _ match {
+      case (r, Failure(fs)) =>
+        val output = BadRow(r, fs).toCompactJson
         badSink.store(output, None, false)
-      }
-    }
-  }
+      case (_, Success(_)) => ()
+    }}
 
   /**
    * Closes the Elasticsearch client when the KinesisConnectorRecordProcessor is shut down
    */
-  override def shutdown(): Unit = newInstance.close
+  override def shutdown(): Unit = elasticsearchSender.close
 
   /**
    * Returns an ISO valid timestamp
