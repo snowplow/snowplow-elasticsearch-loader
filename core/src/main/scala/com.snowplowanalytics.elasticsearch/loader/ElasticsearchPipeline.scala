@@ -17,20 +17,12 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow
-package storage.kinesis.elasticsearch
+package com.snowplowanalytics
+package elasticsearch.loader
 
 // AWS Kinesis Connector libs
-import com.amazonaws.services.kinesis.connectors.elasticsearch.{
-  ElasticsearchObject,
-  ElasticsearchEmitter,
-  ElasticsearchTransformer
-}
 import com.amazonaws.services.kinesis.connectors.interfaces.{
   IEmitter,
-  IBuffer,
-  ITransformer,
-  IFilter,
   IKinesisConnectorPipeline
 }
 import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
@@ -41,7 +33,7 @@ import sinks._
 import StreamType._
 
 // Tracker
-import scalatracker.Tracker
+import snowplow.scalatracker.Tracker
 
 // This project
 import clients.ElasticsearchSender

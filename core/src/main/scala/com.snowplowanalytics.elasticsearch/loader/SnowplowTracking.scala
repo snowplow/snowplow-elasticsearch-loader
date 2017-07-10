@@ -17,11 +17,10 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch
+package com.snowplowanalytics.elasticsearch.loader
 
 // json4s
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
 import org.json4s.JsonDSL._
 
 // Config

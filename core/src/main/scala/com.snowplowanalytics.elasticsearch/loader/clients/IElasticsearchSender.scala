@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2017 Snowplow Analytics Ltd.
+ * Copyright (c) 2014-2016 Snowplow Analytics Ltd.
  * All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
@@ -17,19 +17,13 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch
-package sinks
+package com.snowplowanalytics.elasticsearch.loader
+package clients
 
 /**
- * Shared interface for all sinks
+ * Common interface for Elasticsearch clients
  */
-trait ISink {
-  def store(output: String, key: Option[String], good: Boolean): Unit
-}
-
-/**
- * Sink which ignores all input
- */
-class NullSink extends ISink {
-  def store(output: String, key: Option[String], good: Boolean): Unit = ()
+trait IElasticsearchSender {
+  def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput]
+  def close(): Unit
 }
