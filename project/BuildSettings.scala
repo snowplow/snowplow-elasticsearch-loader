@@ -18,9 +18,6 @@ import scala.io.Source
 
 object BuildSettings {
 
-  // Defines the ES Version to build for
-  val ElasticsearchVersion = sys.env("ELASTICSEARCH_VERSION")
-
   // Basic settings for our app
   lazy val basicSettings = Seq(
     organization  := "com.snowplowanalytics",
@@ -64,23 +61,7 @@ object BuildSettings {
         |}
         |""".stripMargin.format(organization.value, version.value, name.value))
 
-      // Dynamically load ElasticsearchClients
-      val genDir = new java.io.File("").getAbsolutePath +
-        "/src-compat/main/scala/com.snowplowanalytics.snowplow.storage.kinesis/elasticsearch/generated/"
-
-      val esTransportClientFile = dir / "ElasticsearchSenderTransport.scala"
-      val esTransportClientLines = (if (ElasticsearchVersion.equals("1x")) {
-        Source.fromFile(genDir + "ElasticsearchSenderTransport_1x.scala")
-      } else {
-        Source.fromFile(genDir + "ElasticsearchSenderTransport_2x.scala")
-      })
-      IO.write(esTransportClientFile, esTransportClientLines.mkString)
-
-      Seq(
-        file,
-        esHttpClientFile,
-        esTransportClientFile
-      )
+      Seq(file)
     }.taskValue
   )
 
@@ -95,7 +76,7 @@ object BuildSettings {
         Seq("#!/usr/bin/env sh", """exec java -jar "$0" "$@"""" + "\n")
       )),
     // Name it as an executable
-    assemblyJarName in assembly := { s"${name.value}-${version.value}-${ElasticsearchVersion}" },
+    assemblyJarName in assembly := { s"${name.value}-${version.value}" },
     // Merge duplicate class in JodaTime and Elasticsearch 2.4
     assemblyMergeStrategy in assembly := {
       case PathList("org", "joda", "time", "base", "BaseDateTime.class") => MergeStrategy.first

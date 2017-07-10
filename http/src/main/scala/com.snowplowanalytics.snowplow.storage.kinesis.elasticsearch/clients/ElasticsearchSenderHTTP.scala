@@ -77,7 +77,7 @@ class ElasticsearchSenderHTTP(
         bulkResponse.items.zip(records)
           .map { case (bulkResponseItem, record) => handleResponse(bulkResponseItem, record) }
           .flatten
-      }.attempt.run match {
+      }.unsafePerformSyncAttempt match {
         case \/-(s) => s.toList
         case -\/(f) =>
           // if the request failed more than it should have we force shutdown

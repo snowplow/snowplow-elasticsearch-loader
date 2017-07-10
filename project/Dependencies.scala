@@ -17,56 +17,38 @@ object Dependencies {
 
   object V {
     // Java
-    val config               = "1.3.1"
-    val slf4j                = "1.7.5"
-    val kinesisClient        = "1.7.5"
-    val kinesisConnector     = "1.3.0"
-
-    object elasticsearch {
-      val _1x                = "1.7.5"
-      val _2x                = "2.4.0"
-    }
+    val config           = "1.3.1"
+    val slf4j            = "1.7.5"
+    val kinesisClient    = "1.7.5"
+    val kinesisConnector = "1.3.0"
+    val validator        = "2.2.6"
 
     // Scala
-    val scopt                = "3.6.0"
-    val snowplowCommonEnrich = "0.25.0"
-    val scalaz7              = "7.2.14"
-    val snowplowTracker      = "0.3.0"
-    val elastic4s            = "5.4.6"
+    val scopt            = "3.6.0"
+    val scalaz7          = "7.2.14"
+    val snowplowTracker  = "0.3.0"
+    val elastic4s        = "5.4.6"
     // Scala (test only)
-    val specs2               = "3.9.2"
+    val specs2           = "3.9.2"
   }
 
   object Libraries {
     // Java
-    val config               = "com.typesafe"           %  "config"                    % V.config
-    val slf4j                = "org.slf4j"              %  "slf4j-simple"              % V.slf4j
-    val log4jOverSlf4j       = "org.slf4j"              %  "log4j-over-slf4j"          % V.slf4j
-    val kinesisClient        = "com.amazonaws"          %  "amazon-kinesis-client"     % V.kinesisClient
-    val kinesisConnector     = "com.amazonaws"          %  "amazon-kinesis-connectors" % V.kinesisConnector
-
-    object elasticsearch {
-      val _1x                = "org.elasticsearch"      %  "elasticsearch"             % V.elasticsearch._1x
-      val _2x                = "org.elasticsearch"      %  "elasticsearch"             % V.elasticsearch._2x
-    }
-    val transportClient      = "org.elasticsearch.client" % "transport" % "5.4.3"
+    val config           = "com.typesafe"           %  "config"                    % V.config
+    val slf4j            = "org.slf4j"              %  "slf4j-simple"              % V.slf4j
+    val log4jOverSlf4j   = "org.slf4j"              %  "log4j-over-slf4j"          % V.slf4j
+    val kinesisClient    = "com.amazonaws"          %  "amazon-kinesis-client"     % V.kinesisClient
+    val kinesisConnector = "com.amazonaws"          %  "amazon-kinesis-connectors" % V.kinesisConnector
+    val validator        = "com.github.fge"         %  "json-schema-validator"     % V.validator
 
     // Scala
-    val scopt                = "com.github.scopt"       %% "scopt"                     % V.scopt
-    val scalaz7              = "org.scalaz"             %% "scalaz-core"               % V.scalaz7
-    val scalazC7              = "org.scalaz"            %% "scalaz-concurrent"         % V.scalaz7
-    val snowplowTracker      = "com.snowplowanalytics"  %% "snowplow-scala-tracker"    % V.snowplowTracker
-    val snowplowCommonEnrich = "com.snowplowanalytics"  %% "snowplow-common-enrich"    % V.snowplowCommonEnrich
-    val elastic4s            = "com.sksamuel.elastic4s" %% "elastic4s-http"            % V.elastic4s
+    val scopt            = "com.github.scopt"       %% "scopt"                     % V.scopt
+    val scalaz7          = "org.scalaz"             %% "scalaz-core"               % V.scalaz7
+    val scalazC7          = "org.scalaz"            %% "scalaz-concurrent"         % V.scalaz7
+    val snowplowTracker  = "com.snowplowanalytics"  %% "snowplow-scala-tracker"    % V.snowplowTracker
+    val elastic4sHttp    = "com.sksamuel.elastic4s" %% "elastic4s-http"            % V.elastic4s
+    val elastic4sTcp     = "com.sksamuel.elastic4s" %% "elastic4s-tcp"             % V.elastic4s
     // Scala (test only)
-    val specs2               = "org.specs2"             %% "specs2-core"               % V.specs2 % "test"
-  }
-
-  def onVersion[A](all: Seq[A] = Seq(), on1x: => Seq[A] = Seq(), on2x: => Seq[A] = Seq()) = {
-    if (BuildSettings.ElasticsearchVersion.equals("1x")) {
-      all ++ on1x
-    } else {
-      all ++ on2x
-    }
+    val specs2           = "org.specs2"             %% "specs2-core"               % V.specs2 % "test"
   }
 }
