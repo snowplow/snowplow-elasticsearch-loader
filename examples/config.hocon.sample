@@ -17,8 +17,8 @@
 sink {
 
   # Sources currently supported are:
-  # 'kinesis' for reading records from a Kinesis stream
-  # 'stdin' for reading unencoded tab-separated events from stdin
+  # "kinesis" for reading records from a Kinesis stream
+  # "stdin" for reading unencoded tab-separated events from stdin
   # If set to "stdin", JSON documents will not be sent to Elasticsearch
   # but will be written to stdout.
   source = {{sinkElasticsearchInputType}}
@@ -26,44 +26,43 @@ sink {
   # Where to write good and bad records
   sink {
     # Sinks currently supported are:
-    # 'elasticsearch' for writing good records to Elasticsearch
-    # 'stdout' for writing good records to stdout
-    "good": {{sinkElasticsearchGoodOutputDestination}}
+    # "elasticsearch" for writing good records to Elasticsearch
+    # "stdout" for writing good records to stdout
+    good: {{sinkElasticsearchGoodOutputDestination}}
 
     # Sinks currently supported are:
-    # 'kinesis' for writing bad records to Kinesis
-    # 'stderr' for writing bad records to stderr
-    # 'none' for ignoring bad records
-    "bad": {{sinkElasticsearchBadOutputDestination}}
+    # "kinesis" for writing bad records to Kinesis
+    # "stderr" for writing bad records to stderr
+    # "none" for ignoring bad records
+    bad: {{sinkElasticsearchBadOutputDestination}}
   }
 
   # "good" for a stream of successfully enriched events
   # "bad" for a stream of bad events
-  stream-type: "{{sinkKinesisInStreamType}}"
+  stream-type: {{sinkKinesisInStreamType}}
 
   # The following are used to authenticate for the Amazon Kinesis sink.
   #
-  # If both are set to 'default', the default provider chain is used
+  # If both are set to "default", the default provider chain is used
   # (see http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html)
   #
-  # If both are set to 'iam', use AWS IAM Roles to provision credentials.
+  # If both are set to "iam", use AWS IAM Roles to provision credentials.
   #
-  # If both are set to 'env', use environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+  # If both are set to "env", use environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
   aws {
-    access-key: "iam"
-    secret-key: "iam"
+    access-key: iam
+    secret-key: iam
   }
 
   kinesis {
 
     in {
-      stream-name: "{{sinkKinesisInStreamName}}" # Kinesis stream name
+      stream-name: {{sinkKinesisInStreamName}} # Kinesis stream name
 
-      # LATEST: most recent data.
-      # TRIM_HORIZON: oldest available data.
-      # Note: This only affects the first run of this application
-      # on a stream.
-      initial-position: "TRIM_HORIZON"
+      # "LATEST": most recent data.
+      # "TRIM_HORIZON": oldest available data.
+      # Note: This only affects the first run of this application on a stream.
+      initial-position: TRIM_HORIZON
 
       # Maximum number of records to get from Kinesis per call to GetRecords
       maxRecords: 10000
@@ -71,43 +70,40 @@ sink {
 
     out {
       # Stream for enriched events which are rejected by Elasticsearch
-      stream-name: "{{sinkKinesisOutStreamName}}"
+      stream-name: {{sinkKinesisOutStreamName}}
       shards: 1
     }
 
-    region: "{{sinkElasticsearchRegion}}"
+    # Region where the Kinesis stream is located
+    region: {{sinkElasticsearchRegion}}
 
     # "app-name" is used for a DynamoDB table to maintain stream state.
-    # You can set it automatically using: "SnowplowElasticsearchSink-$\\{connector.kinesis.in.stream-name\\}"
-    app-name: "{{sinkKinesisAppName}}"
+    # You can set it automatically using: "SnowplowElasticsearchSink-${sink.kinesis.in.stream-name}"
+    app-name: {{sinkKinesisAppName}}
   }
 
   elasticsearch {
 
     # Events are indexed using an Elasticsearch Client
-    # - type: http or transport (will default to transport)
+    # - type: "http" or "transport" (will default to transport)
     # - endpoint: the cluster endpoint
     # - port: the port the cluster can be accessed on
     #   - for http this is usually 9200
     #   - for transport this is usually 9300
     # - max-timeout: the maximum attempt time before a client restart
     client {
-      type: "{{sinkElasticseachClient}}"
-      endpoint: "{{sinkElasticsearchEndpoint}}"
+      type: {{sinkElasticseachClient}}
+      endpoint: {{sinkElasticsearchEndpoint}}
       port: {{sinkElasticsearchTransportPort}}
-      max-timeout: "{{sinkElasticsearchMaxTimeout}}"
-
-      # Section for configuring the HTTP client
-      http {
-        conn-timeout: "{{sinkElasticsearchClientHttpConnTimeout}}"
-        read-timeout: "{{sinkElasticsearchClientHttpReadTimeout}}"
-      }
+      max-timeout: {{sinkElasticsearchMaxTimeout}}
     }
 
+    # index: the Elasticsearch index name
+    # type: the Elasticsearch index type
     cluster {
-      name: "{{sinkElasticsearchClusterName}}"
-      index: "{{sinkElasticsearchIndex}}"
-      type: "{{sinkElasticsearchType}}"
+      name: {{sinkElasticsearchClusterName}}
+      index: {{sinkElasticsearchIndex}}
+      type: {{sinkElasticsearchType}}
     }
   }
 
@@ -127,8 +123,8 @@ sink {
     snowplow {
       collector-uri: "{{collectorUri}}"
       collector-port: 80
-      app-id: "{{sinkKinesisAppName}}"
-      method: "GET"
+      app-id: {{sinkKinesisAppName}}
+      method: GET
     }
   }
 }
