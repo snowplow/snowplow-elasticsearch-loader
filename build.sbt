@@ -30,9 +30,9 @@ lazy val commonDependencies = Seq(
 
 lazy val root = project.in(file("."))
   .settings(
-    name        := "snowplow-elasticsearch-sink",
+    name        := "snowplow-elasticsearch-loader",
     version     := "0.8.0",
-    description := "Kinesis sink for Elasticsearch"
+    description := "Load the contents of a Kinesis stream to Elasticsearch"
   )
   .settings(BuildSettings.buildSettings)
   .settings(BuildSettings.sbtAssemblySettings)
@@ -60,4 +60,4 @@ lazy val tcp = project
   .settings(libraryDependencies += Dependencies.Libraries.elastic4sTcp)
   .dependsOn(core)
 
-shellPrompt := { _ => "elasticsearch-sink> " }
+shellPrompt := { _ => "elasticsearch-loader> " }

@@ -17,8 +17,8 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow
-package storage.kinesis.elasticsearch
+package com.snowplowanalytics
+package elasticsearch.loader
 
 // Amazon
 import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
@@ -54,8 +54,7 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.JsonDSL._
 
 // Tracker
-import scalatracker.Tracker
-import scalatracker.SelfDescribingJson
+import snowplow.scalatracker.{SelfDescribingJson, Tracker}
 
 // This project
 import sinks._

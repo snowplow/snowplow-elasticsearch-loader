@@ -17,7 +17,7 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow.storage.kinesis
+package com.snowplowanalytics.elasticsearch
 
 // Amazon
 import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
@@ -29,7 +29,7 @@ import Scalaz._
 // json4s
 import org.json4s._
 
-package object elasticsearch {
+package object loader {
 
   /**
    * The original tab separated enriched event together with
