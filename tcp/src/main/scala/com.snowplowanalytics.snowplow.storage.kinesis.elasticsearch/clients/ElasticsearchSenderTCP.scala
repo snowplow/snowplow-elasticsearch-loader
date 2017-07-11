@@ -16,13 +16,16 @@ package clients
 
 // Scala
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Failure => SFailure, Success => SSuccess}
+import scala.util.{Success => SSuccess, Failure => SFailure}
+
+// Amazon
+import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
 
 // elastic4s
-import com.sksamuel.elastic4s.ElasticsearchClientUri
-import com.sksamuel.elastic4s.http.HttpClient
-import com.sksamuel.elastic4s.http.ElasticDsl._
-import com.sksamuel.elastic4s.http.bulk.{BulkResponse, BulkResponseItem}
+import com.sksamuel.elastic4s.{ElasticsearchClientUri, TcpClient}
+import com.sksamuel.elastic4s.ElasticDsl._
+import com.sksamuel.elastic4s.bulk.{RichBulkItemResponse, RichBulkResponse}
+import org.elasticsearch.cluster.health.ClusterHealthStatus
 
 // Scalaz
 import scalaz._
@@ -35,7 +38,8 @@ import org.slf4j.LoggerFactory
 // Tracker
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
 
-class ElasticsearchSenderHTTP(
+class ElasticsearchSenderTCP(
+  clusterName: String,
   endpoint: String,
   port: Int,
   override val tracker: Option[Tracker] = None,
@@ -47,7 +51,8 @@ class ElasticsearchSenderHTTP(
 
   override val log = LoggerFactory.getLogger(getClass)
 
-  private val client = HttpClient(ElasticsearchClientUri(endpoint, port))
+  private val uri = s"elasticsearch://$endpoint:$port?cluster.name=$clusterName"
+  private val client = TcpClient.transport(ElasticsearchClientUri(uri))
 
   implicit val strategy = Strategy.DefaultExecutorService
 
@@ -68,7 +73,7 @@ class ElasticsearchSenderHTTP(
         .map { bulkResponse =>
           bulkResponse.items.zip(records)
             .map { case (bulkResponseItem, record) =>
-              handleResponse(bulkResponseItem.error.map(_.reason), record)
+              handleResponse(bulkResponseItem.failureMessageOpt, record)
             }.flatten
         }.attempt.unsafePerformSync match {
           case \/-(s) => s.toList
@@ -93,10 +98,10 @@ class ElasticsearchSenderHTTP(
   /** Logs the cluster health */
   override def logClusterHealth(): Unit =
     client.execute(clusterHealth) onComplete {
-      case SSuccess(health) => health.status match {
-        case "green"  => log.info("Cluster health is green")
-        case "yellow" => log.warn("Cluster health is yellow")
-        case "red"    => log.error("Cluster health is red")
+      case SSuccess(response) => response.getStatus match {
+        case ClusterHealthStatus.GREEN  => log.info("Cluster health is green")
+        case ClusterHealthStatus.YELLOW => log.warn("Cluster health is yellow")
+        case ClusterHealthStatus.RED    => log.error("Cluster health is red")
       }
       case SFailure(e) => log.error("Couldn't retrieve cluster health", e)
     }

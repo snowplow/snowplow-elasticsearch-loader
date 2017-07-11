@@ -19,15 +19,13 @@
 
 package com.snowplowanalytics.elasticsearch.loader
 
-import clients.{ElasticsearchSender, ElasticsearchSenderHTTP}
+import clients.{ElasticsearchSender, ElasticsearchSenderTCP}
 
-/** Main entry point for the Elasticsearch HTTP sink */
-object ElasticsearchHTTPSinkApp extends App with ElasticsearchSinkApp {
+/** Main entry point for the Elasticsearch TCP sink */
+object ElasticsearchTCPSinkApp extends App with ElasticsearchSinkApp {
   override val arguments = args
 
   override lazy val elasticsearchSender: ElasticsearchSender =
-    new ElasticsearchSenderHTTP(
-      finalConfig.ELASTICSEARCH_ENDPOINT,
-      finalConfig.ELASTICSEARCH_PORT,
-      tracker, maxConnectionTime)
+    new ElasticsearchSenderTCP(finalConfig, tracker, maxConnectionTime)
+
 }

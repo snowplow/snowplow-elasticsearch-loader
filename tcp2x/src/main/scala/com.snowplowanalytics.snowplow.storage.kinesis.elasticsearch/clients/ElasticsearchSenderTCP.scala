@@ -17,77 +17,46 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow.storage.kinesis.elasticsearch
-package generated
+package com.snowplowanalytics.elasticsearch.loader
+package clients
 
 // Amazon
 import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
-import com.amazonaws.services.kinesis.connectors.elasticsearch.{
-  ElasticsearchEmitter,
-  ElasticsearchObject
-}
-import com.amazonaws.services.kinesis.connectors.interfaces.IEmitter
+import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
 
 // Elasticsearch
 import org.elasticsearch.cluster.health.ClusterHealthStatus
-import org.elasticsearch.action.admin.cluster.health.{
-  ClusterHealthRequestBuilder,
-  ClusterHealthResponse
-}
-import org.elasticsearch.action.bulk.{
-  BulkItemResponse,
-  BulkRequestBuilder,
-  BulkResponse
-}
 import org.elasticsearch.action.bulk.BulkItemResponse.Failure
 import org.elasticsearch.action.index.IndexRequestBuilder
-import org.elasticsearch.transport.client.PreBuiltTransportClient
-import org.elasticsearch.client.transport.NoNodeAvailableException
-import org.elasticsearch.common.settings.{Settings => ESSettings}
+import org.elasticsearch.client.transport.{NoNodeAvailableException, TransportClient}
+import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
 
-import com.amazonaws.services.kinesis.connectors.{
-  KinesisConnectorConfiguration,
-  UnmodifiableBuffer
-}
-
-// Joda-Time
-import org.joda.time.{DateTime, DateTimeZone}
-import org.joda.time.format.DateTimeFormat
+import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
 
 // Scala
-import scala.collection.JavaConversions._
 import scala.annotation.tailrec
 
 // Scalaz
 import scalaz._
 import Scalaz._
 
-// json4s
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
-import org.json4s.JsonDSL._
-
 // SLF4j
 import org.slf4j.LoggerFactory
+
+// Java
+import java.net.InetAddress
 
 // Tracker
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
 
-// This project
-import sinks._
-import clients._
-
-class ElasticsearchSenderTransport(
+class ElasticsearchSenderTCP(
   configuration: KinesisConnectorConfiguration,
-  tracker: Option[Tracker] = None,
+  override val tracker: Option[Tracker] = None,
   maxConnectionWaitTimeMs: Long = 60000
 ) extends ElasticsearchSender {
 
   private val log = LoggerFactory.getLogger(getClass)
-
-  // An ISO valid timestamp formatter
-  private val TstampFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(DateTimeZone.UTC)
 
   /**
    * The settings key for the cluster name.
@@ -126,7 +95,7 @@ class ElasticsearchSenderTransport(
    */
   private val ElasticsearchClientTransportNodesSamplerIntervalKey = "client.transport.nodes_sampler_interval"
 
-  private val settings = ESSettings.builder()
+  private val settings = Settings.settingsBuilder
     .put(ElasticsearchClusterNameKey,                         configuration.ELASTICSEARCH_CLUSTER_NAME)
     .put(ElasticsearchClientTransportSniffKey,                configuration.ELASTICSEARCH_TRANSPORT_SNIFF)
     .put(ElasticsearchClientTransportIgnoreClusterNameKey,    configuration.ELASTICSEARCH_IGNORE_CLUSTER_NAME)
@@ -137,7 +106,7 @@ class ElasticsearchSenderTransport(
   /**
    * The Elasticsearch client.
    */
-  private val elasticsearchClient = new PreBuiltTransportClient(settings)
+  private val elasticsearchClient = TransportClient.builder().settings(settings).build()
 
   /**
    * The Elasticsearch endpoint.
@@ -155,7 +124,7 @@ class ElasticsearchSenderTransport(
    */
   private val BackoffPeriod = 10000L
 
-  elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(java.net.InetAddress.getByName(elasticsearchEndpoint), elasticsearchPort))
+  elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(elasticsearchEndpoint), elasticsearchPort))
        
   log.info(s"ElasticsearchSender using elasticsearch endpoint $elasticsearchEndpoint:$elasticsearchPort")
 
@@ -167,9 +136,9 @@ class ElasticsearchSenderTransport(
    * @param records List of records to send to Elasticsearch
    * @return List of inputs which Elasticsearch rejected
    */
-  def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput] = {
+  override def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput] = {
 
-    val bulkRequest: BulkRequestBuilder = elasticsearchClient.prepareBulk()
+    val bulkRequest = elasticsearchClient.prepareBulk()
 
     records.foreach(recordTuple => recordTuple.map(record => record.map(validRecord => {
       val indexRequestBuilder = {
@@ -203,6 +172,7 @@ class ElasticsearchSenderTransport(
     @tailrec def attemptEmit(attemptNumber: Long = 1): List[EmitterInput] = {
 
       if (attemptNumber > 1 && System.currentTimeMillis() - connectionAttemptStartTime > maxConnectionWaitTimeMs) {
+        log.error(s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms")
         forceShutdown()
       }
 
@@ -219,7 +189,8 @@ class ElasticsearchSenderTransport(
           if (failure.getMessage.contains("DocumentAlreadyExistsException") || failure.getMessage.contains("VersionConflictEngineException")) {
             None
           } else {
-            Some(record._1 -> List("Elasticsearch rejected record with message: %s".format(failure.getMessage)).fail)
+            Some(record._1 -> s"Elasticsearch rejected record with message: ${failure.getMessage}"
+              .failureNel[ElasticsearchObject])
           }
         })
 
@@ -229,7 +200,7 @@ class ElasticsearchSenderTransport(
         log.info(s"Emitted ${records.size - failures.size - numberOfSkippedRecords} records to Elasticsearch")
 
         if (!failures.isEmpty) {
-          printClusterStatus()
+          logClusterHealth()
           log.warn(s"Returning ${failures.size} records as failed")
         }
 
@@ -244,8 +215,7 @@ class ElasticsearchSenderTransport(
           attemptEmit(attemptNumber + 1)
         }
         case e: Exception => {
-          log.error("ElasticsearchEmitter threw an unexpected exception ", e)
-          e.printStackTrace()
+          log.error("Unexpected exception ", e)
           
           sleep(BackoffPeriod)
           tracker foreach {
@@ -262,12 +232,12 @@ class ElasticsearchSenderTransport(
   /**
    * Shuts the client down
    */
-  def close(): Unit = elasticsearchClient.close
+  override def close(): Unit = elasticsearchClient.close
 
   /**
    * Logs the Elasticsearch cluster's health
    */
-  private def printClusterStatus(): Unit = {
+  override def logClusterHealth(): Unit = {
     val healthRequestBuilder = elasticsearchClient.admin.cluster.prepareHealth()
     val response = healthRequestBuilder.execute.actionGet
     if (response.getStatus.equals(ClusterHealthStatus.RED)) {
@@ -277,23 +247,5 @@ class ElasticsearchSenderTransport(
     } else if (response.getStatus.equals(ClusterHealthStatus.GREEN)) {
       log.info("Cluster health is GREEN.")
     }
-  }
-
-  /**
-   * Terminate the application in a way the KCL cannot stop
-   *
-   * Prevents shutdown hooks from running
-   */
-  private def forceShutdown(): Unit = {
-    log.error(s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms")
-
-    tracker foreach {
-      t =>
-        // TODO: Instead of waiting a fixed time, use synchronous tracking or futures (when the tracker supports futures)
-        SnowplowTracking.trackApplicationShutdown(t)
-        sleep(5000)
-    }
-
-    Runtime.getRuntime.halt(1)
   }
 }
