@@ -1,0 +1,84 @@
+/**
+ * Copyright (c) 2014-2017 Snowplow Analytics Ltd. All rights reserved.
+ *
+ * This program is licensed to you under the Apache License Version 2.0,
+ * and you may not use this file except in compliance with the Apache License Version 2.0.
+ * You may obtain a copy of the Apache License Version 2.0 at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the Apache License Version 2.0 is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
+ */
+
+package com.snowplowanalytics.elasticsearch.loader
+package clients
+
+// Scala
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.util.{Failure, Success}
+
+// Scalaz
+import scalaz._
+import Scalaz._
+import scalaz.concurrent.{Strategy, Task}
+
+// Amz
+import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
+
+// SLF4j
+import org.slf4j.Logger
+
+import com.snowplowanalytics.snowplow.scalatracker.Tracker
+
+trait Elastic4sSender extends ElasticsearchSender {
+  val log: Logger
+
+  val maxConnectionWaitTimeMs: Long
+  val maxAttempts: Int
+  val delays = 0.milliseconds +:
+    Seq.fill(maxAttempts - 1)((maxConnectionWaitTimeMs / maxAttempts).milliseconds)
+
+  /**
+   * Handle the response given for a bulk request, by producing a failure if we failed to insert
+   * a given item.
+   * @param error possible error
+   * @param record associated to this item
+   * @return a failure if an unforeseen error happened (e.g. not that the document already exists)
+   */
+  def handleResponse(
+    error: Option[String],
+    record: EmitterInput
+  ): Option[EmitterInput] = {
+    error.foreach(e => log.error(s"Record [$record] failed with message $e"))
+    error.map { e =>
+      if (e.contains("DocumentAlreadyExistsException") || e.contains("VersionConflictEngineException"))
+        None
+      else 
+        Some(record._1 -> s"Elasticsearch rejected record with message $e".failureNel[ElasticsearchObject])
+    }.getOrElse(None)
+  }
+
+  /** Predicate about whether or not we should retry sending stuff to ES */
+  def exPredicate(connectionStartTime: Long): (Throwable => Boolean) = _ match {
+    case e: Exception =>
+      log.error("ElasticsearchEmitter threw an unexpected exception ", e)
+      tracker foreach {
+        t => SnowplowTracking.sendFailureEvent(t, delays.head.toMillis, 0L,
+          connectionStartTime, e.getMessage)
+      }
+      true
+    case _ => false
+  }
+
+  /** Turn a scala.concurrent.Future into a scalaz.concurrent.Task */
+  def futureToTask[T](f: => Future[T])(implicit ec: ExecutionContext, s: Strategy): Task[T] =
+    Task.async {
+      register =>
+        f onComplete {
+          case Success(v) => s(register(v.right))
+          case Failure(ex) => s(register(ex.left))
+        }
+    }
+}

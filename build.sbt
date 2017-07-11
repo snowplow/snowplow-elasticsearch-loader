@@ -29,8 +29,8 @@ lazy val commonDependencies = Seq(
 )
 
 lazy val allSettings = BuildSettings.buildSettings ++
-  BuildSettings.sbtAssmelbySettings ++
-  Seq(libraryDependencies ++= commonDepepdencies)
+  BuildSettings.sbtAssemblySettings ++
+  Seq(libraryDependencies ++= commonDependencies)
 
 lazy val root = project.in(file("."))
   .settings(
@@ -39,7 +39,7 @@ lazy val root = project.in(file("."))
     description := "Load the contents of a Kinesis stream to Elasticsearch"
   )
   .settings(allSettings)
-  .aggregate(core, http, tcp)
+  .aggregate(core, http, tcp, tcp2x)
 
 lazy val core = project
   .settings(moduleName := "snowplow-elasticsearch-loader-core")
@@ -49,13 +49,25 @@ lazy val core = project
 lazy val http = project
   .settings(moduleName := "snowplow-elasticsearch-loader-http")
   .settings(allSettings)
-  .settings(libraryDependencies += Dependencies.Libraries.elastic4sHttp)
+  .settings(libraryDependencies ++= Seq(
+    Dependencies.Libraries.elastic4sHttp,
+    Dependencies.Libraries.elastic4sTest
+  ))
   .dependsOn(core)
 
 lazy val tcp = project
   .settings(moduleName := "snowplow-elasticsearch-loader-tcp")
   .settings(allSettings)
-  .settings(libraryDependencies += Dependencies.Libraries.elastic4sTcp)
+  .settings(libraryDependencies ++= Seq(
+    Dependencies.Libraries.elastic4sTcp,
+    Dependencies.Libraries.elastic4sTest
+  ))
+  .dependsOn(core)
+
+lazy val tcp2x = project
+  .settings(moduleName := "snowplow-elasticsearch-loader-tcp-2x")
+  .settings(allSettings)
+  .settings(libraryDependencies += Dependencies.Libraries.elasticsearch)
   .dependsOn(core)
 
 shellPrompt := { _ => "elasticsearch-loader> " }

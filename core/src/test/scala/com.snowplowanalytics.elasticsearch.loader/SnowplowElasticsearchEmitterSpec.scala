@@ -58,6 +58,8 @@ class SnowplowElasticsearchEmitterSpec extends Specification {
       val fakeSender = new ElasticsearchSender {
         override def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput] = records
         override def close(): Unit = ()
+        override def logClusterHealth(): Unit = ()
+        override val tracker = None
       }
 
       val kcc = new KinesisConnectorConfiguration(new Properties, new DefaultAWSCredentialsProviderChain)

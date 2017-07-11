@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2016 Snowplow Analytics Ltd.
+ * Copyright (c) 2014-2017 Snowplow Analytics Ltd.
  * All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
@@ -18,12 +18,17 @@
  */
 
 package com.snowplowanalytics.elasticsearch.loader
-package clients
 
-/**
- * Common interface for Elasticsearch clients
- */
-trait IElasticsearchSender {
-  def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput]
-  def close(): Unit
+import clients.{ElasticsearchSender, ElasticsearchSenderTCP}
+
+/** Main entry point for the Elasticsearch TCP sink */
+object ElasticsearchTCPSinkApp extends App with ElasticsearchSinkApp {
+  override val arguments = args
+
+  override lazy val elasticsearchSender: ElasticsearchSender =
+    new ElasticsearchSenderTCP(
+      finalConfig.ELASTICSEARCH_CLUSTER_NAME,
+      finalConfig.ELASTICSEARCH_ENDPOINT,
+      finalConfig.ELASTICSEARCH_PORT,
+      tracker, maxConnectionTime)
 }

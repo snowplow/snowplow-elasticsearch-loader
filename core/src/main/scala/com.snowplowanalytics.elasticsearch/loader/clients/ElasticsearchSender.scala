@@ -17,23 +17,40 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.elasticsearch.loader.clients
+package com.snowplowanalytics.elasticsearch.loader
+package clients
 
-/**
- * Abstract class for Elasticsearch clients
- */
-abstract class ElasticsearchSender extends IElasticsearchSender {
+import com.snowplowanalytics.snowplow.scalatracker.Tracker
+
+trait ElasticsearchSender {
+  val tracker: Option[Tracker]
+
+  def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput]
+  def close(): Unit
+  def logClusterHealth(): Unit
+
+  /**
+   * Terminate the application in a way the KCL cannot stop, prevents shutdown hooks from running
+   */
+  protected def forceShutdown(): Unit = {
+    tracker foreach {
+      t =>
+        // TODO: Instead of waiting a fixed time, use synchronous tracking or futures (when the tracker supports futures)
+        SnowplowTracking.trackApplicationShutdown(t)
+        sleep(5000)
+    }
+
+    Runtime.getRuntime.halt(1)
+  }
 
   /**
    * Period between retrying sending events to Elasticsearch
-   *
    * @param sleepTime Length of time between tries
    */
-  protected def sleep(sleepTime: Long): Unit = {
+  protected def sleep(sleepTime: Long): Unit =
     try {
       Thread.sleep(sleepTime)
     } catch {
       case e: InterruptedException => ()
     }
-  }
 }

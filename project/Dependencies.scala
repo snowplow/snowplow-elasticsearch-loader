@@ -22,6 +22,7 @@ object Dependencies {
     val kinesisClient    = "1.7.5"
     val kinesisConnector = "1.3.0"
     val validator        = "2.2.6"
+    val elasticsearch    = "2.4.5"
 
     // Scala
     val scopt            = "3.6.0"
@@ -40,15 +41,17 @@ object Dependencies {
     val kinesisClient    = "com.amazonaws"          %  "amazon-kinesis-client"     % V.kinesisClient
     val kinesisConnector = "com.amazonaws"          %  "amazon-kinesis-connectors" % V.kinesisConnector
     val validator        = "com.github.fge"         %  "json-schema-validator"     % V.validator
+    val elasticsearch    = "org.elasticsearch"      %  "elasticsearch"             % V.elasticsearch
 
     // Scala
     val scopt            = "com.github.scopt"       %% "scopt"                     % V.scopt
     val scalaz7          = "org.scalaz"             %% "scalaz-core"               % V.scalaz7
-    val scalazC7          = "org.scalaz"            %% "scalaz-concurrent"         % V.scalaz7
+    val scalazC7         = "org.scalaz"             %% "scalaz-concurrent"         % V.scalaz7
     val snowplowTracker  = "com.snowplowanalytics"  %% "snowplow-scala-tracker"    % V.snowplowTracker
     val elastic4sHttp    = "com.sksamuel.elastic4s" %% "elastic4s-http"            % V.elastic4s
     val elastic4sTcp     = "com.sksamuel.elastic4s" %% "elastic4s-tcp"             % V.elastic4s
     // Scala (test only)
-    val specs2           = "org.specs2"             %% "specs2-core"               % V.specs2 % "test"
+    val specs2           = "org.specs2"             %% "specs2-core"               % V.specs2    % "test"
+    val elastic4sTest    = "com.sksamuel.elastic4s" %% "elastic4s-testkit"         % V.elastic4s % "test"
   }
 }
