@@ -41,11 +41,6 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.JsonDSL._
 
-// Tracker
-import com.snowplowanalytics.snowplow.scalatracker.Tracker
-import com.snowplowanalytics.snowplow.scalatracker.SelfDescribingJson
-import com.snowplowanalytics.snowplow.scalatracker.emitters.AsyncEmitter
-
 // This project
 import sinks._
 import clients._
