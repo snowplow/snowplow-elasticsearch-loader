@@ -35,7 +35,7 @@ class ElasticsearchSenderHTTPSpec extends Specification {
   val node = LocalNode("es", System.getProperty("java.io.tmpdir"))
   node.start()
   val client = node.elastic4sclient()
-  val sender = new ElasticsearchSenderHTTP(node.ip, node.port, None, 1000L, 1)
+  val sender = new ElasticsearchSenderHTTP(node.ip, node.port, false, None, 1000L, 1)
   val index = "idx"
   client.execute(createIndex(index)).await
 
