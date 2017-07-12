@@ -115,7 +115,7 @@ trait ElasticsearchSinkApp {
       val kinesisSink = kinesis.getConfig("out")
       val kinesisSinkName = kinesisSink.getString("stream-name")
       val kinesisSinkRegion = kinesis.getString("region")
-      val kinesisSinkEndpoint = s"https://kinesis.${kinesisSinkRegion}.amazonaws.com"
+      val kinesisSinkEndpoint = getKinesisEndpoint(kinesisSinkRegion)
       new KinesisSink(finalConfig.AWS_CREDENTIALS_PROVIDER,
         kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName)
     }
@@ -194,7 +194,7 @@ trait ElasticsearchSinkApp {
       10000
     }
     val streamName = kinesisIn.getString("stream-name")
-    val streamEndpoint = s"https://kinesis.${streamRegion}.amazonaws.com"
+    val streamEndpoint = getKinesisEndpoint(streamRegion)
 
     val buffer = connector.getConfig("buffer")
     val byteLimit = buffer.getString("byte-limit")
@@ -226,14 +226,14 @@ trait ElasticsearchSinkApp {
     new KinesisConnectorConfiguration(props, CredentialsLookup.getCredentialsProvider(accessKey, secretKey))
   }
 
-  /**
-   * Simple getOrElse wrapper for config getString calls.
-   */
-  def configGetOrElse(config: Config, key: String, elseValue: String): String = {
-    try {
-      config.getString(key)
-    } catch {
-      case e: Exception => elseValue
+  /** Simple getOrElse wrapper for config getString calls. */
+  private def configGetOrElse(config: Config, key: String, elseValue: String): String =
+    if (config.hasPath(key)) config.getString(key)
+    else elseValue
+
+  private def getKinesisEndpoint(region: String): String =
+    region match {
+      case cn@"cn-north-1" => s"https://kinesis.$cn.amazonaws.com.cn"
+      case _ => s"https://kinesis.$region.amazonaws.com"
     }
-  }
 }
