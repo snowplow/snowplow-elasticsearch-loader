@@ -88,8 +88,8 @@ trait ElasticsearchSinkApp {
 
   val elasticsearch = conf.getConfig("elasticsearch")
   val esClient = elasticsearch.getConfig("client")
+  val esSSL = esClient.getBoolean("ssl")
   val esCluster = elasticsearch.getConfig("cluster")
-  val clientType = esClient.getString("type")
   val documentIndex = esCluster.getString("index")
   val documentType = esCluster.getString("type")
 
