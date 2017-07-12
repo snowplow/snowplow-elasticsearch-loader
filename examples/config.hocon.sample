@@ -19,25 +19,25 @@
 # "stdin" for reading unencoded tab-separated events from stdin
 # If set to "stdin", JSON documents will not be sent to Elasticsearch
 # but will be written to stdout.
-source = {{sinkElasticsearchInputType}}
+source = {{elasticsearchInputType}}
 
 # Where to write good and bad records
 sink {
   # Sinks currently supported are:
   # "elasticsearch" for writing good records to Elasticsearch
   # "stdout" for writing good records to stdout
-  good: {{sinkElasticsearchGoodOutputDestination}}
+  good: {{elasticsearchGoodOutputDestination}}
 
   # Sinks currently supported are:
   # "kinesis" for writing bad records to Kinesis
   # "stderr" for writing bad records to stderr
   # "none" for ignoring bad records
-  bad: {{sinkElasticsearchBadOutputDestination}}
+  bad: {{elasticsearchBadOutputDestination}}
 }
 
 # "good" for a stream of successfully enriched events
 # "bad" for a stream of bad events
-stream-type: {{sinkKinesisInStreamType}}
+stream-type: {{kinesisInStreamType}}
 
 # The following are used to authenticate for the Amazon Kinesis sink.
 #
@@ -55,7 +55,7 @@ aws {
 kinesis {
 
   in {
-    stream-name: {{sinkKinesisInStreamName}} # Kinesis stream name
+    stream-name: {{kinesisInStreamName}} # Kinesis stream name
 
     # "LATEST": most recent data.
     # "TRIM_HORIZON": oldest available data.
@@ -68,15 +68,15 @@ kinesis {
 
   out {
     # Stream for enriched events which are rejected by Elasticsearch
-    stream-name: {{sinkKinesisOutStreamName}}
+    stream-name: {{kinesisOutStreamName}}
   }
 
   # Region where the Kinesis stream is located
-  region: {{sinkElasticsearchRegion}}
+  region: {{kinesisRegion}}
 
   # "app-name" is used for a DynamoDB table to maintain stream state.
   # You can set it automatically using: "SnowplowElasticsearchSink-${sink.kinesis.in.stream-name}"
-  app-name: {{sinkKinesisAppName}}
+  app-name: {{kinesisAppName}}
 }
 
 elasticsearch {
@@ -89,29 +89,39 @@ elasticsearch {
   # - max-timeout: the maximum attempt time before a client restart
   # - ssl: if using the http client, whether to use ssl or not
   client {
-    endpoint: {{sinkElasticsearchEndpoint}}
-    port: {{sinkElasticsearchTransportPort}}
-    max-timeout: {{sinkElasticsearchMaxTimeout}}
+    endpoint: {{elasticsearchEndpoint}}
+    port: {{elasticsearchTransportPort}}
+    max-timeout: {{elasticsearchMaxTimeout}}
+    ssl: false
+  }
+
+  # When using the AWS ES service
+  # - signing: if using the http client and the AWS ES service you can sign your requests
+  #    http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html
+  # - region where the AWS ES service is located
+  aws {
+    signing: false
+    region: {{elasticsearchRegion}}
   }
 
   # index: the Elasticsearch index name
   # type: the Elasticsearch index type
   cluster {
-    name: {{sinkElasticsearchClusterName}}
-    index: {{sinkElasticsearchIndex}}
-    type: {{sinkElasticsearchType}}
+    name: {{elasticsearchClusterName}}
+    index: {{elasticsearchIndex}}
+    type: {{elasticsearchType}}
   }
-}
 
-# Events are accumulated in a buffer before being sent to Elasticsearch.
-# The buffer is emptied whenever:
-# - the combined size of the stored records exceeds byte-limit or
-# - the number of stored records exceeds record-limit or
-# - the time in milliseconds since it was last emptied exceeds time-limit
-buffer {
-  byte-limit: {{sinkElasticsearchBufferByteThreshold}}
-  record-limit: {{sinkElasticsearchBufferRecordThreshold}}
-  time-limit: {{sinkElasticsearchBufferTimeThreshold}}
+  # Events are accumulated in a buffer before being sent to Elasticsearch.
+  # The buffer is emptied whenever:
+  # - the combined size of the stored records exceeds byte-limit or
+  # - the number of stored records exceeds record-limit or
+  # - the time in milliseconds since it was last emptied exceeds time-limit
+  buffer {
+    byte-limit: {{elasticsearchBufferByteThreshold}}
+    record-limit: {{elasticsearchBufferRecordThreshold}}
+    time-limit: {{elasticsearchBufferTimeThreshold}}
+  }
 }
 
 # Optional section for tracking endpoints

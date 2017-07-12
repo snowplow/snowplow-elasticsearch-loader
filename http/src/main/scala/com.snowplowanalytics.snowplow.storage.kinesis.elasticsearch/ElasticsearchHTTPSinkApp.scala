@@ -29,5 +29,6 @@ object ElasticsearchHTTPSinkApp extends App with ElasticsearchSinkApp {
     new ElasticsearchSenderHTTP(
       finalConfig.ELASTICSEARCH_ENDPOINT,
       finalConfig.ELASTICSEARCH_PORT,
-      esSSL, tracker, maxConnectionTime)
+      finalConfig.AWS_CREDENTIALS_PROVIDER,
+      esRegion, esSSL, awsSigning, tracker, maxConnectionTime)
 }

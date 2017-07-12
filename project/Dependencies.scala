@@ -14,7 +14,6 @@
 import sbt._
 
 object Dependencies {
-
   object V {
     // Java
     val config           = "1.3.1"
@@ -29,6 +28,7 @@ object Dependencies {
     val scalaz7          = "7.2.14"
     val snowplowTracker  = "0.3.0"
     val analyticsSDK     = "0.2.0"
+    val awsSigner        = "0.4.1"
     val elastic4s        = "5.4.6"
     // Scala (test only)
     val specs2           = "3.9.2"
@@ -50,6 +50,7 @@ object Dependencies {
     val scalazC7         = "org.scalaz"              %% "scalaz-concurrent"            % V.scalaz7
     val snowplowTracker  = "com.snowplowanalytics"   %% "snowplow-scala-tracker"       % V.snowplowTracker
     val analyticsSDK     = "com.snowplowanalytics"   %% "snowplow-scala-analytics-sdk" % V.analyticsSDK
+    val awsSigner        = "io.ticofab"              %% "aws-request-signer"           % V.awsSigner
     val elastic4sHttp    = "com.sksamuel.elastic4s"  %% "elastic4s-http"               % V.elastic4s
     val elastic4sTcp     = ("com.sksamuel.elastic4s" %% "elastic4s-tcp"                % V.elastic4s)
       .exclude("org.apache.logging.log4j", "log4j-1.2-api")
