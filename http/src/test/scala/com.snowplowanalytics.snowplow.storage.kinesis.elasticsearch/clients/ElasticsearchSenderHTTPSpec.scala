@@ -14,9 +14,6 @@
 package com.snowplowanalytics.elasticsearch.loader
 package clients
 
-// Scala
-import scala.concurrent.ExecutionContext.Implicits.global
-
 // Amazon
 import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
 
@@ -26,7 +23,6 @@ import com.sksamuel.elastic4s.embedded.LocalNode
 
 // scalaz
 import scalaz._
-import Scalaz._
 
 // specs2
 import org.specs2.mutable.Specification
@@ -35,7 +31,8 @@ class ElasticsearchSenderHTTPSpec extends Specification {
   val node = LocalNode("es", System.getProperty("java.io.tmpdir"))
   node.start()
   val client = node.elastic4sclient()
-  val sender = new ElasticsearchSenderHTTP(node.ip, node.port, false, None, 1000L, 1)
+  val creds = CredentialsLookup.getCredentialsProvider("a", "s")
+  val sender = new ElasticsearchSenderHTTP(node.ip, node.port, creds, "region", false, false, None, 1000L, 1)
   val index = "idx"
   client.execute(createIndex(index)).await
 
