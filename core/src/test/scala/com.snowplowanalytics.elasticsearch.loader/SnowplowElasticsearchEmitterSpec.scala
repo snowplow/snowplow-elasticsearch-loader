@@ -47,9 +47,6 @@ import org.specs2.mutable.Specification
 import sinks._
 import clients.ElasticsearchSender
 
-/**
- * Tests Shredder
- */
 class SnowplowElasticsearchEmitterSpec extends Specification {
 
   "The emitter method" should {
