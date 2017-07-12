@@ -20,7 +20,7 @@ import scala.util.{Failure => SFailure, Success => SSuccess}
 
 // elastic4s
 import com.sksamuel.elastic4s.ElasticsearchClientUri
-import com.sksamuel.elastic4s.http.HttpClient
+import com.sksamuel.elastic4s.http.{HttpClient, NoOpHttpClientConfigCallback}
 import com.sksamuel.elastic4s.http.ElasticDsl._
 import com.sksamuel.elastic4s.http.bulk.{BulkResponse, BulkResponseItem}
 
@@ -28,6 +28,9 @@ import com.sksamuel.elastic4s.http.bulk.{BulkResponse, BulkResponseItem}
 import scalaz._
 import scalaz.concurrent.{Strategy, Task}
 import Scalaz._
+
+// AMZ
+import com.amazonaws.auth.AWSCredentialsProvider
 
 // SLF4j
 import org.slf4j.LoggerFactory
@@ -38,7 +41,10 @@ import com.snowplowanalytics.snowplow.scalatracker.Tracker
 class ElasticsearchSenderHTTP(
   endpoint: String,
   port: Int,
+  credentialsProvider: AWSCredentialsProvider,
+  region: String,
   ssl: Boolean = false,
+  awsSigning: Boolean = false,
   override val tracker: Option[Tracker] = None,
   override val maxConnectionWaitTimeMs: Long = 60000L,
   override val maxAttempts: Int = 6
@@ -48,10 +54,12 @@ class ElasticsearchSenderHTTP(
 
   override val log = LoggerFactory.getLogger(getClass)
 
-  private val uri =
-    if (ssl) ElasticsearchClientUri(s"elasticsearch://$endpoint:$port?ssl=true")
-    else ElasticsearchClientUri(endpoint, port)
-  private val client = HttpClient(uri)
+  private val uri = ElasticsearchClientUri(s"elasticsearch://$endpoint:$port?ssl=$ssl")
+  private val httpClientConfigCallback =
+    if (awsSigning) new SignedHttpClientConfigCallback(credentialsProvider, region)
+    else NoOpHttpClientConfigCallback
+  private val client = HttpClient(uri,
+    httpClientConfigCallback = httpClientConfigCallback)
 
   implicit val strategy = Strategy.DefaultExecutorService
 
