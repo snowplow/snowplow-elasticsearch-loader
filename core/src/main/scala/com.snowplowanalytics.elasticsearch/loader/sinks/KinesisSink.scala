@@ -47,15 +47,13 @@ import org.slf4j.LoggerFactory
  * @param endpoint Kinesis stream endpoint
  * @param region Kinesis region
  * @param name Kinesis stream name
- * @param shards Number of shards with which to initialize the stream
  * @param config Configuration for the Kinesis stream
  */
 class KinesisSink(
   provider: AWSCredentialsProvider,
   endpoint: String,
   region: String,
-  name: String,
-  shards: Int
+  name: String
 ) extends ISink {
 
   private lazy val log = LoggerFactory.getLogger(getClass)

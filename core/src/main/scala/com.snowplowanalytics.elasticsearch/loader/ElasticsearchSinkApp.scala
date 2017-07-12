@@ -114,11 +114,10 @@ trait ElasticsearchSinkApp {
       val kinesis = conf.getConfig("kinesis")
       val kinesisSink = kinesis.getConfig("out")
       val kinesisSinkName = kinesisSink.getString("stream-name")
-      val kinesisSinkShards = kinesisSink.getInt("shards")
       val kinesisSinkRegion = kinesis.getString("region")
       val kinesisSinkEndpoint = s"https://kinesis.${kinesisSinkRegion}.amazonaws.com"
       new KinesisSink(finalConfig.AWS_CREDENTIALS_PROVIDER,
-        kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName, kinesisSinkShards)
+        kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName)
     }
   }
 
