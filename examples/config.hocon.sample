@@ -71,7 +71,6 @@ sink {
     out {
       # Stream for enriched events which are rejected by Elasticsearch
       stream-name: {{sinkKinesisOutStreamName}}
-      shards: 1
     }
 
     # Region where the Kinesis stream is located
