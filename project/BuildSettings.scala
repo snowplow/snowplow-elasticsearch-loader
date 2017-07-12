@@ -24,7 +24,8 @@ object BuildSettings {
     version       := "0.8.0",
     scalaVersion  := "2.11.11",
     scalacOptions := compilerOptions,
-    javacOptions  := javaCompilerOptions
+    javacOptions  := javaCompilerOptions,
+    resolvers     += Resolver.jcenterRepo
   )
 
   lazy val compilerOptions = Seq(
