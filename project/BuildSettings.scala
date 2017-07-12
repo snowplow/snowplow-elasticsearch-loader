@@ -64,8 +64,6 @@ object BuildSettings {
     }.taskValue
   )
 
-  lazy val buildSettings = basicSettings ++ scalifySettings
-
   // sbt-assembly settings for building an executable
   import sbtassembly.AssemblyPlugin.autoImport._
   lazy val sbtAssemblySettings = Seq(
@@ -75,9 +73,9 @@ object BuildSettings {
         Seq("#!/usr/bin/env sh", """exec java -jar "$0" "$@"""" + "\n")
       )),
     // Name it as an executable
-    assemblyJarName in assembly := { s"${name.value}-${version.value}" },
-    // Merge duplicate class in JodaTime and Elasticsearch 2.4
+    assemblyJarName in assembly := { s"${moduleName.value}-${version.value}" },
     assemblyMergeStrategy in assembly := {
+      case "META-INF/io.netty.versions.properties" => MergeStrategy.first
       case PathList("org", "joda", "time", "base", "BaseDateTime.class") => MergeStrategy.first
       case x =>
         val oldStrategy = (assemblyMergeStrategy in assembly).value

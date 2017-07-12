@@ -1,0 +1,55 @@
+# Required: local settings
+local:
+  root_dir : <%= ENV['TRAVIS_BUILD_DIR'] %>
+
+# Required: deployment targets
+targets:
+  - type     : "bintray"
+    user     : <%= ENV['BINTRAY_SNOWPLOW_GENERIC_USER'] %>
+    password : <%= ENV['BINTRAY_SNOWPLOW_GENERIC_API_KEY'] %>
+
+# Required: packages to be deployed
+packages:
+  - repo     : "snowplow-generic"
+    name     : "snowplow-elasticsearch-loader"
+    user_org : "snowplow"
+    publish  : true
+
+    # Will attempt to overwrite a published entity if one is found
+    override : false
+
+    # If the artifact already exists will determine whether or not to fail the release
+    continue_on_conflict : false
+
+    # The version of this package
+    version  : <%= ENV['TRAVIS_TAG'] %>
+
+    # Required IF '--check-version' is passed: will assert that both versions are the same
+    build_version : <%= FUNC['sbt_version(.)'] %>
+    
+    build_commands:
+      - sbt "project http"  assembly
+      - sbt "project tcp"   assembly
+      - sbt "project tcp2x" assembly
+
+    # Required: Artifact
+    artifacts:
+        # The artifact name is composed like so: {{prefix}}{{version}}{{suffix}}.zip
+      - prefix : "snowplow_elasticsearch_loader_http_"
+        suffix : ""
+        type   : "zip"
+        # The binaries to put in the zip
+        binary_paths:
+          - http/target/scala-2.11/snowplow-elasticsearch-loader-http-<%= ENV['TRAVIS_TAG'] %>
+      - prefix : "snowplow_elasticsearch_loader_tcp_"
+        suffix : ""
+        type   : "zip"
+        # The binaries to put in the zip
+        binary_paths:
+          - tcp/target/scala-2.11/snowplow-elasticsearch-loader-tcp-<%= ENV['TRAVIS_TAG'] %>
+      - prefix : "snowplow_elasticsearch_loader_tcp_2x_"
+        suffix : ""
+        type   : "zip"
+        # The binaries to put in the zip
+        binary_paths:
+          - tcp2x/target/scala-2.11/snowplow-elasticsearch-loader-tcp-2x-<%= ENV['TRAVIS_TAG'] %>
