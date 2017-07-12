@@ -38,6 +38,7 @@ import com.snowplowanalytics.snowplow.scalatracker.Tracker
 class ElasticsearchSenderHTTP(
   endpoint: String,
   port: Int,
+  ssl: Boolean = false,
   override val tracker: Option[Tracker] = None,
   override val maxConnectionWaitTimeMs: Long = 60000L,
   override val maxAttempts: Int = 6
@@ -47,7 +48,10 @@ class ElasticsearchSenderHTTP(
 
   override val log = LoggerFactory.getLogger(getClass)
 
-  private val client = HttpClient(ElasticsearchClientUri(endpoint, port))
+  private val uri =
+    if (ssl) ElasticsearchClientUri(s"elasticsearch://$endpoint:$port?ssl=true")
+    else ElasticsearchClientUri(endpoint, port)
+  private val client = HttpClient(uri)
 
   implicit val strategy = Strategy.DefaultExecutorService
 
