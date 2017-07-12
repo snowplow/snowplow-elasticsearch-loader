@@ -186,7 +186,7 @@ trait ElasticsearchSinkApp {
     val kinesis = connector.getConfig("kinesis")
     val kinesisIn = kinesis.getConfig("in")
     val streamRegion = kinesis.getString("region")
-    val appName = kinesis.getString("app-name")
+    val appName = kinesis.getString("app-name").trim
     val initialPosition = kinesisIn.getString("initial-position")
     val maxRecords = if (kinesisIn.hasPath("maxRecords")) {
       kinesisIn.getInt("maxRecords")
