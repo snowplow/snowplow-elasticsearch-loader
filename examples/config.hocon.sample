@@ -85,14 +85,13 @@ sink {
   elasticsearch {
 
     # Events are indexed using an Elasticsearch Client
-    # - type: "http" or "transport" (will default to transport)
     # - endpoint: the cluster endpoint
     # - port: the port the cluster can be accessed on
     #   - for http this is usually 9200
     #   - for transport this is usually 9300
     # - max-timeout: the maximum attempt time before a client restart
+    # - ssl: if using the http client, whether to use ssl or not
     client {
-      type: {{sinkElasticseachClient}}
       endpoint: {{sinkElasticsearchEndpoint}}
       port: {{sinkElasticsearchTransportPort}}
       max-timeout: {{sinkElasticsearchMaxTimeout}}
