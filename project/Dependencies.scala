@@ -35,23 +35,25 @@ object Dependencies {
 
   object Libraries {
     // Java
-    val config           = "com.typesafe"           %  "config"                    % V.config
-    val slf4j            = "org.slf4j"              %  "slf4j-simple"              % V.slf4j
-    val log4jOverSlf4j   = "org.slf4j"              %  "log4j-over-slf4j"          % V.slf4j
-    val kinesisClient    = "com.amazonaws"          %  "amazon-kinesis-client"     % V.kinesisClient
-    val kinesisConnector = "com.amazonaws"          %  "amazon-kinesis-connectors" % V.kinesisConnector
-    val validator        = "com.github.fge"         %  "json-schema-validator"     % V.validator
-    val elasticsearch    = "org.elasticsearch"      %  "elasticsearch"             % V.elasticsearch
+    val config           = "com.typesafe"            %  "config"                    % V.config
+    val slf4j            = "org.slf4j"               %  "slf4j-simple"              % V.slf4j
+    val log4jOverSlf4j   = "org.slf4j"               %  "log4j-over-slf4j"          % V.slf4j
+    val kinesisClient    = "com.amazonaws"           %  "amazon-kinesis-client"     % V.kinesisClient
+    val kinesisConnector = "com.amazonaws"           %  "amazon-kinesis-connectors" % V.kinesisConnector
+    val validator        = "com.github.fge"          %  "json-schema-validator"     % V.validator
+    val elasticsearch    = "org.elasticsearch"       %  "elasticsearch"             % V.elasticsearch
 
     // Scala
-    val scopt            = "com.github.scopt"       %% "scopt"                     % V.scopt
-    val scalaz7          = "org.scalaz"             %% "scalaz-core"               % V.scalaz7
-    val scalazC7         = "org.scalaz"             %% "scalaz-concurrent"         % V.scalaz7
-    val snowplowTracker  = "com.snowplowanalytics"  %% "snowplow-scala-tracker"    % V.snowplowTracker
-    val elastic4sHttp    = "com.sksamuel.elastic4s" %% "elastic4s-http"            % V.elastic4s
-    val elastic4sTcp     = "com.sksamuel.elastic4s" %% "elastic4s-tcp"             % V.elastic4s
+    val scopt            = "com.github.scopt"        %% "scopt"                     % V.scopt
+    val scalaz7          = "org.scalaz"              %% "scalaz-core"               % V.scalaz7
+    val scalazC7         = "org.scalaz"              %% "scalaz-concurrent"         % V.scalaz7
+    val snowplowTracker  = "com.snowplowanalytics"   %% "snowplow-scala-tracker"    % V.snowplowTracker
+    val elastic4sHttp    = "com.sksamuel.elastic4s"  %% "elastic4s-http"            % V.elastic4s
+    val elastic4sTcp     = ("com.sksamuel.elastic4s" %% "elastic4s-tcp"             % V.elastic4s)
+      .exclude("org.apache.logging.log4j", "log4j-1.2-api")
+      .exclude("io.netty", "netty-all")
     // Scala (test only)
-    val specs2           = "org.specs2"             %% "specs2-core"               % V.specs2    % "test"
-    val elastic4sTest    = "com.sksamuel.elastic4s" %% "elastic4s-testkit"         % V.elastic4s % "test"
+    val specs2           = "org.specs2"              %% "specs2-core"               % V.specs2    % "test"
+    val elastic4sTest    = "com.sksamuel.elastic4s"  %% "elastic4s-testkit"         % V.elastic4s % "test"
   }
 }
