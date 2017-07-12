@@ -35,7 +35,6 @@ package object loader {
    * The original tab separated enriched event together with
    * a validated ElasticsearchObject created from it (or list of errors
    * if the creation process failed)
-   * Can't use NonEmptyList as it isn't serializable
    */
   type ValidatedRecord = (String, ValidationNel[String, JsonRecord])
 
