@@ -61,10 +61,7 @@ lazy val http = project
 lazy val tcp = project
   .settings(moduleName := "snowplow-elasticsearch-loader-tcp")
   .settings(allSettings)
-  .settings(libraryDependencies ++= Seq(
-    Dependencies.Libraries.elastic4sTcp,
-    Dependencies.Libraries.elastic4sTest
-  ))
+  .settings(libraryDependencies += Dependencies.Libraries.elastic4sTcp)
   .dependsOn(core)
 
 lazy val tcp2x = project
