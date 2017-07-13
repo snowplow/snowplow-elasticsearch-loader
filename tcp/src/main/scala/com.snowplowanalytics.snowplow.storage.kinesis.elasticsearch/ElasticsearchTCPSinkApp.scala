@@ -23,12 +23,18 @@ import clients.{ElasticsearchSender, ElasticsearchSenderTCP}
 
 /** Main entry point for the Elasticsearch TCP sink */
 object ElasticsearchTCPSinkApp extends App with ElasticsearchSinkApp {
-  override val arguments = args
+  override lazy val arguments = args
+
+  val conf = parseConfig()
+  val maxConnectionTime = conf.getConfig("elasticsearch.client").getLong("max-timeout")
+  val finalConfig = convertConfig(conf)
 
   override lazy val elasticsearchSender: ElasticsearchSender =
     new ElasticsearchSenderTCP(
       finalConfig.ELASTICSEARCH_CLUSTER_NAME,
       finalConfig.ELASTICSEARCH_ENDPOINT,
       finalConfig.ELASTICSEARCH_PORT,
-      tracker, maxConnectionTime)
+      getTracker(conf), maxConnectionTime)
+
+  run(conf)
 }

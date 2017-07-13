@@ -43,7 +43,7 @@ aws {
 
 Next, start the sink, making sure to specify your new config file:
 
-    $ ./snowplow-elasticsearch-loader-http-0.8.0 --config my.conf
+    $ java -jar snowplow-elasticsearch-loader-http-0.8.0.jar --config my.conf
 
 ## Find out more
 

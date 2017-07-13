@@ -23,12 +23,21 @@ import clients.{ElasticsearchSender, ElasticsearchSenderHTTP}
 
 /** Main entry point for the Elasticsearch HTTP sink */
 object ElasticsearchHTTPSinkApp extends App with ElasticsearchSinkApp {
-  override val arguments = args
+  override lazy val arguments = args
+
+  val conf = parseConfig()
+  val finalConfig = convertConfig(conf)
+  val region = conf.getString("elasticsearch.aws.region")
+  val signing = conf.getBoolean("elasticsearch.aws.signing")
+  val ssl = conf.getBoolean("elasticsearch.client.ssl")
+  val maxConnectionTime = conf.getLong("elasticsearch.client.max-timeout")
 
   override lazy val elasticsearchSender: ElasticsearchSender =
     new ElasticsearchSenderHTTP(
       finalConfig.ELASTICSEARCH_ENDPOINT,
       finalConfig.ELASTICSEARCH_PORT,
       finalConfig.AWS_CREDENTIALS_PROVIDER,
-      esRegion, esSSL, awsSigning, tracker, maxConnectionTime)
+      region, ssl, signing, getTracker(conf), maxConnectionTime)
+
+  run(conf)
 }
