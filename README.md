@@ -41,9 +41,9 @@ aws {
 }
 ```
 
-Next, start the sink, making sure to specify your new config file:
+Next, start the loader, making sure to specify your new config file:
 
-    $ ./snowplow-elasticsearch-loader-http-0.8.0 --config my.conf
+    $ java -jar snowplow-elasticsearch-loader-http-0.8.0.jar --config my.conf
 
 ## Find out more
 
@@ -70,8 +70,8 @@ limitations under the License.
 [elasticsearch]: http://www.elasticsearch.org/
 [sbt]: http://www.scala-sbt.org
 
-[setup]: https://github.com/snowplow/snowplow/wiki/kinesis-elasticsearch-sink-setup
-[techdocs]: https://github.com/snowplow/snowplow/wiki/kinesis-elasticsearch-sink
+[setup]: https://github.com/snowplow/snowplow/wiki/elasticsearch-loader-setup
+[techdocs]: https://github.com/snowplow/snowplow/wiki/elasticsearch-loader
 
 [techdocs-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/techdocs.png
 [setup-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/setup.png
