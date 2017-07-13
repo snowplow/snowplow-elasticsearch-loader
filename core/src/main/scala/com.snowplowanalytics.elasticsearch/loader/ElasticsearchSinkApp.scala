@@ -26,9 +26,6 @@ import java.util.Properties
 // Config
 import com.typesafe.config.{Config, ConfigFactory}
 
-// AWS libs
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-
 // AWS Kinesis Connector libs
 import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
 
@@ -36,15 +33,12 @@ import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
 import scalaz._
 import Scalaz._
 
-// json4s
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
-import org.json4s.JsonDSL._
+// Tracker
+import com.snowplowanalytics.snowplow.scalatracker.Tracker
 
 // This project
 import sinks._
 import clients._
-import generated._
 
 // Whether the input stream contains enriched events or bad events
 object StreamType extends Enumeration {
@@ -56,116 +50,113 @@ object StreamType extends Enumeration {
  * Main entry point for the Elasticsearch sink
  */
 trait ElasticsearchSinkApp {
-  val arguments: Array[String]
-  val elasticsearchSender: ElasticsearchSender
+  def arguments: Array[String]
+  def elasticsearchSender: ElasticsearchSender
 
-  case class FileConfig(config: File = new File("."))
-  val parser = new scopt.OptionParser[FileConfig](generated.Settings.name) {
-    head(generated.Settings.name, generated.Settings.version)
-    opt[File]("config").required().valueName("<filename>")
-      .action((f: File, c: FileConfig) => c.copy(config = f))
-      .validate(f =>
-        if (f.exists) success
-        else failure(s"Configurationfile $f does not exist")
-      )
-  }
-
-  val conf = parser.parse(arguments, FileConfig()) match {
-    case Some(c) => ConfigFactory.parseFile(c.config).resolve()
-    case None    => ConfigFactory.empty()
-  }
-
-  if (conf.isEmpty()) {
-    System.err.println("Empty configuration file")
-    System.exit(1)
-  }
-
-  val streamType = conf.getString("stream-type") match {
-    case "good" => StreamType.Good
-    case "bad" => StreamType.Bad
-    case _ => throw new RuntimeException("\"stream-type\" must be set to \"good\" or \"bad\"")
-  }
-
-  val elasticsearch = conf.getConfig("elasticsearch")
-  val esClient = elasticsearch.getConfig("client")
-  val esSSL = esClient.getBoolean("ssl")
-  val aws = elasticsearch.getConfig("aws")
-  val awsSigning = aws.getBoolean("signing")
-  val esRegion = aws.getString("region")
-  val esCluster = elasticsearch.getConfig("cluster")
-  val documentIndex = esCluster.getString("index")
-  val documentType = esCluster.getString("type")
-
-  val tracker = if (conf.hasPath("monitoring.snowplow")) {
-    SnowplowTracking.initializeTracker(conf.getConfig("monitoring.snowplow")).some
-  } else {
-    None
-  }
-
-  val maxConnectionTime = conf.getConfig("elasticsearch.client").getLong("max-timeout")
-  val finalConfig = convertConfig(conf)
-
-  val goodSink = conf.getString("sink.good") match {
-    case "stdout" => Some(new StdouterrSink)
-    case "elasticsearch" => None
-  }
-
-  val badSink = conf.getString("sink.bad") match {
-    case "stderr" => new StdouterrSink
-    case "none" => new NullSink
-    case "kinesis" => {
-      val kinesis = conf.getConfig("kinesis")
-      val kinesisSink = kinesis.getConfig("out")
-      val kinesisSinkName = kinesisSink.getString("stream-name")
-      val kinesisSinkRegion = kinesis.getString("region")
-      val kinesisSinkEndpoint = getKinesisEndpoint(kinesisSinkRegion)
-      new KinesisSink(finalConfig.AWS_CREDENTIALS_PROVIDER,
-        kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName)
-    }
-  }
-
-  val executor = conf.getString("source") match {
-
-    // Read records from Kinesis
-    case "kinesis" =>
-      new ElasticsearchSinkExecutor(streamType, documentIndex, documentType, finalConfig, goodSink, badSink, elasticsearchSender, tracker).success
-
-    // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
-    // TODO reduce code duplication
-    case "stdin" => new Runnable {
-      val transformer = streamType match {
-        case StreamType.Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
-        case StreamType.Bad => new BadEventTransformer(documentIndex, documentType)
-      }
-
-      def run = for (ln <- scala.io.Source.stdin.getLines) {
-        val emitterInput = transformer.consumeLine(ln)
-        emitterInput._2.bimap(
-          f => badSink.store(BadRow(emitterInput._1, f).toCompactJson, None, false),
-          s => goodSink match {
-            case Some(gs) => gs.store(s.getSource, None, true)
-            case None => elasticsearchSender.sendToElasticsearch(List(ln -> s.success))
-          }
+  def parseConfig(): Config = {
+    val projectName = "snowplow-elasticsearch-loader"
+    case class FileConfig(config: File = new File("."))
+    val parser = new scopt.OptionParser[FileConfig](projectName) {
+      head(projectName, generated.Settings.version)
+      opt[File]("config").required().valueName("<filename>")
+        .action((f: File, c: FileConfig) => c.copy(config = f))
+        .validate(f =>
+          if (f.exists) success
+          else failure(s"Configurationfile $f does not exist")
         )
-      }
-    }.success
+    }
 
-    case _ => "Source must be set to 'stdin' or 'kinesis'".failure
-  }
+    val conf = parser.parse(arguments, FileConfig()) match {
+      case Some(c) => ConfigFactory.parseFile(c.config).resolve()
+      case None    => ConfigFactory.empty()
+    }
 
-  executor.fold(
-    err => throw new RuntimeException(err),
-    exec => {
-      tracker foreach {
-        t => SnowplowTracking.initializeSnowplowTracking(t)
-      }
-      exec.run()
-
-      // If the stream cannot be found, the KCL's "cw-metrics-publisher" thread will prevent the
-      // application from exiting naturally so we explicitly call System.exit.
+    if (conf.isEmpty()) {
+      System.err.println("Empty configuration file")
       System.exit(1)
     }
-  )
+    conf
+  }
+
+
+  def run(conf: Config): Unit = {
+    val streamType = conf.getString("stream-type") match {
+      case "good" => StreamType.Good
+      case "bad" => StreamType.Bad
+      case _ => throw new RuntimeException("\"stream-type\" must be set to \"good\" or \"bad\"")
+    }
+
+    val elasticsearch = conf.getConfig("elasticsearch")
+    val esCluster = elasticsearch.getConfig("cluster")
+    val documentIndex = esCluster.getString("index")
+    val documentType = esCluster.getString("type")
+
+    val finalConfig = convertConfig(conf)
+
+    val goodSink = conf.getString("sink.good") match {
+      case "stdout" => Some(new StdouterrSink)
+      case "elasticsearch" => None
+    }
+
+    val badSink = conf.getString("sink.bad") match {
+      case "stderr" => new StdouterrSink
+      case "none" => new NullSink
+      case "kinesis" => {
+        val kinesis = conf.getConfig("kinesis")
+        val kinesisSink = kinesis.getConfig("out")
+        val kinesisSinkName = kinesisSink.getString("stream-name")
+        val kinesisSinkRegion = kinesis.getString("region")
+        val kinesisSinkEndpoint = getKinesisEndpoint(kinesisSinkRegion)
+        new KinesisSink(finalConfig.AWS_CREDENTIALS_PROVIDER,
+          kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName)
+      }
+    }
+
+    val tracker = getTracker(conf)
+
+    val executor = conf.getString("source") match {
+
+      // Read records from Kinesis
+      case "kinesis" =>
+        new ElasticsearchSinkExecutor(streamType, documentIndex, documentType, finalConfig, goodSink, badSink, elasticsearchSender, tracker).success
+
+      // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
+      // TODO reduce code duplication
+      case "stdin" => new Runnable {
+        val transformer = streamType match {
+          case StreamType.Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
+          case StreamType.Bad => new BadEventTransformer(documentIndex, documentType)
+        }
+
+        def run = for (ln <- scala.io.Source.stdin.getLines) {
+          val emitterInput = transformer.consumeLine(ln)
+          emitterInput._2.bimap(
+            f => badSink.store(BadRow(emitterInput._1, f).toCompactJson, None, false),
+            s => goodSink match {
+              case Some(gs) => gs.store(s.getSource, None, true)
+              case None => elasticsearchSender.sendToElasticsearch(List(ln -> s.success))
+            }
+          )
+        }
+      }.success
+
+      case _ => "Source must be set to 'stdin' or 'kinesis'".failure
+    }
+
+    executor.fold(
+      err => throw new RuntimeException(err),
+      exec => {
+        tracker foreach {
+          t => SnowplowTracking.initializeSnowplowTracking(t)
+        }
+        exec.run()
+
+        // If the stream cannot be found, the KCL's "cw-metrics-publisher" thread will prevent the
+        // application from exiting naturally so we explicitly call System.exit.
+        System.exit(1)
+      }
+    )
+  }
 
   /**
    * Builds a KinesisConnectorConfiguration from the "connector" field of the configuration HOCON
@@ -229,10 +220,12 @@ trait ElasticsearchSinkApp {
     new KinesisConnectorConfiguration(props, CredentialsLookup.getCredentialsProvider(accessKey, secretKey))
   }
 
-  /** Simple getOrElse wrapper for config getString calls. */
-  private def configGetOrElse(config: Config, key: String, elseValue: String): String =
-    if (config.hasPath(key)) config.getString(key)
-    else elseValue
+  def getTracker(conf: Config): Option[Tracker] =
+    if (conf.hasPath("monitoring.snowplow")) {
+      SnowplowTracking.initializeTracker(conf.getConfig("monitoring.snowplow")).some
+    } else {
+      None
+    }
 
   private def getKinesisEndpoint(region: String): String =
     region match {

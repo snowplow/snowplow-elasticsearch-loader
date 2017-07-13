@@ -30,25 +30,33 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.specs2
 )
 
-lazy val allSettings = BuildSettings.basicSettings ++
+lazy val buildSettings = Seq(
+  organization  := "com.snowplowanalytics",
+  name          := "snowplow-elasticsearch-loader",
+  version       := "0.8.0",
+  description   := "Load the contents of a Kinesis stream to Elasticsearch",
+  scalaVersion  := "2.11.11",
+  scalacOptions := BuildSettings.compilerOptions,
+  javacOptions  := BuildSettings.javaCompilerOptions,
+  resolvers     += Resolver.jcenterRepo,
+  shellPrompt   := { _ => "elasticsearch-loader> " }
+)
+
+lazy val allSettings = buildSettings ++
   BuildSettings.sbtAssemblySettings ++
   Seq(libraryDependencies ++= commonDependencies)
 
 lazy val root = project.in(file("."))
-  .settings(
-    name        := "snowplow-elasticsearch-loader",
-    version     := "0.8.0",
-    description := "Load the contents of a Kinesis stream to Elasticsearch"
-  )
-  .settings(BuildSettings.basicSettings)
+  .settings(buildSettings)
   .aggregate(core, http, tcp, tcp2x)
 
 lazy val core = project
   .settings(moduleName := "snowplow-elasticsearch-loader-core")
-  .settings(BuildSettings.basicSettings)
+  .settings(buildSettings)
   .settings(BuildSettings.scalifySettings)
   .settings(libraryDependencies ++= commonDependencies)
 
+// project dealing with the ES HTTP API
 lazy val http = project
   .settings(moduleName := "snowplow-elasticsearch-loader-http")
   .settings(allSettings)
@@ -58,19 +66,16 @@ lazy val http = project
   ))
   .dependsOn(core)
 
+// project dealing with the ES transport API for 5.x clusters
 lazy val tcp = project
   .settings(moduleName := "snowplow-elasticsearch-loader-tcp")
   .settings(allSettings)
-  .settings(libraryDependencies ++= Seq(
-    Dependencies.Libraries.elastic4sTcp,
-    Dependencies.Libraries.elastic4sTest
-  ))
+  .settings(libraryDependencies += Dependencies.Libraries.elastic4sTcp)
   .dependsOn(core)
 
+// project dealing with the ES transport API for 2.x clusters
 lazy val tcp2x = project
   .settings(moduleName := "snowplow-elasticsearch-loader-tcp-2x")
   .settings(allSettings)
   .settings(libraryDependencies += Dependencies.Libraries.elasticsearch)
   .dependsOn(core)
-
-shellPrompt := { _ => "elasticsearch-loader> " }
