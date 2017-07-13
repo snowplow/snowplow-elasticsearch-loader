@@ -26,8 +26,6 @@ import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObje
 
 // Elasticsearch
 import org.elasticsearch.cluster.health.ClusterHealthStatus
-import org.elasticsearch.action.bulk.BulkItemResponse.Failure
-import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.client.transport.{NoNodeAvailableException, TransportClient}
 import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
@@ -125,8 +123,14 @@ class ElasticsearchSenderTCP(
   private val BackoffPeriod = 10000L
 
   elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(elasticsearchEndpoint), elasticsearchPort))
-       
+
   log.info(s"ElasticsearchSender using elasticsearch endpoint $elasticsearchEndpoint:$elasticsearchPort")
+
+  // With previous versions of ES there were hard limits regarding the size of the payload (32768
+  // bytes) and since we don't really need the whole payload in those cases we cut it at 20k so that
+  // it can be sent to a bad sink. This way we don't have to compute the size of the byte
+  // representation of the utf-8 string.
+  private val maxSizeWhenReportingFailure = 20000
 
   /**
    * Emits good records to Elasticsearch and bad records to Kinesis.
@@ -189,8 +193,9 @@ class ElasticsearchSenderTCP(
           if (failure.getMessage.contains("DocumentAlreadyExistsException") || failure.getMessage.contains("VersionConflictEngineException")) {
             None
           } else {
-            Some(record._1 -> s"Elasticsearch rejected record with message: ${failure.getMessage}"
-              .failureNel[ElasticsearchObject])
+            Some(record._1.take(maxSizeWhenReportingFailure) ->
+              s"Elasticsearch rejected record with message: ${failure.getMessage}"
+                .failureNel[ElasticsearchObject])
           }
         })
 
