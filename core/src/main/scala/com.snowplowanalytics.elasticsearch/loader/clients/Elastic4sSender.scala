@@ -40,6 +40,12 @@ trait Elastic4sSender extends ElasticsearchSender {
   val delays = 0.milliseconds +:
     Seq.fill(maxAttempts - 1)((maxConnectionWaitTimeMs / maxAttempts).milliseconds)
 
+  // With previous versions of ES there were hard limits regarding the size of the payload (32768
+  // bytes) and since we don't really need the whole payload in those cases we cut it at 20k so that
+  // it can be sent to a bad sink. This way we don't have to compute the size of the byte
+  // representation of the utf-8 string.
+  val maxSizeWhenReportingFailure = 20000
+
   /**
    * Handle the response given for a bulk request, by producing a failure if we failed to insert
    * a given item.
@@ -56,14 +62,15 @@ trait Elastic4sSender extends ElasticsearchSender {
       if (e.contains("DocumentAlreadyExistsException") || e.contains("VersionConflictEngineException"))
         None
       else 
-        Some(record._1 -> s"Elasticsearch rejected record with message $e".failureNel[ElasticsearchObject])
+        Some(record._1.take(maxSizeWhenReportingFailure) ->
+          s"Elasticsearch rejected record with message $e".failureNel[ElasticsearchObject])
     }.getOrElse(None)
   }
 
   /** Predicate about whether or not we should retry sending stuff to ES */
   def exPredicate(connectionStartTime: Long): (Throwable => Boolean) = _ match {
     case e: Exception =>
-      log.error("ElasticsearchEmitter threw an unexpected exception ", e)
+      log.error("ElasticsearchSender threw an unexpected exception ", e)
       tracker foreach {
         t => SnowplowTracking.sendFailureEvent(t, delays.head.toMillis, 0L,
           connectionStartTime, e.getMessage)
