@@ -21,7 +21,7 @@ object BuildSettings {
   // Basic settings for our app
   lazy val basicSettings = Seq(
     organization  := "com.snowplowanalytics",
-    version       := "0.9.0-rc1",
+    version       := "0.9.0-rc2",
     scalaVersion  := "2.11.11",
     scalacOptions := compilerOptions,
     javacOptions  := javaCompilerOptions,
