@@ -11,124 +11,125 @@
 # implied.  See the Apache License Version 2.0 for the specific language
 # governing permissions and limitations there under.
 
-# This file (application.conf.example) contains a template with
-# configuration options for the Kinesis Elasticsearch Sink.
+# This file (config.hocon.sample) contains a template with
+# configuration options for the Elasticsearch Loader.
 
+# Sources currently supported are:
+# "kinesis" for reading records from a Kinesis stream
+# "stdin" for reading unencoded tab-separated events from stdin
+# If set to "stdin", JSON documents will not be sent to Elasticsearch
+# but will be written to stdout.
+source = {{elasticsearchInputType}}
+
+# Where to write good and bad records
 sink {
+  # Sinks currently supported are:
+  # "elasticsearch" for writing good records to Elasticsearch
+  # "stdout" for writing good records to stdout
+  good: {{elasticsearchGoodOutputDestination}}
 
-  # Sources currently supported are:
-  # 'kinesis' for reading records from a Kinesis stream
-  # 'stdin' for reading unencoded tab-separated events from stdin
-  # If set to "stdin", JSON documents will not be sent to Elasticsearch
-  # but will be written to stdout.
-  source = {{sinkElasticsearchInputType}}
+  # Sinks currently supported are:
+  # "kinesis" for writing bad records to Kinesis
+  # "stderr" for writing bad records to stderr
+  # "none" for ignoring bad records
+  bad: {{elasticsearchBadOutputDestination}}
+}
 
-  # Where to write good and bad records
-  sink {
-    # Sinks currently supported are:
-    # 'elasticsearch' for writing good records to Elasticsearch
-    # 'stdout' for writing good records to stdout
-    "good": {{sinkElasticsearchGoodOutputDestination}}
+# "good" for a stream of successfully enriched events
+# "bad" for a stream of bad events
+stream-type: {{kinesisInStreamType}}
 
-    # Sinks currently supported are:
-    # 'kinesis' for writing bad records to Kinesis
-    # 'stderr' for writing bad records to stderr
-    # 'none' for ignoring bad records
-    "bad": {{sinkElasticsearchBadOutputDestination}}
+# The following are used to authenticate for the Amazon Kinesis sink.
+#
+# If both are set to "default", the default provider chain is used
+# (see http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html)
+#
+# If both are set to "iam", use AWS IAM Roles to provision credentials.
+#
+# If both are set to "env", use environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+aws {
+  access-key: iam
+  secret-key: iam
+}
+
+kinesis {
+
+  in {
+    stream-name: {{kinesisInStreamName}} # Kinesis stream name
+
+    # "LATEST": most recent data.
+    # "TRIM_HORIZON": oldest available data.
+    # Note: This only affects the first run of this application on a stream.
+    initial-position: TRIM_HORIZON
+
+    # Maximum number of records to get from Kinesis per call to GetRecords
+    maxRecords: 10000
   }
 
-  # "good" for a stream of successfully enriched events
-  # "bad" for a stream of bad events
-  stream-type: "{{sinkKinesisInStreamType}}"
+  out {
+    # Stream for enriched events which are rejected by Elasticsearch
+    stream-name: {{kinesisOutStreamName}}
+  }
 
-  # The following are used to authenticate for the Amazon Kinesis sink.
-  #
-  # If both are set to 'default', the default provider chain is used
-  # (see http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html)
-  #
-  # If both are set to 'iam', use AWS IAM Roles to provision credentials.
-  #
-  # If both are set to 'env', use environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+  # Region where the Kinesis stream is located
+  region: {{kinesisRegion}}
+
+  # "app-name" is used for a DynamoDB table to maintain stream state.
+  # You can set it automatically using: "SnowplowElasticsearchSink-${sink.kinesis.in.stream-name}"
+  app-name: {{kinesisAppName}}
+}
+
+elasticsearch {
+
+  # Events are indexed using an Elasticsearch Client
+  # - endpoint: the cluster endpoint
+  # - port: the port the cluster can be accessed on
+  #   - for http this is usually 9200
+  #   - for transport this is usually 9300
+  # - max-timeout: the maximum attempt time before a client restart
+  # - ssl: if using the http client, whether to use ssl or not
+  client {
+    endpoint: {{elasticsearchEndpoint}}
+    port: {{elasticsearchTransportPort}}
+    max-timeout: {{elasticsearchMaxTimeout}}
+    ssl: false
+  }
+
+  # When using the AWS ES service
+  # - signing: if using the http client and the AWS ES service you can sign your requests
+  #    http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html
+  # - region where the AWS ES service is located
   aws {
-    access-key: "iam"
-    secret-key: "iam"
+    signing: false
+    region: {{elasticsearchRegion}}
   }
 
-  kinesis {
-
-    in {
-      stream-name: "{{sinkKinesisInStreamName}}" # Kinesis stream name
-
-      # LATEST: most recent data.
-      # TRIM_HORIZON: oldest available data.
-      # Note: This only affects the first run of this application
-      # on a stream.
-      initial-position: "TRIM_HORIZON"
-
-      # Maximum number of records to get from Kinesis per call to GetRecords
-      maxRecords: 10000
-    }
-
-    out {
-      # Stream for enriched events which are rejected by Elasticsearch
-      stream-name: "{{sinkKinesisOutStreamName}}"
-      shards: 1
-    }
-
-    region: "{{sinkElasticsearchRegion}}"
-
-    # "app-name" is used for a DynamoDB table to maintain stream state.
-    # You can set it automatically using: "SnowplowElasticsearchSink-$\\{connector.kinesis.in.stream-name\\}"
-    app-name: "{{sinkKinesisAppName}}"
+  # index: the Elasticsearch index name
+  # type: the Elasticsearch index type
+  cluster {
+    name: {{elasticsearchClusterName}}
+    index: {{elasticsearchIndex}}
+    type: {{elasticsearchType}}
   }
+}
 
-  elasticsearch {
+# Events are accumulated in a buffer before being sent to Elasticsearch.
+# The buffer is emptied whenever:
+# - the combined size of the stored records exceeds byte-limit or
+# - the number of stored records exceeds record-limit or
+# - the time in milliseconds since it was last emptied exceeds time-limit
+buffer {
+  byte-limit: {{elasticsearchBufferByteThreshold}}
+  record-limit: {{elasticsearchBufferRecordThreshold}}
+  time-limit: {{elasticsearchBufferTimeThreshold}}
+}
 
-    # Events are indexed using an Elasticsearch Client
-    # - type: http or transport (will default to transport)
-    # - endpoint: the cluster endpoint
-    # - port: the port the cluster can be accessed on
-    #   - for http this is usually 9200
-    #   - for transport this is usually 9300
-    # - max-timeout: the maximum attempt time before a client restart
-    client {
-      type: "{{sinkElasticseachClient}}"
-      endpoint: "{{sinkElasticsearchEndpoint}}"
-      port: {{sinkElasticsearchTransportPort}}
-      max-timeout: "{{sinkElasticsearchMaxTimeout}}"
-
-      # Section for configuring the HTTP client
-      http {
-        conn-timeout: "{{sinkElasticsearchClientHttpConnTimeout}}"
-        read-timeout: "{{sinkElasticsearchClientHttpReadTimeout}}"
-      }
-    }
-
-    cluster {
-      name: "{{sinkElasticsearchClusterName}}"
-      index: "{{sinkElasticsearchIndex}}"
-      type: "{{sinkElasticsearchType}}"
-    }
-  }
-
-  # Events are accumulated in a buffer before being sent to Elasticsearch.
-  # The buffer is emptied whenever:
-  # - the combined size of the stored records exceeds byte-limit or
-  # - the number of stored records exceeds record-limit or
-  # - the time in milliseconds since it was last emptied exceeds time-limit
-  buffer {
-    byte-limit: {{sinkElasticsearchBufferByteThreshold}}
-    record-limit: {{sinkElasticsearchBufferRecordThreshold}}
-    time-limit: {{sinkElasticsearchBufferTimeThreshold}}
-  }
-
-  # Optional section for tracking endpoints
-  monitoring {
-    snowplow {
-      collector-uri: "{{collectorUri}}"
-      collector-port: 80
-      app-id: "{{sinkKinesisAppName}}"
-      method: "GET"
-    }
+# Optional section for tracking endpoints
+monitoring {
+  snowplow {
+    collector-uri: "{{collectorUri}}"
+    collector-port: 80
+    app-id: {{sinkKinesisAppName}}
+    method: GET
   }
 }
