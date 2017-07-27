@@ -22,7 +22,7 @@ object Dependencies {
     val kinesisConnector = "1.3.0"
     val validator        = "2.2.6"
     val elasticsearch    = "2.4.5"
-
+    val nsqClient        = "1.1.0-rc1"
     // Scala
     val scopt            = "3.6.0"
     val scalaz7          = "7.2.14"
@@ -43,7 +43,7 @@ object Dependencies {
     val kinesisConnector = "com.amazonaws"           %  "amazon-kinesis-connectors"    % V.kinesisConnector
     val validator        = "com.github.fge"          %  "json-schema-validator"        % V.validator
     val elasticsearch    = "org.elasticsearch"       %  "elasticsearch"                % V.elasticsearch
-
+    val nsqClient        = "com.snowplowanalytics"   %  "nsq-java-client_2.10"         % V.nsqClient
     // Scala
     val scopt            = "com.github.scopt"        %% "scopt"                        % V.scopt
     val scalaz7          = "org.scalaz"              %% "scalaz-core"                  % V.scalaz7
@@ -55,6 +55,13 @@ object Dependencies {
     val elastic4sTcp     = ("com.sksamuel.elastic4s" %% "elastic4s-tcp"                % V.elastic4s)
       .exclude("org.apache.logging.log4j", "log4j-1.2-api")
       .exclude("io.netty", "netty-all")
+      .exclude("io.netty", "netty-buffer")
+      .exclude("io.netty", "netty-codec")
+      .exclude("io.netty", "netty-codec-http")
+      .exclude("io.netty", "netty-common")
+      .exclude("io.netty", "netty-handler")
+      .exclude("io.netty", "netty-resolver")
+      .exclude("io.netty", "netty-transport")
     // Scala (test only)
     val specs2           = "org.specs2"              %% "specs2-core"                  % V.specs2    % "test"
     val elastic4sTest    = "com.sksamuel.elastic4s"  %% "elastic4s-embedded"           % V.elastic4s % "test"

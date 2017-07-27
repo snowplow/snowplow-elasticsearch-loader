@@ -19,6 +19,7 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.kinesisClient,
   Dependencies.Libraries.kinesisConnector,
   Dependencies.Libraries.validator,
+  Dependencies.Libraries.nsqClient,  
   // Scala
   Dependencies.Libraries.scopt,
   Dependencies.Libraries.scalaz7,

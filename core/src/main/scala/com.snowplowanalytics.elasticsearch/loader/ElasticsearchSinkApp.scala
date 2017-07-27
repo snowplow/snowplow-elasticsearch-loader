@@ -92,6 +92,7 @@ trait ElasticsearchSinkApp {
     val documentType = esCluster.getString("type")
 
     val finalConfig = convertConfig(conf)
+    val nsqConfig = new ElasticsearchSinkNsqConfig(conf)
 
     val goodSink = conf.getString("sink.good") match {
       case "stdout" => Some(new StdouterrSink)
@@ -100,11 +101,12 @@ trait ElasticsearchSinkApp {
 
     val badSink = conf.getString("sink.bad") match {
       case "stderr" => new StdouterrSink
+      case "NSQ" => new NsqSink(nsqConfig)
       case "none" => new NullSink
       case "kinesis" => {
         val kinesis = conf.getConfig("kinesis")
         val kinesisSink = kinesis.getConfig("out")
-        val kinesisSinkName = kinesisSink.getString("stream-name")
+        val kinesisSinkName = conf.getString("streams.stream-name-out")
         val kinesisSinkRegion = kinesis.getString("region")
         val kinesisSinkEndpoint = getKinesisEndpoint(kinesisSinkRegion)
         new KinesisSink(finalConfig.AWS_CREDENTIALS_PROVIDER,
@@ -117,8 +119,10 @@ trait ElasticsearchSinkApp {
     val executor = conf.getString("source") match {
 
       // Read records from Kinesis
-      case "kinesis" =>
-        new ElasticsearchSinkExecutor(streamType, documentIndex, documentType, finalConfig, goodSink, badSink, elasticsearchSender, tracker).success
+      case "kinesis" => new KinesisSourceExecutor(streamType, documentIndex, documentType, finalConfig, goodSink, badSink, elasticsearchSender, tracker).success
+
+      // Read records from NSQ
+      case "NSQ" => new NsqSourceExecutor(streamType, documentIndex, documentType, nsqConfig, goodSink, badSink, elasticsearchSender).success
 
       // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
       // TODO reduce code duplication
@@ -140,7 +144,7 @@ trait ElasticsearchSinkApp {
         }
       }.success
 
-      case _ => "Source must be set to 'stdin' or 'kinesis'".failure
+      case _ => "Source must be set to 'stdin', 'kinesis' or 'NSQ'".failure
     }
 
     executor.fold(
@@ -153,7 +157,14 @@ trait ElasticsearchSinkApp {
 
         // If the stream cannot be found, the KCL's "cw-metrics-publisher" thread will prevent the
         // application from exiting naturally so we explicitly call System.exit.
-        System.exit(1)
+        // This does not apply to NSQ because NSQ consumer is non-blocking and fall here 
+        // right after consumer.start()
+        conf.getString("source") match { 
+          case "kinesis" => System.exit(1)
+          case "stdin" => System.exit(1)
+          // do anything
+          case "NSQ" =>    
+        }
       }
     )
   }
@@ -169,6 +180,14 @@ trait ElasticsearchSinkApp {
     val aws = connector.getConfig("aws")
     val accessKey = aws.getString("access-key")
     val secretKey = aws.getString("secret-key")
+
+    val streams = connector.getConfig("streams")
+    val streamName = streams.getString("stream-name-in")
+    
+    val buffer = streams.getConfig("buffer")
+    val byteLimit = buffer.getString("byte-limit")
+    val recordLimit = buffer.getString("record-limit")
+    val timeLimit = buffer.getString("time-limit")
 
     val elasticsearch = connector.getConfig("elasticsearch")
     val esClient = elasticsearch.getConfig("client")
@@ -187,13 +206,7 @@ trait ElasticsearchSinkApp {
     } else {
       10000
     }
-    val streamName = kinesisIn.getString("stream-name")
     val streamEndpoint = getKinesisEndpoint(streamRegion)
-
-    val buffer = connector.getConfig("buffer")
-    val byteLimit = buffer.getString("byte-limit")
-    val recordLimit = buffer.getString("record-limit")
-    val timeLimit = buffer.getString("time-limit")
 
     val props = new Properties
 
@@ -232,4 +245,19 @@ trait ElasticsearchSinkApp {
       case cn@"cn-north-1" => s"https://kinesis.$cn.amazonaws.com.cn"
       case _ => s"https://kinesis.$region.amazonaws.com"
     }
+}
+
+/**
+  * Rigidly load the configuration of the NSQ here to error.
+  */
+class ElasticsearchSinkNsqConfig(config: Config) { 
+  private val nsq = config.getConfig("NSQ")
+  val nsqSourceChannelName = nsq.getString("channel-name")
+  val nsqHost = nsq.getString("host")
+  val nsqPort = nsq.getInt("port")
+  val nsqlookupPort = nsq.getInt("lookup-port")
+
+  private val streams = config.getConfig("streams")
+  val nsqSourceTopicName = streams.getString("stream-name-in")
+  val nsqSinkTopicName = streams.getString("stream-name-out")
 }
