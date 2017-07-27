@@ -92,14 +92,17 @@ trait ElasticsearchSinkApp {
     val documentType = esCluster.getString("type")
 
     val finalConfig = convertConfig(conf)
+    val nsqConfig = new ElasticsearchSinkNsqConfig(conf)
 
     val goodSink = conf.getString("sink.good") match {
       case "stdout" => Some(new StdouterrSink)
       case "elasticsearch" => None
+      case "NSQ" => Some(new NsqSink(nsqConfig))
     }
 
     val badSink = conf.getString("sink.bad") match {
       case "stderr" => new StdouterrSink
+      case "NSQ" => new NsqSink(nsqConfig)
       case "none" => new NullSink
       case "kinesis" => {
         val kinesis = conf.getConfig("kinesis")
@@ -117,8 +120,10 @@ trait ElasticsearchSinkApp {
     val executor = conf.getString("source") match {
 
       // Read records from Kinesis
-      case "kinesis" =>
-        new ElasticsearchSinkExecutor(streamType, documentIndex, documentType, finalConfig, goodSink, badSink, elasticsearchSender, tracker).success
+      case "kinesis" => new KinesisSourceExecutor(streamType, documentIndex, documentType, finalConfig, goodSink, badSink, elasticsearchSender, tracker).success
+
+      // Read records from NSQ
+      case "NSQ" => new NsqSourceExecutor(streamType, documentIndex, documentType, nsqConfig, goodSink, badSink, elasticsearchSender).success
 
       // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
       // TODO reduce code duplication
@@ -140,7 +145,7 @@ trait ElasticsearchSinkApp {
         }
       }.success
 
-      case _ => "Source must be set to 'stdin' or 'kinesis'".failure
+      case _ => "Source must be set to 'stdin', 'kinesis' or 'NSQ'".failure
     }
 
     executor.fold(
@@ -153,7 +158,14 @@ trait ElasticsearchSinkApp {
 
         // If the stream cannot be found, the KCL's "cw-metrics-publisher" thread will prevent the
         // application from exiting naturally so we explicitly call System.exit.
-        System.exit(1)
+        // This did not applied for NSQ because NSQ consumer is non-blocking and fall here 
+        // right after consumer.start()
+        conf.getString("source") match { 
+          case "kinesis" => System.exit(1)
+          case "stdin" => System.exit(1)
+          // do anything
+          case "NSQ" =>    
+        }
       }
     )
   }
@@ -232,4 +244,20 @@ trait ElasticsearchSinkApp {
       case cn@"cn-north-1" => s"https://kinesis.$cn.amazonaws.com.cn"
       case _ => s"https://kinesis.$region.amazonaws.com"
     }
+}
+
+/**
+  * Rigidly load the configuration of the NSQ here to error.
+  */
+class ElasticsearchSinkNsqConfig(config: Config) { 
+  private val nsq = config.getConfig("NSQ")
+  val nsqGoodSourceTopicName = nsq.getString("good-source-topic")
+  val nsqGoodSourceChannelName = nsq.getString("good-source-channel")    
+  val nsqGoodSinkTopicName = nsq.getString("good-sink")
+  val nsqBadSourceTopicName = nsq.getString("bad-source-topic")
+  val nsqBadSourceChannelName = nsq.getString("bad-source-channel")
+  val nsqBadSinkTopicName = nsq.getString("bad-sink")
+  val nsqHost = nsq.getString("host")
+  val nsqPort = nsq.getInt("port")
+  val nsqlookupPort = nsq.getInt("lookup-port")
 }

@@ -44,12 +44,10 @@ import StreamType._
  * @param config the KCL configuration
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
+ * @param elasticsearchSender function for sending to elasticsearch 
  * @param tracker a Tracker instance
- * @param maxConnectionTimeout the maximum amount of time
- *        we can attempt to send to elasticsearch
- * @param elasticsearchClientType The type of ES Client to use
  */
-class ElasticsearchSinkExecutor(
+class KinesisSourceExecutor(
   streamType: StreamType,
   documentIndex: String,
   documentType: String,
