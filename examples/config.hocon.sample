@@ -19,6 +19,7 @@
 # "stdin" for reading unencoded tab-separated events from stdin
 # If set to "stdin", JSON documents will not be sent to Elasticsearch
 # but will be written to stdout.
+# "NSQ" for reading unencoded tab-separated events from NSQ
 source = {{elasticsearchInputType}}
 
 # Where to write good and bad records
@@ -26,11 +27,13 @@ sink {
   # Sinks currently supported are:
   # "elasticsearch" for writing good records to Elasticsearch
   # "stdout" for writing good records to stdout
+  # "NSQ" for writing good records to NSQ  
   good: {{elasticsearchGoodOutputDestination}}
 
   # Sinks currently supported are:
   # "kinesis" for writing bad records to Kinesis
   # "stderr" for writing bad records to stderr
+  # "NSQ" for writing bad records to NSQ    
   # "none" for ignoring bad records
   bad: {{elasticsearchBadOutputDestination}}
 }
@@ -50,6 +53,36 @@ stream-type: {{kinesisInStreamType}}
 aws {
   access-key: iam
   secret-key: iam
+}
+
+# config for NSQ sink and NSQ source
+NSQ {
+  #Topic name for good event source
+  good-source-topic: "{{sinkKinesisNsqSourceGoodTopicName}}"
+
+  #Channel name for good event source
+  good-source-channel: "{{sinkKinesisNsqSourceGoodChannelName}}"
+
+  #Topic name for good event sink
+  good-sink: "{{sinkKinesisNsqSinkGoodTopicName}}"
+
+  #Topic name for bad event source
+  bad-source-topic: "{{sinkKinesisNsqSourceBadTopicName}}"
+
+  #Channel name for bad event source
+  bad-source-channel: "{{sinkKinesisNsqSourceBadChannelName}}"
+
+  #Topic name for bad event sink
+  bad-sink: "{{sinkKinesisNsqSinkBadTopicName}}"
+     
+  #Host name for NSQ tools
+  host: "{{NsqHost}}"
+
+  #Port for nsqd
+  port: "{{NsqdPort}}"
+
+  #Port for nsqlookupd
+  lookup-port: {{NsqlookupdPort}}
 }
 
 kinesis {
@@ -114,6 +147,7 @@ elasticsearch {
 }
 
 # Events are accumulated in a buffer before being sent to Elasticsearch.
+# Note: Buffering is not supported by NSQ; will be ignored
 # The buffer is emptied whenever:
 # - the combined size of the stored records exceeds byte-limit or
 # - the number of stored records exceeds record-limit or
