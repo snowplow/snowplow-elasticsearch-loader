@@ -76,6 +76,7 @@ class NsqSourceExecutor(
   private val transformer = streamType match {
     case StreamType.Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
     case StreamType.Bad => new BadEventTransformer(documentIndex, documentType)
+    case StreamType.PlainJson => new PlainJsonTransformer(documentIndex, documentType)
   }
 
   private val topicName = config.nsqSourceTopicName
