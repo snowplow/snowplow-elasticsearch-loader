@@ -43,7 +43,7 @@ import clients._
 // Whether the input stream contains enriched events or bad events
 object StreamType extends Enumeration {
   type StreamType = Value
-  val Good, Bad = Value
+  val Good, Bad, PlainJson = Value
 }
 
 /**
@@ -83,7 +83,8 @@ trait ElasticsearchSinkApp {
     val streamType = conf.getString("stream-type") match {
       case "good" => StreamType.Good
       case "bad" => StreamType.Bad
-      case _ => throw new RuntimeException("\"stream-type\" must be set to \"good\" or \"bad\"")
+      case "plain-json" => StreamType.PlainJson
+      case _ => throw new RuntimeException("\"stream-type\" must be set to \"good\", \"bad\" or \"plain-json\" ")
     }
 
     val elasticsearch = conf.getConfig("elasticsearch")
@@ -130,6 +131,7 @@ trait ElasticsearchSinkApp {
         val transformer = streamType match {
           case StreamType.Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
           case StreamType.Bad => new BadEventTransformer(documentIndex, documentType)
+          case StreamType.PlainJson => new PlainJsonTransformer(documentIndex, documentType)
         }
 
         def run = for (ln <- scala.io.Source.stdin.getLines) {

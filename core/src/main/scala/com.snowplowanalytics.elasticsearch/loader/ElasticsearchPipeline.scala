@@ -67,6 +67,7 @@ class KinesisElasticsearchPipeline(
   override def getTransformer(c: KinesisConnectorConfiguration) = streamType match {
     case Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
     case Bad => new BadEventTransformer(documentIndex, documentType)
+    case PlainJson => new PlainJsonTransformer(documentIndex, documentType)
   }
 
   override def getFilter(c: KinesisConnectorConfiguration) = new AllPassFilter[ValidatedRecord]()

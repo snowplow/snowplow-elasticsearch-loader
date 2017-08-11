@@ -40,6 +40,7 @@ sink {
 
 # "good" for a stream of successfully enriched events
 # "bad" for a stream of bad events
+# "plain-json" for writing plain json
 stream-type: {{kinesisInStreamType}}
 
 # The following are used to authenticate for the Amazon Kinesis sink.
