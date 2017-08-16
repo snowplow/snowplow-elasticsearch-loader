@@ -77,6 +77,12 @@ kinesis {
   # Note: This only affects the first run of this application on a stream.
   initialPosition = "{{initialPosition}}"
 
+  # Need to be specified when initial-position is "AT_TIMESTAMP".
+  # Timestamp format need to be in "yyyy-MM-ddTHH:mm:ssZ".
+  # Ex: "2017-05-17T10:00:00Z"
+  # Note: Time need to specified in UTC.
+  initialTimestamp = "{{initialTimestamp}}"
+
   # Maximum number of records to get from Kinesis per call to GetRecords
   maxRecords = {{kinesisMaxRecords}}
 
