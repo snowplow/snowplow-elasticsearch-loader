@@ -155,7 +155,18 @@ trait ElasticsearchSinkApp {
     val executor = conf.source match {
 
       // Read records from Kinesis
-      case "kinesis" => new KinesisSourceExecutor(streamType, documentIndex, documentType, convertConfig(conf), goodSink, badSink, elasticsearchSender, tracker).success
+      case "kinesis" =>
+        new KinesisSourceExecutor(streamType,
+                                  documentIndex,
+                                  documentType,
+                                  convertConfig(conf),
+                                  conf.kinesis.initialPosition,
+                                  conf.kinesis.timestamp,
+                                  goodSink,
+                                  badSink,
+                                  elasticsearchSender,
+                                  tracker
+                                 ).success
 
       // Read records from NSQ
       case "nsq" =>

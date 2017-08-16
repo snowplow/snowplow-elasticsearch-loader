@@ -19,6 +19,10 @@
 
 package com.snowplowanalytics.elasticsearch.loader
 
+import java.text.SimpleDateFormat
+
+import scala.util.Try
+
 package model {
   sealed trait StreamType
   case object Good extends StreamType
@@ -35,10 +39,21 @@ package model {
   )
   case class KinesisConfig(
     initialPosition: String,
+    initialTimestamp: Option[String],
     maxRecords: Long,
     region: String,
     appName: String
   ) {
+    val timestampEither = initialTimestamp
+      .toRight("An initial timestamp needs to be provided when choosing AT_TIMESTAMP")
+      .right.flatMap { s =>
+        val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+        utils.fold(Try(format.parse(s)))(t => Left(t.getMessage), Right(_))
+      }
+    require(initialPosition != "AT_TIMESTAMP" || timestampEither.isRight, timestampEither.left.getOrElse(""))
+
+    val timestamp = timestampEither.right.toOption
+
     val endpoint = region match {
       case cn@"cn-north-1" => s"https://kinesis.$cn.amazonaws.com.cn"
       case _ => s"https://kinesis.$region.amazonaws.com"
