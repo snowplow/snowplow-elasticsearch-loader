@@ -1,3 +1,11 @@
+Version 0.10.0 (2017-xx-xx)
+--------------------------
+Create ElasticsearchEmitter class (#65)
+Support AT_TIMESTAMP as initial position (#63)
+Configuration decoding with pureconfig (#61)
+Add support for NSQ source (#59)
+Add support for writing raw JSONs (#26)
+
 Version 0.9.0 (2017-07-21)
 --------------------------
 Allow AWS request signing for outbound events (#12)
