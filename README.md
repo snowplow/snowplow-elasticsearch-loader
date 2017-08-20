@@ -3,7 +3,7 @@
 ## Introduction
 
 The Snowplow Elasticsearch Loader consumes Snowplow enriched events or failed events from an
-[Amazon Kinesis][kinesis] stream, transforms them to JSON, and writes them to
+[Amazon Kinesis][kinesis] stream or [NSQ][nsq] topic, transforms them to JSON, and writes them to
 [Elasticsearch][elasticsearch]. Events which cannot be transformed or which are rejected by
 Elasticsearch are written to a separate Kinesis stream.
 
@@ -19,7 +19,7 @@ Assuming you already have [SBT 0.13][sbt] installed:
 The Snowplow Elasticsearch Loader has the following command-line interface:
 
 ```
-snowplow-elasticsearch-loader 0.9.0
+snowplow-elasticsearch-loader 0.10.0
 
 Usage: snowplow-elasticsearch-loader [options]
 
@@ -43,7 +43,7 @@ aws {
 
 Next, start the loader, making sure to specify your new config file:
 
-    $ java -jar snowplow-elasticsearch-loader-http-0.9.0.jar --config my.conf
+    $ java -jar snowplow-elasticsearch-loader-http-0.10.0.jar --config my.conf
 
 ## Find out more
 
@@ -66,6 +66,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 [kinesis]: http://aws.amazon.com/kinesis/
+[nsq]: http://nsq.io
 [snowplow]: http://snowplowanalytics.com
 [elasticsearch]: http://www.elasticsearch.org/
 [sbt]: http://www.scala-sbt.org
