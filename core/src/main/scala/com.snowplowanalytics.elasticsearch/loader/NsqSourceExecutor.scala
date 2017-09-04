@@ -28,12 +28,11 @@ import com.snowplowanalytics.client.nsq.callbacks.NSQMessageCallback
 import com.snowplowanalytics.client.nsq.callbacks.NSQErrorCallback
 import com.snowplowanalytics.client.nsq.exceptions.NSQException
 
-
 //Java
 import java.nio.charset.StandardCharsets.UTF_8
 
-// Scalaz
-import scalaz._
+// Scala
+import scala.collection.mutable.ListBuffer
 
 // Logging
 import org.slf4j.LoggerFactory
@@ -66,30 +65,42 @@ class NsqSourceExecutor(
 
   lazy val log = LoggerFactory.getLogger(getClass())
 
-  val transformer = streamType match {
+  // nsq messages will be buffered in msgBuffer until buffer size become equal to nsqBufferSize
+  private val msgBuffer = new ListBuffer[EmitterInput]()
+  // ElasticsearchEmitter instance
+  private val elasticsearchEmitter = new ElasticsearchEmitter(elasticsearchSender, 
+                                                              goodSink, 
+                                                              badSink, 
+                                                              config.streams.buffer.recordLimit,  
+                                                              config.streams.buffer.byteLimit)
+  private val transformer = streamType match {
     case StreamType.Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
     case StreamType.Bad => new BadEventTransformer(documentIndex, documentType)
   }
 
-  val topicName = config.nsqSourceTopicName
-  val channelName = config.nsqSourceChannelName
+  private val topicName = config.nsqSourceTopicName
+  private val channelName = config.nsqSourceChannelName
 
  /**
    * Consumer will be started to wait new message.
    */
   override def run(): Unit = {
-    val nsqCallback = new  NSQMessageCallback {
+    val nsqCallback = new NSQMessageCallback {
+      val nsqBufferSize = config.streams.buffer.recordLimit
+  
       override def message(msg: NSQMessage): Unit = {
         val msgStr = new String(msg.getMessage(), UTF_8)
-        val emitterInput = transformer.consumeLine(msgStr)
-        emitterInput._2.bimap(
-          f => badSink.store(BadRow(emitterInput._1, f).toCompactJson, None, false),          
-          s => goodSink match {
-            case Some(gs) => gs.store(s.getSource, None, true)
-            case None => elasticsearchSender.sendToElasticsearch(List(msgStr -> s.success))
+        msgBuffer.synchronized {
+          val emitterInput = transformer.consumeLine(msgStr)
+          msgBuffer += emitterInput
+          msg.finished()
+          
+          if (msgBuffer.size == nsqBufferSize) {
+            val elasticsearchRejects = elasticsearchEmitter.attempEmit(msgBuffer.toList)
+            elasticsearchEmitter.fail(elasticsearchRejects)
+            msgBuffer.clear()
           }
-        )
-        msg.finished()
+        }
       }
     }
 

@@ -17,74 +17,48 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics
-package elasticsearch.loader
-
-// Amazon
-import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
-import com.amazonaws.services.kinesis.connectors.interfaces.IEmitter
-import com.amazonaws.services.kinesis.connectors.{
-  KinesisConnectorConfiguration,
-  UnmodifiableBuffer
-}
-
-import scala.collection.mutable.ListBuffer
+package com.snowplowanalytics.elasticsearch.loader
 
 // Java
 import java.io.IOException
-import java.util.{List => JList}
-
-// Joda-Time
-import org.joda.time.{DateTime, DateTimeZone}
-import org.joda.time.format.DateTimeFormat
 
 // Scala
-import scala.collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
 
 // Scalaz
 import scalaz._
 import Scalaz._
-
-// Tracker
-import snowplow.scalatracker.Tracker
 
 // This project
 import sinks._
 import clients._
 
 /**
- * Class to send valid records to Elasticsearch and invalid records to Kinesis
+ * ElasticsearchEmitter class
  *
- * @param configuration the KCL configuration
+ * @param elasticsearchSender The ES Client to use
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
- * @param elasticsearchSender ES Client to use
- * @param tracker a Tracker instance
+ * @param bufferRecordLimit record limit for buffer
+ * @param bufferByteLimit byte limit for buffer
  */
-class SnowplowElasticsearchEmitter(
-  configuration: KinesisConnectorConfiguration,
+class ElasticsearchEmitter (
+  elasticsearchSender: ElasticsearchSender,
   goodSink: Option[ISink],
   badSink: ISink,
-  elasticsearchSender: ElasticsearchSender,
-  tracker: Option[Tracker] = None
-) extends IEmitter[EmitterInput] {
-
-  // An ISO valid timestamp formatter
-  private val TstampFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(DateTimeZone.UTC)
-
+  bufferRecordLimit: Long,
+  bufferByteLimit: Long
+) {
   /**
    * Emits good records to stdout or Elasticsearch.
    * All records which Elasticsearch rejects and all records which failed transformation
    * get sent to to stderr or Kinesis.
    *
-   * @param buffer BasicMemoryBuffer containing EmitterInputs
+   * @param records list containing EmitterInputs
    * @return list of inputs which failed transformation or which Elasticsearch rejected
    */
   @throws[IOException]
-  override def emit(buffer: UnmodifiableBuffer[EmitterInput]): JList[EmitterInput] = {
-
-    val records = buffer.getRecords.toList
-
+  def attempEmit(records: List[EmitterInput]): List[EmitterInput] = {
     if (records.isEmpty) {
       Nil
     } else {
@@ -107,6 +81,19 @@ class SnowplowElasticsearchEmitter(
   }
 
   /**
+   * Handles records rejected by the SnowplowElasticsearchTransformer or by Elasticsearch
+   *
+   * @param records List of failed records
+   */
+  def fail(records: List[EmitterInput]): Unit =
+    records.foreach { _ match {
+      case (r, Failure(fs)) =>
+        val output = BadRow(r, fs).toCompactJson
+        badSink.store(output, None, false)
+      case (_, Success(_)) => ()
+    }}
+
+  /**
    * Emits good records to Elasticsearch and bad records to Kinesis.
    * All valid records in the buffer get sent to Elasticsearch in a bulk request.
    * All invalid requests and all requests which failed transformation get sent to Kinesis.
@@ -116,7 +103,7 @@ class SnowplowElasticsearchEmitter(
    */
   private def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput] = {
     val failures = for {
-      recordSlice <- splitBuffer(configuration, records)
+      recordSlice <- splitBuffer(records, bufferByteLimit, bufferRecordLimit)
     } yield elasticsearchSender.sendToElasticsearch(recordSlice)
     failures.flatten
   }
@@ -128,13 +115,11 @@ class SnowplowElasticsearchEmitter(
    * @param records The records to split
    * @returns a list of buffers
    */
-  protected def splitBuffer(
-    configuration: KinesisConnectorConfiguration,
-    records: List[EmitterInput]
+  private def splitBuffer(
+    records: List[EmitterInput],
+    byteLimit: Long,
+    recordLimit: Long
   ): List[List[EmitterInput]] = {
-    val byteLimit: Long   = configuration.BUFFER_BYTE_SIZE_LIMIT
-    val recordLimit: Long = configuration.BUFFER_RECORD_COUNT_LIMIT
-
     // partition the records in
     val remaining: ListBuffer[EmitterInput] = records.to[ListBuffer]
     val buffers: ListBuffer[List[EmitterInput]] = new ListBuffer
@@ -168,34 +153,5 @@ class SnowplowElasticsearchEmitter(
     if (curBuffer.nonEmpty) buffers += curBuffer.toList
 
     buffers.toList
-  }
-
-  /**
-   * Handles records rejected by the SnowplowElasticsearchTransformer or by Elasticsearch
-   *
-   * @param records List of failed records
-   */
-  override def fail(records: JList[EmitterInput]): Unit =
-    records.foreach { _ match {
-      case (r, Failure(fs)) =>
-        val output = BadRow(r, fs).toCompactJson
-        badSink.store(output, None, false)
-      case (_, Success(_)) => ()
-    }}
-
-  /**
-   * Closes the Elasticsearch client when the KinesisConnectorRecordProcessor is shut down
-   */
-  override def shutdown(): Unit = elasticsearchSender.close
-
-  /**
-   * Returns an ISO valid timestamp
-   *
-   * @param tstamp The Timestamp to convert
-   * @return the formatted Timestamp
-   */
-  private def getTimestamp(tstamp: Long): String = {
-    val dt = new DateTime(tstamp)
-    TstampFormat.print(dt)
   }
 }
