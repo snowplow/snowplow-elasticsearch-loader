@@ -25,11 +25,12 @@ import clients.{ElasticsearchSender, ElasticsearchSenderTCP}
 object ElasticsearchTCPSinkApp extends App with ElasticsearchSinkApp {
   override lazy val arguments = args
 
-  val conf = parseConfig()
-  val maxConnectionTime = conf.getConfig("elasticsearch.client").getLong("max-timeout")
+  val config = parseConfig().get
+  val maxConnectionTime = config.elasticsearch.client.maxTimeout
+  val tracker = config.monitoring.map(e => SnowplowTracking.initializeTracker(e.snowplow))
 
   override lazy val elasticsearchSender: ElasticsearchSender =
-    new ElasticsearchSenderTCP(convertConfig(conf), getTracker(conf), maxConnectionTime)
+    new ElasticsearchSenderTCP(convertConfig(config), tracker, maxConnectionTime)
 
-  run(conf)
+  run(config)
 }

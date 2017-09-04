@@ -27,6 +27,7 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.snowplowTracker,
   Dependencies.Libraries.analyticsSDK,
   Dependencies.Libraries.awsSigner,
+  Dependencies.Libraries.pureconfig,
   // Scala (test only)
   Dependencies.Libraries.specs2
 )
