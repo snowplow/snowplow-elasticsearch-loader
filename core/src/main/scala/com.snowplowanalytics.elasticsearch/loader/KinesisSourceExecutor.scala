@@ -61,6 +61,6 @@ class KinesisSourceExecutor(
   initialize(config)
   override def getKinesisConnectorRecordProcessorFactory = {
     new KinesisConnectorRecordProcessorFactory[ValidatedRecord, EmitterInput](
-      new ElasticsearchPipeline(streamType, documentIndex, documentType, goodSink, badSink, elasticsearchSender, tracker), config)
+      new KinesisElasticsearchPipeline(streamType, documentIndex, documentType, goodSink, badSink, elasticsearchSender, tracker), config)
   }
 }

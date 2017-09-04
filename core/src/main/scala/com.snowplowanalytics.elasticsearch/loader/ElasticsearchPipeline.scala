@@ -39,7 +39,7 @@ import snowplow.scalatracker.Tracker
 import clients.ElasticsearchSender
 
 /**
- * ElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter
+ * KinesisElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter
  *
  * @param streamType the type of stream, good/bad
  * @param documentIndex the elasticsearch index name
@@ -49,7 +49,7 @@ import clients.ElasticsearchSender
  * @param elasticsearchSender The ES Client to use
  * @param tracker a Tracker instance
  */
-class ElasticsearchPipeline(
+class KinesisElasticsearchPipeline(
   streamType: StreamType,
   documentIndex: String,
   documentType: String,
@@ -60,7 +60,7 @@ class ElasticsearchPipeline(
 ) extends IKinesisConnectorPipeline[ValidatedRecord, EmitterInput] {
 
   override def getEmitter(configuration: KinesisConnectorConfiguration): IEmitter[EmitterInput] =
-    new SnowplowElasticsearchEmitter(configuration, goodSink, badSink, elasticsearchSender, tracker)
+    new KinesisElasticsearchEmitter(configuration, goodSink, badSink, elasticsearchSender, tracker)
 
   override def getBuffer(configuration: KinesisConnectorConfiguration) = new BasicMemoryBuffer[ValidatedRecord](configuration)
 
