@@ -40,15 +40,15 @@ import org.slf4j.LoggerFactory
 // This project
 import sinks._
 import clients._
-import StreamType._
+import model._
 
 /**
  * NSQSource executor
  *
- * @param streamType the type of stream, good/bad
+ * @param streamType the type of stream, good, bad or plain-json
  * @param documentIndex the elasticsearch index name
  * @param documentType the elasticsearch index type
- * @param config the NSQ configuration
+ * @param config ESLoader Configuration
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
  * @param elasticsearchSender function for sending to elasticsearch
@@ -57,7 +57,7 @@ class NsqSourceExecutor(
   streamType: StreamType,
   documentIndex: String,
   documentType: String,
-  config: ElasticsearchSinkNsqConfig,
+  config: ESLoaderConfig,
   goodSink: Option[ISink],
   badSink: ISink,
   elasticsearchSender: ElasticsearchSender
@@ -74,13 +74,13 @@ class NsqSourceExecutor(
                                                               config.streams.buffer.recordLimit,  
                                                               config.streams.buffer.byteLimit)
   private val transformer = streamType match {
-    case StreamType.Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
-    case StreamType.Bad => new BadEventTransformer(documentIndex, documentType)
-    case StreamType.PlainJson => new PlainJsonTransformer(documentIndex, documentType)
+    case Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
+    case Bad => new BadEventTransformer(documentIndex, documentType)
+    case PlainJson => new PlainJsonTransformer(documentIndex, documentType)
   }
 
-  private val topicName = config.nsqSourceTopicName
-  private val channelName = config.nsqSourceChannelName
+  private val topicName = config.streams.inStreamName
+  private val channelName = config.nsq.channelName
 
  /**
    * Consumer will be started to wait new message.
@@ -112,7 +112,7 @@ class NsqSourceExecutor(
 
     // use NSQLookupd
     val lookup = new DefaultNSQLookup
-    lookup.addLookupAddress(config.nsqHost, config.nsqlookupPort)
+    lookup.addLookupAddress(config.nsq.host, config.nsq.lookupPort)
     val consumer = new NSQConsumer(lookup,
                                    topicName,
                                    channelName,

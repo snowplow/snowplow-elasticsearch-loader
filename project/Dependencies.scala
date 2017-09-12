@@ -30,6 +30,7 @@ object Dependencies {
     val analyticsSDK     = "0.2.0"
     val awsSigner        = "0.5.0"
     val elastic4s        = "5.4.6"
+    val pureconfig       = "0.8.0"
     // Scala (test only)
     val specs2           = "3.9.2"
   }
@@ -51,6 +52,7 @@ object Dependencies {
     val snowplowTracker  = "com.snowplowanalytics"   %% "snowplow-scala-tracker"       % V.snowplowTracker
     val analyticsSDK     = "com.snowplowanalytics"   %% "snowplow-scala-analytics-sdk" % V.analyticsSDK
     val awsSigner        = "io.ticofab"              %% "aws-request-signer"           % V.awsSigner
+    val pureconfig       = "com.github.pureconfig"   %% "pureconfig"                   % V.pureconfig
     val elastic4sHttp    = "com.sksamuel.elastic4s"  %% "elastic4s-http"               % V.elastic4s
     val elastic4sTcp     = ("com.sksamuel.elastic4s" %% "elastic4s-tcp"                % V.elastic4s)
       .exclude("org.apache.logging.log4j", "log4j-1.2-api")

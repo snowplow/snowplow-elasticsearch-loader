@@ -30,7 +30,7 @@ import com.amazonaws.services.kinesis.connectors.impl.{BasicMemoryBuffer,AllPass
 
 // This project
 import sinks._
-import StreamType._
+import model._
 
 // Tracker
 import snowplow.scalatracker.Tracker
@@ -41,7 +41,7 @@ import clients.ElasticsearchSender
 /**
  * KinesisElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter
  *
- * @param streamType the type of stream, good/bad
+ * @param streamType the type of stream, good, bad or plain-json
  * @param documentIndex the elasticsearch index name
  * @param documentType the elasticsearch index type
  * @param goodSink the configured GoodSink
