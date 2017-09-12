@@ -30,7 +30,7 @@ import com.amazonaws.services.kinesis.connectors.impl.{BasicMemoryBuffer,AllPass
 
 // This project
 import sinks._
-import StreamType._
+import model._
 
 // Tracker
 import snowplow.scalatracker.Tracker
@@ -39,9 +39,9 @@ import snowplow.scalatracker.Tracker
 import clients.ElasticsearchSender
 
 /**
- * ElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter
+ * KinesisElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter
  *
- * @param streamType the type of stream, good/bad
+ * @param streamType the type of stream, good, bad or plain-json
  * @param documentIndex the elasticsearch index name
  * @param documentType the elasticsearch index type
  * @param goodSink the configured GoodSink
@@ -49,7 +49,7 @@ import clients.ElasticsearchSender
  * @param elasticsearchSender The ES Client to use
  * @param tracker a Tracker instance
  */
-class ElasticsearchPipeline(
+class KinesisElasticsearchPipeline(
   streamType: StreamType,
   documentIndex: String,
   documentType: String,
@@ -60,13 +60,14 @@ class ElasticsearchPipeline(
 ) extends IKinesisConnectorPipeline[ValidatedRecord, EmitterInput] {
 
   override def getEmitter(configuration: KinesisConnectorConfiguration): IEmitter[EmitterInput] =
-    new SnowplowElasticsearchEmitter(configuration, goodSink, badSink, elasticsearchSender, tracker)
+    new KinesisElasticsearchEmitter(configuration, goodSink, badSink, elasticsearchSender, tracker)
 
   override def getBuffer(configuration: KinesisConnectorConfiguration) = new BasicMemoryBuffer[ValidatedRecord](configuration)
 
   override def getTransformer(c: KinesisConnectorConfiguration) = streamType match {
     case Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
     case Bad => new BadEventTransformer(documentIndex, documentType)
+    case PlainJson => new PlainJsonTransformer(documentIndex, documentType)
   }
 
   override def getFilter(c: KinesisConnectorConfiguration) = new AllPassFilter[ValidatedRecord]()

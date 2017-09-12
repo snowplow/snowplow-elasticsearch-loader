@@ -60,7 +60,7 @@ class MockElasticsearchSender extends ElasticsearchSender {
   override val tracker = None
 }
 
-class SnowplowElasticsearchEmitterSpec extends Specification {
+class KinesisElasticsearchEmitterSpec extends Specification {
 
   "The emitter" should {
     "return all invalid records" in {
@@ -73,7 +73,7 @@ class SnowplowElasticsearchEmitterSpec extends Specification {
       }
 
       val kcc = new KinesisConnectorConfiguration(new Properties, new DefaultAWSCredentialsProviderChain)
-      val eem = new SnowplowElasticsearchEmitter(kcc, None, new StdouterrSink, fakeSender)
+      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, fakeSender)
 
       val validInput: EmitterInput = "good" -> new ElasticsearchObject("index", "type", "{}").success
       val invalidInput: EmitterInput = "bad" -> "malformed event".failureNel
@@ -94,7 +94,7 @@ class SnowplowElasticsearchEmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new SnowplowElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
+      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
 
       val validInput: EmitterInput = "good" -> new ElasticsearchObject("index" * 10000, "type", "{}").success
 
@@ -116,7 +116,7 @@ class SnowplowElasticsearchEmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new SnowplowElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
+      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
 
       val validInput: EmitterInput = "good" -> new ElasticsearchObject("index" * 10000, "type", "{}").success
 
@@ -138,7 +138,7 @@ class SnowplowElasticsearchEmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new SnowplowElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
+      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
 
       val validInput: EmitterInput = "good" -> new ElasticsearchObject("index", "type", "{}").success
 
@@ -160,7 +160,7 @@ class SnowplowElasticsearchEmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new SnowplowElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
+      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
 
       val validInput: EmitterInput = "good" -> new ElasticsearchObject("index", "type", "{}").success
 
@@ -182,7 +182,7 @@ class SnowplowElasticsearchEmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new SnowplowElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
+      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
 
       // record size is 95 bytes
       val validInput: EmitterInput = "good" -> new ElasticsearchObject("index", "type", "{}").success

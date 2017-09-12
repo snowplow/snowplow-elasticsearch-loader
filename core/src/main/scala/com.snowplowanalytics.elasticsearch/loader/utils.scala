@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2014-2017 Snowplow Analytics Ltd.
+/*
+ * Copyright (c) 2013-2017 Snowplow Analytics Ltd.
  * All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
@@ -16,21 +16,14 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.elasticsearch.loader
 
-import clients.{ElasticsearchSender, ElasticsearchSenderTCP}
+import scala.util.{Failure, Success, Try}
 
-/** Main entry point for the Elasticsearch TCP sink */
-object ElasticsearchTCPSinkApp extends App with ElasticsearchSinkApp {
-  override lazy val arguments = args
-
-  val config = parseConfig().get
-  val maxConnectionTime = config.elasticsearch.client.maxTimeout
-  val tracker = config.monitoring.map(e => SnowplowTracking.initializeTracker(e.snowplow))
-
-  override lazy val elasticsearchSender: ElasticsearchSender =
-    new ElasticsearchSenderTCP(convertConfig(config), tracker, maxConnectionTime)
-
-  run(config)
+object utils {
+    // to rm once 2.12 as well as the right projections
+    def fold[A, B](t: Try[A])(ft: Throwable => B, fa: A => B): B = t match {
+      case Success(a) => fa(a)
+      case Failure(t) => ft(t)
+    }
 }

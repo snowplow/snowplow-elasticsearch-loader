@@ -1,4 +1,13 @@
-Version 0.9.0 (2017-07-XX)
+Version 0.10.0 (2017-09-12)
+--------------------------
+Create ElasticsearchEmitter class (#65)
+Support AT_TIMESTAMP as initial position (#63)
+Configuration decoding with pureconfig (#61)
+Fix 0.9.0 entry in CHANGELOG (#60)
+Add support for NSQ source (#59)
+Add support for writing raw JSONs (#26)
+
+Version 0.9.0 (2017-07-21)
 --------------------------
 Allow AWS request signing for outbound events (#12)
 Add support for Elasticsearch 5.x (#10)
@@ -19,7 +28,6 @@ Bump amazon-kinesis-connectors to 1.3.0 (#52)
 Bump Kinesis Client Library to 1.7.5 (#51)
 Bump config to 1.3.1 (#50)
 Bump sbt-assembly to 0.14.5 (#49)
-Bump snowplow-common-enrich to 0.25.0 (#44)
 Bump specs2-core to 3.9.2 (#43)
 Bump Scalaz to 7.2.14 (#40)
 Replace argot by scopt (#34)
