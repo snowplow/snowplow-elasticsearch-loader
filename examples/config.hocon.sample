@@ -19,7 +19,7 @@
 # "stdin" for reading unencoded tab-separated events from stdin
 # If set to "stdin", JSON documents will not be sent to Elasticsearch
 # but will be written to stdout.
-# "NSQ" for reading unencoded tab-separated events from NSQ
+# "nsq" for reading unencoded tab-separated events from NSQ
 source = {{elasticsearchInputType}}
 
 # Where to write good and bad records
@@ -27,21 +27,20 @@ sink {
   # Sinks currently supported are:
   # "elasticsearch" for writing good records to Elasticsearch
   # "stdout" for writing good records to stdout
-  # "NSQ" for writing good records to NSQ  
-  good: {{elasticsearchGoodOutputDestination}}
+  good = "{{elasticsearchGoodOutputDestination}}"
 
   # Sinks currently supported are:
   # "kinesis" for writing bad records to Kinesis
   # "stderr" for writing bad records to stderr
-  # "NSQ" for writing bad records to NSQ    
+  # "nsq" for writing bad records to NSQ    
   # "none" for ignoring bad records
-  bad: {{elasticsearchBadOutputDestination}}
+  bad = "{{elasticsearchBadOutputDestination}}"
 }
 
 # "good" for a stream of successfully enriched events
 # "bad" for a stream of bad events
 # "plain-json" for writing plain json
-stream-type: {{kinesisInStreamType}}
+enabled = "{{kinesisInEnabledStreamType}}"
 
 # The following are used to authenticate for the Amazon Kinesis sink.
 #
@@ -52,61 +51,59 @@ stream-type: {{kinesisInStreamType}}
 #
 # If both are set to "env", use environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
 aws {
-  access-key: iam
-  secret-key: iam
+  accessKey = iam
+  secretKey = iam
 }
 
 # config for NSQ
-NSQ {
+nsq {
   # Channel name for NSQ source
-  channel-name: "{{nsqSourceChannelName}}"
+  channelName = "{{nsqSourceChannelName}}"
      
   # Host name for NSQ tools
-  host: "{{nsqHost}}"
+  host = "{{nsqHost}}"
 
   # Port for nsqd
-  port: "{{nsqdPort}}"
+  port = {{nsqdPort}}
 
   # Port for nsqlookupd
-  lookup-port: {{nsqlookupdPort}}
+  lookupPort = {{nsqlookupdPort}}
 }
 
 kinesis {
+  # "LATEST": most recent data.
+  # "TRIM_HORIZON": oldest available data.
+  # "AT_TIMESTAMP": Start from the record at or after the specified timestamp
+  # Note: This only affects the first run of this application on a stream.
+  initialPosition = "{{initialPosition}}"
 
-  in {
-    # "LATEST": most recent data.
-    # "TRIM_HORIZON": oldest available data.
-    # Note: This only affects the first run of this application on a stream.
-    initial-position: TRIM_HORIZON
-
-    # Maximum number of records to get from Kinesis per call to GetRecords
-    maxRecords: 10000
-  }
+  # Maximum number of records to get from Kinesis per call to GetRecords
+  maxRecords = {{kinesisMaxRecords}}
 
   # Region where the Kinesis stream is located
-  region: {{kinesisRegion}}
+  region = "{{kinesisRegion}}"
 
-  # "app-name" is used for a DynamoDB table to maintain stream state.
+  # "appName" is used for a DynamoDB table to maintain stream state.
   # You can set it automatically using: "SnowplowElasticsearchSink-${sink.kinesis.in.stream-name}"
-  app-name: {{kinesisAppName}}
+  appName = "{{kinesisAppName}}"
 }
 
 # Common configuration section for all stream sources
 streams {
-  stream-name-in: {{InStreamName}}
+  streamNameIn = "{{InStreamName}}"
   
   # Stream for enriched events which are rejected by Elasticsearch
-  stream-name-out: {{OutStreamName}}
+  streamNameOut = "{{OutStreamName}}"
 
   # Events are accumulated in a buffer before being sent to Elasticsearch.
   # The buffer is emptied whenever:
-  # - the combined size of the stored records exceeds byte-limit or
-  # - the number of stored records exceeds record-limit or
-  # - the time in milliseconds since it was last emptied exceeds time-limit
+  # - the combined size of the stored records exceeds byteLimit or
+  # - the number of stored records exceeds recordLimit or
+  # - the time in milliseconds since it was last emptied exceeds timeLimit
   buffer {
-    byte-limit: {{elasticsearchBufferByteThreshold}} # Not supported by NSQ, will be ignored
-    record-limit: {{elasticsearchBufferRecordThreshold}}
-    time-limit: {{elasticsearchBufferTimeThreshold}} # Not supported by NSQ, will be ignored
+    byteLimit = {{elasticsearchBufferByteThreshold}} # Not supported by NSQ, will be ignored
+    recordLimit = {{elasticsearchBufferRecordThreshold}}
+    timeLimit = {{elasticsearchBufferTimeThreshold}} # Not supported by NSQ, will be ignored
   }
 }
 
@@ -120,10 +117,10 @@ elasticsearch {
   # - max-timeout: the maximum attempt time before a client restart
   # - ssl: if using the http client, whether to use ssl or not
   client {
-    endpoint: {{elasticsearchEndpoint}}
-    port: {{elasticsearchTransportPort}}
-    max-timeout: {{elasticsearchMaxTimeout}}
-    ssl: false
+    endpoint = "{{elasticsearchEndpoint}}"
+    port = "{{elasticsearchTransportPort}}"
+    maxTimeout = "{{elasticsearchMaxTimeout}}"
+    ssl = {{sslBool}}
   }
 
   # When using the AWS ES service
@@ -131,16 +128,16 @@ elasticsearch {
   #    http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html
   # - region where the AWS ES service is located
   aws {
-    signing: false
-    region: {{elasticsearchRegion}}
+    signing = {{signingBool}}
+    region = "{{elasticsearchRegion}}"
   }
 
   # index: the Elasticsearch index name
   # type: the Elasticsearch index type
   cluster {
-    name: {{elasticsearchClusterName}}
-    index: {{elasticsearchIndex}}
-    type: {{elasticsearchType}}
+    name = "{{elasticsearchClusterName}}"
+    index = "{{elasticsearchIndex}}"
+    clusterType = "{{elasticsearchType}}"
   }
 }
 
@@ -148,9 +145,9 @@ elasticsearch {
 # Optional section for tracking endpoints
 monitoring {
   snowplow {
-    collector-uri: "{{collectorUri}}"
-    collector-port: 80
-    app-id: {{sinkKinesisAppName}}
-    method: GET
+    collectorUri = "{{collectorUri}}"
+    collectorPort = "{{collectorPort}}"
+    appId = "{{appId}}"
+    method = "{{method}}"
   }
 }

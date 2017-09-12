@@ -24,7 +24,7 @@ import java.io.File
 import java.util.Properties
 
 // Config
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 
 // AWS Kinesis Connector libs
 import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
@@ -33,18 +33,13 @@ import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
 import scalaz._
 import Scalaz._
 
-// Tracker
-import com.snowplowanalytics.snowplow.scalatracker.Tracker
+// Pureconfig
+import pureconfig._
 
 // This project
 import sinks._
 import clients._
-
-// Whether the input stream contains enriched events or bad events
-object StreamType extends Enumeration {
-  type StreamType = Value
-  val Good, Bad, PlainJson = Value
-}
+import model._
 
 /**
  * Main entry point for the Elasticsearch sink
@@ -53,7 +48,7 @@ trait ElasticsearchSinkApp {
   def arguments: Array[String]
   def elasticsearchSender: ElasticsearchSender
 
-  def parseConfig(): Config = {
+  def parseConfig(): Option[ESLoaderConfig] = {
     val projectName = "snowplow-elasticsearch-loader"
     case class FileConfig(config: File = new File("."))
     val parser = new scopt.OptionParser[FileConfig](projectName) {
@@ -75,140 +70,44 @@ trait ElasticsearchSinkApp {
       System.err.println("Empty configuration file")
       System.exit(1)
     }
-    conf
-  }
-
-
-  def run(conf: Config): Unit = {
-    val streamType = conf.getString("stream-type") match {
-      case "good" => StreamType.Good
-      case "bad" => StreamType.Bad
-      case "plain-json" => StreamType.PlainJson
-      case _ => throw new RuntimeException("\"stream-type\" must be set to \"good\", \"bad\" or \"plain-json\" ")
-    }
-
-    val elasticsearch = conf.getConfig("elasticsearch")
-    val esCluster = elasticsearch.getConfig("cluster")
-    val documentIndex = esCluster.getString("index")
-    val documentType = esCluster.getString("type")
-
-    val finalConfig = convertConfig(conf)
-    val nsqConfig = new ElasticsearchSinkNsqConfig(conf)
-
-    val goodSink = conf.getString("sink.good") match {
-      case "stdout" => Some(new StdouterrSink)
-      case "elasticsearch" => None
-    }
-
-    val badSink = conf.getString("sink.bad") match {
-      case "stderr" => new StdouterrSink
-      case "NSQ" => new NsqSink(nsqConfig)
-      case "none" => new NullSink
-      case "kinesis" => {
-        val kinesis = conf.getConfig("kinesis")
-        val kinesisSink = kinesis.getConfig("out")
-        val kinesisSinkName = conf.getString("streams.stream-name-out")
-        val kinesisSinkRegion = kinesis.getString("region")
-        val kinesisSinkEndpoint = getKinesisEndpoint(kinesisSinkRegion)
-        new KinesisSink(finalConfig.AWS_CREDENTIALS_PROVIDER,
-          kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName)
-      }
-    }
-
-    val tracker = getTracker(conf)
-
-    val executor = conf.getString("source") match {
-
-      // Read records from Kinesis
-      case "kinesis" => new KinesisSourceExecutor(streamType, documentIndex, documentType, finalConfig, goodSink, badSink, elasticsearchSender, tracker).success
-
-      // Read records from NSQ
-      case "NSQ" => new NsqSourceExecutor(streamType, documentIndex, documentType, nsqConfig, goodSink, badSink, elasticsearchSender).success
-
-      // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
-      // TODO reduce code duplication
-      case "stdin" => new Runnable {
-        val transformer = streamType match {
-          case StreamType.Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
-          case StreamType.Bad => new BadEventTransformer(documentIndex, documentType)
-          case StreamType.PlainJson => new PlainJsonTransformer(documentIndex, documentType)
-        }
-
-        def run = for (ln <- scala.io.Source.stdin.getLines) {
-          val emitterInput = transformer.consumeLine(ln)
-          emitterInput._2.bimap(
-            f => badSink.store(BadRow(emitterInput._1, f).toCompactJson, None, false),
-            s => goodSink match {
-              case Some(gs) => gs.store(s.getSource, None, true)
-              case None => elasticsearchSender.sendToElasticsearch(List(ln -> s.success))
-            }
-          )
-        }
-      }.success
-
-      case _ => "Source must be set to 'stdin', 'kinesis' or 'NSQ'".failure
-    }
-
-    executor.fold(
-      err => throw new RuntimeException(err),
-      exec => {
-        tracker foreach {
-          t => SnowplowTracking.initializeSnowplowTracking(t)
-        }
-        exec.run()
-
-        // If the stream cannot be found, the KCL's "cw-metrics-publisher" thread will prevent the
-        // application from exiting naturally so we explicitly call System.exit.
-        // This does not apply to NSQ because NSQ consumer is non-blocking and fall here 
-        // right after consumer.start()
-        conf.getString("source") match { 
-          case "kinesis" => System.exit(1)
-          case "stdin" => System.exit(1)
-          // do anything
-          case "NSQ" =>    
-        }
-      }
-    )
-  }
-
-  /**
-   * Builds a KinesisConnectorConfiguration from the "connector" field of the configuration HOCON
-   *
-   * @param connector The "connector" field of the configuration HOCON
-   * @return A KinesisConnectorConfiguration
-   */
-  def convertConfig(connector: Config): KinesisConnectorConfiguration = {
-
-    val aws = connector.getConfig("aws")
-    val accessKey = aws.getString("access-key")
-    val secretKey = aws.getString("secret-key")
-
-    val streams = connector.getConfig("streams")
-    val streamName = streams.getString("stream-name-in")
     
-    val buffer = streams.getConfig("buffer")
-    val byteLimit = buffer.getString("byte-limit")
-    val recordLimit = buffer.getString("record-limit")
-    val timeLimit = buffer.getString("time-limit")
-
-    val elasticsearch = connector.getConfig("elasticsearch")
-    val esClient = elasticsearch.getConfig("client")
-    val esCluster = elasticsearch.getConfig("cluster")
-    val elasticsearchEndpoint = esClient.getString("endpoint")
-    val elasticsearchPort = esClient.getString("port")
-    val clusterName = esCluster.getString("name")
-
-    val kinesis = connector.getConfig("kinesis")
-    val kinesisIn = kinesis.getConfig("in")
-    val streamRegion = kinesis.getString("region")
-    val appName = kinesis.getString("app-name").trim
-    val initialPosition = kinesisIn.getString("initial-position")
-    val maxRecords = if (kinesisIn.hasPath("maxRecords")) {
-      kinesisIn.getInt("maxRecords")
-    } else {
-      10000
+    implicit def hint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+    val esLoaderConf = loadConfig[ESLoaderConfig](conf) match {
+      case Left(e) =>
+        System.err.println(s"configuration error: $e")
+        System.exit(-1)
+        None
+       case Right(c) => Some(c)
     }
-    val streamEndpoint = getKinesisEndpoint(streamRegion)
+
+    esLoaderConf 
+  }
+
+/**
+  * Builds a KinesisConnectorConfiguration
+  *
+  * @param config the configuration HOCON
+  * @return A KinesisConnectorConfiguration
+  */
+  def convertConfig(config: ESLoaderConfig): KinesisConnectorConfiguration = {
+
+    val accessKey = config.aws.accessKey
+    val secretKey = config.aws.secretKey
+
+    val streamName = config.streams.streamNameIn
+    val byteLimit = config.streams.buffer.byteLimit
+    val recordLimit = config.streams.buffer.recordLimit
+    val timeLimit = config.streams.buffer.timeLimit
+
+    val elasticsearchEndpoint = config.elasticsearch.client.endpoint
+    val elasticsearchPort = config.elasticsearch.client.port
+    val clusterName = config.elasticsearch.cluster.name
+
+    val streamRegion = config.kinesis.region
+    val appName = config.kinesis.appName.trim
+    val initialPosition = config.kinesis.initialPosition
+    val maxRecords = config.kinesis.maxRecords
+    val streamEndpoint = config.kinesis.endpoint
 
     val props = new Properties
 
@@ -223,11 +122,11 @@ trait ElasticsearchSinkApp {
 
     props.setProperty(KinesisConnectorConfiguration.PROP_ELASTICSEARCH_ENDPOINT, elasticsearchEndpoint)
     props.setProperty(KinesisConnectorConfiguration.PROP_ELASTICSEARCH_CLUSTER_NAME, clusterName)
-    props.setProperty(KinesisConnectorConfiguration.PROP_ELASTICSEARCH_PORT, elasticsearchPort)
+    props.setProperty(KinesisConnectorConfiguration.PROP_ELASTICSEARCH_PORT, elasticsearchPort.toString)
 
-    props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_BYTE_SIZE_LIMIT, byteLimit)
-    props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_RECORD_COUNT_LIMIT, recordLimit)
-    props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_MILLISECONDS_LIMIT, timeLimit)
+    props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_BYTE_SIZE_LIMIT, byteLimit.toString)
+    props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_RECORD_COUNT_LIMIT, recordLimit.toString)
+    props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_MILLISECONDS_LIMIT, timeLimit.toString)
 
     props.setProperty(KinesisConnectorConfiguration.PROP_CONNECTOR_DESTINATION, "elasticsearch")
     props.setProperty(KinesisConnectorConfiguration.PROP_RETRY_LIMIT, "1")
@@ -235,31 +134,91 @@ trait ElasticsearchSinkApp {
     new KinesisConnectorConfiguration(props, CredentialsLookup.getCredentialsProvider(accessKey, secretKey))
   }
 
-  def getTracker(conf: Config): Option[Tracker] =
-    if (conf.hasPath("monitoring.snowplow")) {
-      SnowplowTracking.initializeTracker(conf.getConfig("monitoring.snowplow")).some
-    } else {
-      None
+  def run(conf: ESLoaderConfig): Unit = {
+    val streamType = conf.streamType
+    val documentIndex = conf.elasticsearch.cluster.index
+    val documentType = conf.elasticsearch.cluster.clusterType
+
+    val credentials = CredentialsLookup.getCredentialsProvider(conf.aws.accessKey, conf.aws.secretKey)
+    val tracker = conf.monitoring.map(e => SnowplowTracking.initializeTracker(e.snowplow))
+
+    val goodSink = conf.sink.good match {
+      case "stdout" => Some(new StdouterrSink)
+      case "elasticsearch" => None
     }
 
-  private def getKinesisEndpoint(region: String): String =
-    region match {
-      case cn@"cn-north-1" => s"https://kinesis.$cn.amazonaws.com.cn"
-      case _ => s"https://kinesis.$region.amazonaws.com"
+    val badSink = conf.sink.bad match {
+      case "stderr" => new StdouterrSink
+      case "nsq" => new NsqSink(conf)
+      case "none" => new NullSink
+      case "kinesis" => {
+        val kinesisSinkName = conf.streams.streamNameOut
+        val kinesisSinkRegion = conf.kinesis.region
+        val kinesisSinkEndpoint = conf.kinesis.endpoint
+        new KinesisSink(credentials, kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName)
+      }
     }
-}
+      
+    val executor = conf.source match {
 
-/**
-  * Rigidly load the configuration of the NSQ here to error.
-  */
-class ElasticsearchSinkNsqConfig(config: Config) { 
-  private val nsq = config.getConfig("NSQ")
-  val nsqSourceChannelName = nsq.getString("channel-name")
-  val nsqHost = nsq.getString("host")
-  val nsqPort = nsq.getInt("port")
-  val nsqlookupPort = nsq.getInt("lookup-port")
+      // Read records from Kinesis
+      case "kinesis" => new KinesisSourceExecutor(streamType, documentIndex, documentType, convertConfig(conf), goodSink, badSink, elasticsearchSender, tracker).success
 
-  private val streams = config.getConfig("streams")
-  val nsqSourceTopicName = streams.getString("stream-name-in")
-  val nsqSinkTopicName = streams.getString("stream-name-out")
+      // Read records from NSQ
+      case "nsq" =>
+        new NsqSourceExecutor(streamType,
+                              documentIndex,
+                              documentType,
+                              conf,
+                              goodSink,
+                              badSink,
+                              elasticsearchSender
+                             ).success
+
+      // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
+      // TODO reduce code duplication
+      case "stdin" => new Runnable {
+        val transformer = streamType match {
+          case Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
+          case Bad => new BadEventTransformer(documentIndex, documentType)
+          case PlainJson => new PlainJsonTransformer(documentIndex, documentType)
+        }
+
+        def run = for (ln <- scala.io.Source.stdin.getLines) {
+          val emitterInput = transformer.consumeLine(ln)
+          emitterInput._2.bimap(
+            f => badSink.store(BadRow(emitterInput._1, f).toCompactJson, None, false),
+            s => goodSink match {
+              case Some(gs) => gs.store(s.getSource, None, true)
+              case None => elasticsearchSender.sendToElasticsearch(List(ln -> s.success))
+            }
+          )
+        }
+      }.success
+
+      case _ => "Source must be set to 'stdin', 'kinesis' or 'nsq'".failure
+    }
+
+    executor.fold(
+      err => throw new RuntimeException(err),
+      exec => {
+        tracker foreach {
+          t => SnowplowTracking.initializeSnowplowTracking(t)
+        }
+        exec.run()
+
+        // If the stream cannot be found, the KCL's "cw-metrics-publisher" thread will prevent the
+        // application from exiting naturally so we explicitly call System.exit.
+        // This does not apply to NSQ because NSQ consumer is non-blocking and fall here 
+        // right after consumer.start()
+        conf.source match { 
+          case "kinesis" => System.exit(1)
+          case "stdin" => System.exit(1)
+          // do anything
+          case "nsq" =>    
+        }
+      }
+    )
+  }
+
 }

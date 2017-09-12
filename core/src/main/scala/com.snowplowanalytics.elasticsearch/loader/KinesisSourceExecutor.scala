@@ -33,12 +33,12 @@ import snowplow.scalatracker.Tracker
 // This project
 import clients.ElasticsearchSender
 import sinks._
-import StreamType._
+import model._
 
 /**
  * Boilerplate class for Kinesis Conenector
  *
- * @param streamType the type of stream, good/bad
+ * @param streamType the type of stream, good, bad or plain-json
  * @param documentIndex the elasticsearch index name
  * @param documentType the elasticsearch index type
  * @param config the KCL configuration

@@ -25,19 +25,18 @@ import clients.{ElasticsearchSender, ElasticsearchSenderHTTP}
 object ElasticsearchHTTPSinkApp extends App with ElasticsearchSinkApp {
   override lazy val arguments = args
 
-  val conf = parseConfig()
-  val finalConfig = convertConfig(conf)
-  val region = conf.getString("elasticsearch.aws.region")
-  val signing = conf.getBoolean("elasticsearch.aws.signing")
-  val ssl = conf.getBoolean("elasticsearch.client.ssl")
-  val maxConnectionTime = conf.getLong("elasticsearch.client.max-timeout")
+  val config = parseConfig().get
+  val esEndpoint = config.elasticsearch.client.endpoint
+  val esPort = config.elasticsearch.client.port
+  val region = config.elasticsearch.aws.region
+  val signing = config.elasticsearch.aws.signing
+  val ssl = config.elasticsearch.client.ssl
+  val maxConnectionTime = config.elasticsearch.client.maxTimeout
+  val credentials = CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey)
+  val tracker = config.monitoring.map(e => SnowplowTracking.initializeTracker(e.snowplow))
 
   override lazy val elasticsearchSender: ElasticsearchSender =
-    new ElasticsearchSenderHTTP(
-      finalConfig.ELASTICSEARCH_ENDPOINT,
-      finalConfig.ELASTICSEARCH_PORT,
-      finalConfig.AWS_CREDENTIALS_PROVIDER,
-      region, ssl, signing, getTracker(conf), maxConnectionTime)
+    new ElasticsearchSenderHTTP(esEndpoint, esPort, credentials, region, ssl, signing, tracker, maxConnectionTime)
 
-  run(conf)
+  run(config)
 }
