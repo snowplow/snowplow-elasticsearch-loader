@@ -19,7 +19,7 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.kinesisClient,
   Dependencies.Libraries.kinesisConnector,
   Dependencies.Libraries.validator,
-  Dependencies.Libraries.nsqClient,  
+  Dependencies.Libraries.nsqClient,
   // Scala
   Dependencies.Libraries.scopt,
   Dependencies.Libraries.scalaz7,
@@ -35,7 +35,7 @@ lazy val commonDependencies = Seq(
 lazy val buildSettings = Seq(
   organization  := "com.snowplowanalytics",
   name          := "snowplow-elasticsearch-loader",
-  version       := "0.10.0",
+  version       := "0.10.1",
   description   := "Load the contents of a Kinesis stream or NSQ topic to Elasticsearch",
   scalaVersion  := "2.11.11",
   scalacOptions := BuildSettings.compilerOptions,

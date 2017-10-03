@@ -1,3 +1,8 @@
+Version 0.10.1 (2017-10-03)
+--------------------------
+Stop closing ElasticSearch clients when the Emitter is closed (#67)
+Add help and version flags to CLI options (#66)
+
 Version 0.10.0 (2017-09-12)
 --------------------------
 Create ElasticsearchEmitter class (#65)
