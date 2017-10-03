@@ -53,6 +53,8 @@ trait ElasticsearchSinkApp {
     case class FileConfig(config: File = new File("."))
     val parser = new scopt.OptionParser[FileConfig](projectName) {
       head(projectName, generated.Settings.version)
+      help("help")
+      version("version")
       opt[File]("config").required().valueName("<filename>")
         .action((f: File, c: FileConfig) => c.copy(config = f))
         .validate(f =>
@@ -70,7 +72,7 @@ trait ElasticsearchSinkApp {
       System.err.println("Empty configuration file")
       System.exit(1)
     }
-    
+
     implicit def hint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
     val esLoaderConf = loadConfig[ESLoaderConfig](conf) match {
       case Left(e) =>
@@ -80,7 +82,7 @@ trait ElasticsearchSinkApp {
        case Right(c) => Some(c)
     }
 
-    esLoaderConf 
+    esLoaderConf
   }
 
 /**
@@ -151,7 +153,7 @@ trait ElasticsearchSinkApp {
         new KinesisSink(credentials, kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName)
       }
     }
-      
+
     val executor = conf.source match {
 
       // Read records from Kinesis
@@ -213,13 +215,13 @@ trait ElasticsearchSinkApp {
 
         // If the stream cannot be found, the KCL's "cw-metrics-publisher" thread will prevent the
         // application from exiting naturally so we explicitly call System.exit.
-        // This does not apply to NSQ because NSQ consumer is non-blocking and fall here 
+        // This does not apply to NSQ because NSQ consumer is non-blocking and fall here
         // right after consumer.start()
-        conf.source match { 
+        conf.source match {
           case "kinesis" => System.exit(1)
           case "stdin" => System.exit(1)
           // do anything
-          case "nsq" =>    
+          case "nsq" =>
         }
       }
     )
