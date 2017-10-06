@@ -19,7 +19,7 @@ Assuming you already have [SBT 0.13][sbt] installed:
 The Snowplow Elasticsearch Loader has the following command-line interface:
 
 ```
-snowplow-elasticsearch-loader 0.10.0
+snowplow-elasticsearch-loader 0.10.1
 
 Usage: snowplow-elasticsearch-loader [options]
 
@@ -43,7 +43,7 @@ aws {
 
 Next, start the loader, making sure to specify your new config file:
 
-    $ java -jar snowplow-elasticsearch-loader-http-0.10.0.jar --config my.conf
+    $ java -jar snowplow-elasticsearch-loader-http-0.10.1.jar --config my.conf
 
 ## Find out more
 
