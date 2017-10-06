@@ -58,7 +58,7 @@ class ElasticsearchSenderTCP(
 
   /**
    * The settings key for the cluster name.
-   * 
+   *
    * Defaults to elasticsearch.
    */
   private val ElasticsearchClusterNameKey = "cluster.name"
@@ -66,7 +66,7 @@ class ElasticsearchSenderTCP(
   /**
    * The settings key for transport client sniffing. If set to true, this instructs the TransportClient to
    * find all nodes in the cluster, providing robustness if the original node were to become unavailable.
-   * 
+   *
    * Defaults to false.
    */
   private val ElasticsearchClientTransportSniffKey = "client.transport.sniff"
@@ -74,21 +74,21 @@ class ElasticsearchSenderTCP(
   /**
    * The settings key for ignoring the cluster name. Set to true to ignore cluster name validation
    * of connected nodes.
-   * 
+   *
    * Defaults to false.
    */
   private val ElasticsearchClientTransportIgnoreClusterNameKey = "client.transport.ignore_cluster_name"
 
   /**
    * The settings key for ping timeout. The time to wait for a ping response from a node.
-   * 
+   *
    * Default to 5s.
    */
   private val ElasticsearchClientTransportPingTimeoutKey = "client.transport.ping_timeout"
 
   /**
    * The settings key for node sampler interval. How often to sample / ping the nodes listed and connected.
-   * 
+   *
    * Defaults to 5s
    */
   private val ElasticsearchClientTransportNodesSamplerIntervalKey = "client.transport.nodes_sampler_interval"
@@ -189,7 +189,7 @@ class ElasticsearchSenderTCP(
           val failure = response.getFailure
 
           log.error(s"Record failed with message: ${response.getFailureMessage}")
-          
+
           if (failure.getMessage.contains("DocumentAlreadyExistsException") || failure.getMessage.contains("VersionConflictEngineException")) {
             None
           } else {
@@ -221,7 +221,7 @@ class ElasticsearchSenderTCP(
         }
         case e: Exception => {
           log.error("Unexpected exception ", e)
-          
+
           sleep(BackoffPeriod)
           tracker foreach {
             t => SnowplowTracking.sendFailureEvent(t, BackoffPeriod, attemptNumber, connectionAttemptStartTime, e.toString)
@@ -234,10 +234,8 @@ class ElasticsearchSenderTCP(
     attemptEmit()
   }
 
-  /**
-   * Shuts the client down
-   */
-  override def close(): Unit = elasticsearchClient.close
+  // do not close the es client, otherwise it will fail when resharding
+  override def close(): Unit = ()
 
   /**
    * Logs the Elasticsearch cluster's health

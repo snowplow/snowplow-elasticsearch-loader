@@ -51,7 +51,8 @@ class ElasticsearchSenderTCP(
 
   implicit val strategy = Strategy.DefaultExecutorService
 
-  override def close(): Unit = client.close()
+  // do not close the es client, otherwise it will fail when resharding
+  override def close(): Unit = ()
 
   override def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput] = {
     val connectionAttemptStartTime = System.currentTimeMillis()
