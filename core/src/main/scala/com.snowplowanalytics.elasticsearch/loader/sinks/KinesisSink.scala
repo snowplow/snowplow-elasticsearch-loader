@@ -65,7 +65,8 @@ class KinesisSink(
     .withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
     .build()
 
-  require(streamExists(name))
+  require(streamExists(name),
+    s"Stream $name doesn't exist or is neither active nor updating (deleted or creating)")
 
   /**
    * Checks if a stream exists.
@@ -73,21 +74,12 @@ class KinesisSink(
    * @param name Name of the stream to look for
    * @return Whether the stream both exists and is active
    */
-  def streamExists(name: String): Boolean = {
-    val exists = try {
-      val describeStreamResult = client.describeStream(name)
-      describeStreamResult.getStreamDescription.getStreamStatus == "ACTIVE"
-    } catch {
-      case rnfe: ResourceNotFoundException => false
-    }
-
-    if (exists) {
-      log.info(s"Stream $name exists and is active")
-    } else {
-      log.info(s"Stream $name doesn't exist or is not active")
-    }
-
-    exists
+  def streamExists(name: String): Boolean = try {
+    val describeStreamResult = client.describeStream(name)
+    val status = describeStreamResult.getStreamDescription.getStreamStatus
+    status == "ACTIVE" || status == "UPDATING"
+  } catch {
+    case rnfe: ResourceNotFoundException => false
   }
 
   private def put(name: String, data: ByteBuffer, key: String): Future[PutRecordResult] = Future {

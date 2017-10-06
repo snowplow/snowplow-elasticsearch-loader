@@ -146,12 +146,11 @@ trait ElasticsearchSinkApp {
       case "stderr" => new StdouterrSink
       case "nsq" => new NsqSink(conf)
       case "none" => new NullSink
-      case "kinesis" => {
+      case "kinesis" =>
         val kinesisSinkName = conf.streams.outStreamName
         val kinesisSinkRegion = conf.kinesis.region
         val kinesisSinkEndpoint = conf.kinesis.endpoint
         new KinesisSink(credentials, kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName)
-      }
     }
 
     val executor = conf.source match {
