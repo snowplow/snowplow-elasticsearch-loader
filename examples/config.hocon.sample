@@ -127,6 +127,8 @@ elasticsearch {
   client {
     endpoint = "{{elasticsearchEndpoint}}"
     port = "{{elasticsearchTransportPort}}"
+    username = "{{elasticsearchUsername}}"
+    password = "{{elasticsearchPassword}}"
     maxTimeout = "{{elasticsearchMaxTimeout}}"
     ssl = {{sslBool}}
   }

@@ -15,6 +15,12 @@ package com.snowplowanalytics.elasticsearch.loader
 package clients
 
 // Scala
+import com.google.common.base.Charsets
+import com.google.common.io.BaseEncoding
+import org.apache.http.{Header, HttpHost}
+import org.apache.http.message.BasicHeader
+import org.elasticsearch.client.{RestClient, RestClientBuilder}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure => SFailure, Success => SSuccess}
 
@@ -39,6 +45,8 @@ import com.snowplowanalytics.snowplow.scalatracker.Tracker
 class ElasticsearchSenderHTTP(
   endpoint: String,
   port: Int,
+  username: String,
+  password: String,
   credentialsProvider: AWSCredentialsProvider,
   region: String,
   ssl: Boolean = false,
@@ -56,8 +64,19 @@ class ElasticsearchSenderHTTP(
   private val httpClientConfigCallback =
     if (awsSigning) new SignedHttpClientConfigCallback(credentialsProvider, region)
     else NoOpHttpClientConfigCallback
-  private val client = HttpClient(uri,
-    httpClientConfigCallback = httpClientConfigCallback)
+
+  private val userpass = BaseEncoding.base64().encode(s"$username:$password".getBytes(Charsets.UTF_8))
+  private val formedHost = new HttpHost(endpoint, port,if (uri.options.getOrElse("ssl", "false") == "true") "https" else "http")
+
+  private val headers:Array[Header] = Array(new BasicHeader("Authorization", s"Basic $userpass"))
+
+  private val restClient = RestClient.builder(formedHost)
+      .setHttpClientConfigCallback(httpClientConfigCallback.asInstanceOf[RestClientBuilder.HttpClientConfigCallback])
+    .setDefaultHeaders(headers)
+    .build()
+
+  private val client = HttpClient.fromRestClient(restClient)
+
 
   implicit val strategy = Strategy.DefaultExecutorService
 
