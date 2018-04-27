@@ -45,8 +45,8 @@ import com.snowplowanalytics.snowplow.scalatracker.Tracker
 class ElasticsearchSenderHTTP(
   endpoint: String,
   port: Int,
-  username: String,
-  password: String,
+  username: Option[String],
+  password: Option[String],
   credentialsProvider: AWSCredentialsProvider,
   region: String,
   ssl: Boolean = false,
@@ -65,18 +65,18 @@ class ElasticsearchSenderHTTP(
     if (awsSigning) new SignedHttpClientConfigCallback(credentialsProvider, region)
     else NoOpHttpClientConfigCallback
 
-  private val userpass = BaseEncoding.base64().encode(s"$username:$password".getBytes(Charsets.UTF_8))
   private val formedHost = new HttpHost(endpoint, port,if (uri.options.getOrElse("ssl", "false") == "true") "https" else "http")
+  private val restClientBuilder = RestClient.builder(formedHost)
+    .setHttpClientConfigCallback(httpClientConfigCallback.asInstanceOf[RestClientBuilder.HttpClientConfigCallback])
 
-  private val headers:Array[Header] = Array(new BasicHeader("Authorization", s"Basic $userpass"))
+  if (username.orNull != null && password.orNull != null) {
+    val userpass = BaseEncoding.base64().encode(s"${username.get}:${password.get}".getBytes(Charsets.UTF_8))
+    val headers:Array[Header] = Array(new BasicHeader("Authorization", s"Basic $userpass"))
+    restClientBuilder.setDefaultHeaders(headers)
 
-  private val restClient = RestClient.builder(formedHost)
-      .setHttpClientConfigCallback(httpClientConfigCallback.asInstanceOf[RestClientBuilder.HttpClientConfigCallback])
-    .setDefaultHeaders(headers)
-    .build()
+  }
 
-  private val client = HttpClient.fromRestClient(restClient)
-
+  private val client = HttpClient.fromRestClient(restClientBuilder.build())
 
   implicit val strategy = Strategy.DefaultExecutorService
 
