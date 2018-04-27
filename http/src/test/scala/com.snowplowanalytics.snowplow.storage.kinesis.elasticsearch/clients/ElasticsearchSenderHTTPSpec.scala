@@ -32,7 +32,9 @@ class ElasticsearchSenderHTTPSpec extends Specification {
   node.start()
   val client = node.elastic4sclient()
   val creds = CredentialsLookup.getCredentialsProvider("a", "s")
-  val sender = new ElasticsearchSenderHTTP(node.ip, node.port, creds, "region", false, false, None, 1000L, 1)
+  val username:Option[String] = null
+  val password:Option[String] = null
+  val sender = new ElasticsearchSenderHTTP(node.ip, node.port, username, password, creds, "region", false, false, None, 1000L, 1)
   val index = "idx"
   client.execute(createIndex(index)).await
 
