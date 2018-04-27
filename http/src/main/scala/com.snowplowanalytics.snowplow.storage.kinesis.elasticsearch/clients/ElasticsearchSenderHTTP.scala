@@ -73,7 +73,6 @@ class ElasticsearchSenderHTTP(
     val userpass = BaseEncoding.base64().encode(s"${username.get}:${password.get}".getBytes(Charsets.UTF_8))
     val headers:Array[Header] = Array(new BasicHeader("Authorization", s"Basic $userpass"))
     restClientBuilder.setDefaultHeaders(headers)
-
   }
 
   private val client = HttpClient.fromRestClient(restClientBuilder.build())
