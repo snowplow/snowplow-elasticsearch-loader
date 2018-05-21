@@ -15,11 +15,16 @@ package com.snowplowanalytics.elasticsearch.loader
 package clients
 
 // Scala
+import com.google.common.base.Charsets
+import com.google.common.io.BaseEncoding
+import org.apache.http.{Header, HttpHost}
+import org.apache.http.message.BasicHeader
+import org.elasticsearch.client.RestClient
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure => SFailure, Success => SSuccess}
 
 // elastic4s
-import com.sksamuel.elastic4s.ElasticsearchClientUri
 import com.sksamuel.elastic4s.http.{HttpClient, NoOpHttpClientConfigCallback}
 import com.sksamuel.elastic4s.http.ElasticDsl._
 
@@ -39,6 +44,8 @@ import com.snowplowanalytics.snowplow.scalatracker.Tracker
 class ElasticsearchSenderHTTP(
   endpoint: String,
   port: Int,
+  username: Option[String],
+  password: Option[String],
   credentialsProvider: AWSCredentialsProvider,
   region: String,
   ssl: Boolean = false,
@@ -52,12 +59,22 @@ class ElasticsearchSenderHTTP(
 
   override val log = LoggerFactory.getLogger(getClass)
 
-  private val uri = ElasticsearchClientUri(s"elasticsearch://$endpoint:$port?ssl=$ssl")
-  private val httpClientConfigCallback =
-    if (awsSigning) new SignedHttpClientConfigCallback(credentialsProvider, region)
-    else NoOpHttpClientConfigCallback
-  private val client = HttpClient(uri,
-    httpClientConfigCallback = httpClientConfigCallback)
+  private val client = {
+    val httpClientConfigCallback =
+      if (awsSigning) new SignedHttpClientConfigCallback(credentialsProvider, region)
+      else NoOpHttpClientConfigCallback
+    val formedHost = new HttpHost(endpoint, port, if (ssl) "https" else "http")
+    val headers: Array[Header] = (username, password) match {
+      case (Some(u), Some(p)) =>
+        val userpass = BaseEncoding.base64().encode(s"${username.get}:${password.get}".getBytes(Charsets.UTF_8))
+        Array(new BasicHeader("Authorization", s"Basic $userpass"))
+      case _ => Array.empty[Header]
+      }
+    val restClientBuilder = RestClient.builder(formedHost)
+      .setHttpClientConfigCallback(httpClientConfigCallback)
+      .setDefaultHeaders(headers)
+    HttpClient.fromRestClient(restClientBuilder.build())
+  }
 
   implicit val strategy = Strategy.DefaultExecutorService
 
