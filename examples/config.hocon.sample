@@ -123,11 +123,15 @@ elasticsearch {
   # - port: the port the cluster can be accessed on
   #   - for http this is usually 9200
   #   - for transport this is usually 9300
+  # - username (optional, remove if not active): http basic auth username
+  # - password (optional, remove if not active): http basic auth password
   # - max-timeout: the maximum attempt time before a client restart
   # - ssl: if using the http client, whether to use ssl or not
   client {
     endpoint = "{{elasticsearchEndpoint}}"
     port = "{{elasticsearchTransportPort}}"
+    username = "{{elasticsearchUsername}}"
+    password = "{{elasticsearchPassword}}"
     maxTimeout = "{{elasticsearchMaxTimeout}}"
     ssl = {{sslBool}}
   }

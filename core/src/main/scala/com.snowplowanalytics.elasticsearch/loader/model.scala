@@ -69,6 +69,8 @@ package model {
   case class ESClientConfig(
     endpoint: String,
     port: Int,
+    username: Option[String],
+    password: Option[String],
     maxTimeout: Long,
     ssl: Boolean
   )
