@@ -32,7 +32,7 @@ object Dependencies {
     val elastic4s        = "5.4.6"
     val pureconfig       = "0.9.1"
     // Scala (test only)
-    val specs2           = "3.9.2"
+    val specs2           = "4.1.0"
   }
 
   object Libraries {
