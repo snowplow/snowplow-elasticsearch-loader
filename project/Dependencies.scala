@@ -30,7 +30,7 @@ object Dependencies {
     val analyticsSDK     = "0.2.0"
     val awsSigner        = "0.5.0"
     val elastic4s        = "5.4.6"
-    val pureconfig       = "0.8.0"
+    val pureconfig       = "0.9.1"
     // Scala (test only)
     val specs2           = "3.9.2"
   }
