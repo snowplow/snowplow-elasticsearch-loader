@@ -24,7 +24,7 @@ object Dependencies {
     val elasticsearch    = "2.4.5"
     val nsqClient        = "1.1.0-rc1"
     // Scala
-    val scopt            = "3.6.0"
+    val scopt            = "3.7.0"
     val scalaz7          = "7.2.14"
     val snowplowTracker  = "0.3.0"
     val analyticsSDK     = "0.2.0"
