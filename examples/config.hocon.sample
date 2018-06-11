@@ -160,6 +160,7 @@ monitoring {
   snowplow {
     collectorUri = "{{collectorUri}}"
     collectorPort = "{{collectorPort}}"
+    ssl = "{{sslMonitoring}}"
     appId = "{{appId}}"
     method = "{{method}}"
   }

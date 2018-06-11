@@ -84,6 +84,7 @@ package model {
   case class SnowplowMonitoringConfig(
     collectorUri: String,
     collectorPort: Int,
+    ssl: Option[Boolean],
     appId: String,
     method: String
   )
