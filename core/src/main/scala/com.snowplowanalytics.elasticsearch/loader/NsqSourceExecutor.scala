@@ -97,7 +97,7 @@ class NsqSourceExecutor(
           msg.finished()
 
           if (msgBuffer.size == nsqBufferSize) {
-            val elasticsearchRejects = elasticsearchEmitter.attempEmit(msgBuffer.toList)
+            val elasticsearchRejects = elasticsearchEmitter.attemptEmit(msgBuffer.toList)
             elasticsearchEmitter.fail(elasticsearchRejects)
             msgBuffer.clear()
           }
