@@ -58,7 +58,7 @@ class ElasticsearchEmitter (
    * @return list of inputs which failed transformation or which Elasticsearch rejected
    */
   @throws[IOException]
-  def attempEmit(records: List[EmitterInput]): List[EmitterInput] = {
+  def attemptEmit(records: List[EmitterInput]): List[EmitterInput] = {
     if (records.isEmpty) {
       Nil
     } else {
@@ -113,7 +113,7 @@ class ElasticsearchEmitter (
    * buffer settings defined in the config
    *
    * @param records The records to split
-   * @returns a list of buffers
+   * @return a list of buffers
    */
   private def splitBuffer(
     records: List[EmitterInput],
