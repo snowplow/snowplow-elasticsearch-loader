@@ -9,7 +9,7 @@ Elasticsearch are written to a separate Kinesis stream.
 
 ## Building
 
-Assuming you already have [SBT 0.13][sbt] installed:
+Assuming you already have [SBT 1.1.5][sbt] installed:
 
     $ git clone git://github.com/snowplow/snowplow-elasticsearch-loader.git
     $ sbt compile
