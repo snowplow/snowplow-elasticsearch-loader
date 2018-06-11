@@ -18,7 +18,7 @@ object Dependencies {
     // Java
     val config           = "1.3.3"
     val slf4j            = "1.7.5"
-    val kinesisClient    = "1.7.5"
+    val kinesisClient    = "1.9.1"
     val kinesisConnector = "1.3.0"
     val validator        = "2.2.6"
     val elasticsearch    = "2.4.5"
