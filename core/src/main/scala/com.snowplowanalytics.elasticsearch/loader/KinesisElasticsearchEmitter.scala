@@ -21,7 +21,6 @@ package com.snowplowanalytics
 package elasticsearch.loader
 
 // Amazon
-import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
 import com.amazonaws.services.kinesis.connectors.interfaces.IEmitter
 import com.amazonaws.services.kinesis.connectors.{
   KinesisConnectorConfiguration,
@@ -32,12 +31,8 @@ import com.amazonaws.services.kinesis.connectors.{
 import java.io.IOException
 import java.util.{List => JList}
 
-// Joda-Time
-import org.joda.time.{DateTime, DateTimeZone}
-import org.joda.time.format.DateTimeFormat
-
 // Scala
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 // Scalaz
 import scalaz._
@@ -67,9 +62,6 @@ class KinesisElasticsearchEmitter(
   tracker: Option[Tracker] = None
 ) extends IEmitter[EmitterInput] {
 
-  // An ISO valid timestamp formatter
-  private val TstampFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(DateTimeZone.UTC)
-
   // ElasticsearchEmitter instance
   private val elasticsearchEmitter = new ElasticsearchEmitter(elasticsearchSender, 
                                                               goodSink, 
@@ -86,8 +78,8 @@ class KinesisElasticsearchEmitter(
    */
   @throws[IOException]
   override def emit(buffer: UnmodifiableBuffer[EmitterInput]): JList[EmitterInput] = {
-    val records = buffer.getRecords.toList
-    elasticsearchEmitter.attempEmit(records)
+    val records = buffer.getRecords.asScala.toList
+    elasticsearchEmitter.attemptEmit(records).asJava
   }
 
   /**
@@ -96,21 +88,11 @@ class KinesisElasticsearchEmitter(
    * @param records List of failed records
    */
   override def fail(records: JList[EmitterInput]): Unit =
-    elasticsearchEmitter.fail(records.toList)
+    elasticsearchEmitter.fail(records.asScala.toList)
 
   /**
    * Closes the Elasticsearch client when the KinesisConnectorRecordProcessor is shut down
    */
   override def shutdown(): Unit = elasticsearchSender.close
 
-  /**
-   * Returns an ISO valid timestamp
-   *
-   * @param tstamp The Timestamp to convert
-   * @return the formatted Timestamp
-   */
-  private def getTimestamp(tstamp: Long): String = {
-    val dt = new DateTime(tstamp)
-    TstampFormat.print(dt)
-  }
 }
