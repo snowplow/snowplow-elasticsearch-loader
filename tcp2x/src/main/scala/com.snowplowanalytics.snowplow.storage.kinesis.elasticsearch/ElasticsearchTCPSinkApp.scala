@@ -20,6 +20,7 @@
 package com.snowplowanalytics.elasticsearch.loader
 
 import clients.{ElasticsearchSender, ElasticsearchSenderTCP}
+import scalaz.{Failure, Success}
 
 /** Main entry point for the Elasticsearch TCP sink */
 object ElasticsearchTCPSinkApp extends App with ElasticsearchSinkApp {
@@ -30,7 +31,10 @@ object ElasticsearchTCPSinkApp extends App with ElasticsearchSinkApp {
   val tracker = config.monitoring.map(e => SnowplowTracking.initializeTracker(e.snowplow))
 
   override lazy val elasticsearchSender: ElasticsearchSender =
-    new ElasticsearchSenderTCP(convertConfig(config), tracker, maxConnectionTime)
+    convertConfig(config) match {
+      case Success(kinesisConfig) => new ElasticsearchSenderTCP(kinesisConfig, tracker, maxConnectionTime)
+      case Failure(e) => throw new Exception(e)
+    }
 
   run(config)
 }

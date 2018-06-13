@@ -26,17 +26,16 @@ import java.nio.charset.StandardCharsets.UTF_8
 // NSQ
 import com.snowplowanalytics.client.nsq.NSQProducer
 
-// This project
-import model._
-
 /**
- * NSQ sink
- *
- * @param config ESLoader Configuration
- */
-class NsqSink(config: ESLoaderConfig) extends ISink {
+  * NSQ sink
+  *
+  * @param host host for Nsq
+  * @param port port for Nsq
+  * @param outStreamName Nsq out stream
+  */
+class NsqSink(host: String, port: Int, outStreamName: String) extends ISink {
 
-  private val producer = new NSQProducer().addAddress(config.nsq.host, config.nsq.port).start()
+  private val producer = new NSQProducer().addAddress(host, port).start()
 
   /**
    * Writes a string to NSQ
@@ -46,6 +45,6 @@ class NsqSink(config: ESLoaderConfig) extends ISink {
    * @param good Unused parameter which exists to extend ISink
    */
   override def store(output: String, key: Option[String], good: Boolean): Unit =
-    producer.produce(config.streams.outStreamName, output.getBytes(UTF_8))
+    producer.produce(outStreamName, output.getBytes(UTF_8))
 }
 
