@@ -55,13 +55,15 @@ aws {
   secretKey = iam
 }
 
-# config for NSQ
-nsq {
+queue {
+  # What queue to use, can be "kinesis" or "nsq"
+  enabled="kinesis"
+  # Config for NSQ
   # Channel name for NSQ source
   # If more than one application reading from the same NSQ topic at the same time,
   # all of them must have unique channel name for getting all the data from the same topic
   channelName = "{{nsqSourceChannelName}}"
-     
+
   # Host name for NSQ tools
   host = "{{nsqHost}}"
 
@@ -70,9 +72,8 @@ nsq {
 
   # HTTP port for nsqlookupd
   lookupPort = {{nsqlookupdPort}}
-}
 
-kinesis {
+  # Config for Kinesis
   # "LATEST": most recent data.
   # "TRIM_HORIZON": oldest available data.
   # "AT_TIMESTAMP": Start from the record at or after the specified timestamp

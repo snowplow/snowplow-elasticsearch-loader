@@ -74,59 +74,69 @@ trait ElasticsearchSinkApp {
     }
 
     implicit def hint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+    implicit val queueHint = new FieldCoproductHint[Queue]("enabled")
+
     val esLoaderConf = loadConfig[ESLoaderConfig](conf) match {
       case Left(e) =>
         System.err.println(s"configuration error: $e")
         System.exit(1)
         None
-       case Right(c) => Some(c)
+      case Right(c) => Some(c)
     }
 
     esLoaderConf
   }
 
-/**
-  * Builds a KinesisConnectorConfiguration
-  *
-  * @param config the configuration HOCON
-  * @return A KinesisConnectorConfiguration
-  */
-  def convertConfig(config: ESLoaderConfig): KinesisConnectorConfiguration = {
+  /**
+    * Builds a KinesisConnectorConfiguration
+    *
+    * @param config the configuration HOCON
+    * @return A KinesisConnectorConfiguration
+    */
+  def convertConfig(config: ESLoaderConfig): Validation[String, KinesisConnectorConfiguration] = {
     val props = new Properties
+    config.queue match {
+      case queue: Kinesis =>
+        props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT,
+          queue.endpoint)
+        props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME,
+          queue.appName.trim)
+        props.setProperty(KinesisConnectorConfiguration.PROP_INITIAL_POSITION_IN_STREAM,
+          queue.initialPosition)
+        props.setProperty(KinesisConnectorConfiguration.PROP_MAX_RECORDS,
+          queue.maxRecords.toString)
 
-    props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_INPUT_STREAM,
-      config.streams.inStreamName)
-    props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT,
-      config.kinesis.endpoint)
-    props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME,
-      config.kinesis.appName.trim)
-    props.setProperty(KinesisConnectorConfiguration.PROP_INITIAL_POSITION_IN_STREAM,
-      config.kinesis.initialPosition)
-    props.setProperty(KinesisConnectorConfiguration.PROP_MAX_RECORDS,
-      config.kinesis.maxRecords.toString)
+        // So that the region of the DynamoDB table is correct
+        props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME,
+          queue.region)
 
-    // So that the region of the DynamoDB table is correct
-    props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME,
-      config.kinesis.region)
+        props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_INPUT_STREAM,
+          config.streams.inStreamName)
 
-    props.setProperty(KinesisConnectorConfiguration.PROP_ELASTICSEARCH_ENDPOINT,
-      config.elasticsearch.client.endpoint)
-    props.setProperty(KinesisConnectorConfiguration.PROP_ELASTICSEARCH_CLUSTER_NAME,
-      config.elasticsearch.cluster.name)
-    props.setProperty(KinesisConnectorConfiguration.PROP_ELASTICSEARCH_PORT,
-      config.elasticsearch.client.port.toString)
+        props.setProperty(KinesisConnectorConfiguration.PROP_ELASTICSEARCH_ENDPOINT,
+          config.elasticsearch.client.endpoint)
+        props.setProperty(KinesisConnectorConfiguration.PROP_ELASTICSEARCH_CLUSTER_NAME,
+          config.elasticsearch.cluster.name)
+        props.setProperty(KinesisConnectorConfiguration.PROP_ELASTICSEARCH_PORT,
+          config.elasticsearch.client.port.toString)
 
-    props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_BYTE_SIZE_LIMIT,
-      config.streams.buffer.byteLimit.toString)
-    props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_RECORD_COUNT_LIMIT,
-      config.streams.buffer.recordLimit.toString)
-    props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_MILLISECONDS_LIMIT,
-      config.streams.buffer.timeLimit.toString)
+        props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_BYTE_SIZE_LIMIT,
+          config.streams.buffer.byteLimit.toString)
+        props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_RECORD_COUNT_LIMIT,
+          config.streams.buffer.recordLimit.toString)
+        props.setProperty(KinesisConnectorConfiguration.PROP_BUFFER_MILLISECONDS_LIMIT,
+          config.streams.buffer.timeLimit.toString)
 
-    props.setProperty(KinesisConnectorConfiguration.PROP_CONNECTOR_DESTINATION, "elasticsearch")
-    props.setProperty(KinesisConnectorConfiguration.PROP_RETRY_LIMIT, "1")
+        props.setProperty(KinesisConnectorConfiguration.PROP_CONNECTOR_DESTINATION, "elasticsearch")
+        props.setProperty(KinesisConnectorConfiguration.PROP_RETRY_LIMIT, "1")
 
-    new KinesisConnectorConfiguration(props, CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey))
+        new KinesisConnectorConfiguration(props,
+          CredentialsLookup.getCredentialsProvider(config.aws.accessKey,
+            config.aws.secretKey)).success
+
+       case _ => "Kinesis configuration is not valid".failure
+    }
+
   }
 
   def run(conf: ESLoaderConfig): Unit = {
@@ -142,47 +152,57 @@ trait ElasticsearchSinkApp {
       case "elasticsearch" => None
     }
 
-    val badSink = conf.sink.bad match {
-      case "stderr" => new StdouterrSink
-      case "nsq" => new NsqSink(conf)
-      case "none" => new NullSink
+    val badSinkValidated = conf.sink.bad match {
+      case "stderr" => (new StdouterrSink).success
+      case "nsq" =>
+        conf.queue match {
+          case  queue: Nsq =>
+            new NsqSink(queue.host, queue.port, conf.streams.outStreamName).success
+          case _ => "queue config is not valid for Nsq".failure
+        }
+      case "none" => (new NullSink).success
       case "kinesis" =>
-        val kinesisSinkName = conf.streams.outStreamName
-        val kinesisSinkRegion = conf.kinesis.region
-        val kinesisSinkEndpoint = conf.kinesis.endpoint
-        new KinesisSink(credentials, kinesisSinkEndpoint, kinesisSinkRegion, kinesisSinkName)
+        conf.queue match {
+          case  queue: Kinesis =>
+            new KinesisSink(credentials, queue.endpoint, queue.region, conf.streams.outStreamName).success
+          case _ => "queue config is not valid for Kinesis".failure
+        }
     }
 
-    val executor = conf.source match {
-
+    val executor = (conf.source, conf.queue, badSinkValidated)  match {
       // Read records from Kinesis
-      case "kinesis" =>
-        new KinesisSourceExecutor(streamType,
-                                  documentIndex,
-                                  documentType,
-                                  convertConfig(conf),
-                                  conf.kinesis.initialPosition,
-                                  conf.kinesis.timestamp,
-                                  goodSink,
-                                  badSink,
-                                  elasticsearchSender,
-                                  tracker
-                                 ).success
+      case ("kinesis", queue: Kinesis, Success(badSink)) =>
+        convertConfig(conf) match {
+          case Success(kinesisConfig) =>
+            new KinesisSourceExecutor(streamType,
+              documentIndex,
+              documentType,
+              kinesisConfig,
+              queue.initialPosition,
+              queue.timestamp,
+              goodSink,
+              badSink,
+              elasticsearchSender,
+              tracker
+            ).success
+          case Failure(e) => e.failure
+        }
 
       // Read records from NSQ
-      case "nsq" =>
+      case ("nsq", queue: Nsq, Success(badSink)) =>
         new NsqSourceExecutor(streamType,
-                              documentIndex,
-                              documentType,
-                              conf,
-                              goodSink,
-                              badSink,
-                              elasticsearchSender
-                             ).success
+          documentIndex,
+          documentType,
+          queue,
+          conf,
+          goodSink,
+          badSink,
+          elasticsearchSender
+        ).success
 
       // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
       // TODO reduce code duplication
-      case "stdin" => new Runnable {
+      case ("stdin", _, Success(badSink)) => new Runnable {
         val transformer = streamType match {
           case Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
           case Bad => new BadEventTransformer(documentIndex, documentType)
@@ -200,7 +220,7 @@ trait ElasticsearchSinkApp {
           )
         }
       }.success
-
+      case (_, _, Failure(badSinkError)) => s"badSink configuration is not correct: $badSinkError".failure
       case _ => "Source must be set to 'stdin', 'kinesis' or 'nsq'".failure
     }
 
