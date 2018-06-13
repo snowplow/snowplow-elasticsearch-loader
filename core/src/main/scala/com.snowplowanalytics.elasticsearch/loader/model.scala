@@ -31,26 +31,27 @@ package model {
 
   case class SinkConfig(good: String, bad: String)
   case class AWSConfig(accessKey: String, secretKey: String)
-  case class NSQConfig(
-    channelName: String,
-    nsqdHost: String,
-    nsqdPort: Int,
-    nsqlookupdHost: String,
-    nsqlookupdPort: Int
-  )
-  case class KinesisConfig(
-    initialPosition: String,
-    initialTimestamp: Option[String],
-    maxRecords: Long,
-    region: String,
-    appName: String
-  ) {
+  sealed trait Queue
+  final case class Nsq(
+                        channelName: String,
+                        nsqdHost: String,
+                        nsqdPort: Int,
+                        nsqlookupdHost: String,
+                        nsqlookupdPort: Int
+                      ) extends Queue
+  final case class Kinesis(
+                            initialPosition: String,
+                            initialTimestamp: Option[String],
+                            maxRecords: Long,
+                            region: String,
+                            appName: String
+                          ) extends Queue {
     val timestampEither = initialTimestamp
       .toRight("An initial timestamp needs to be provided when choosing AT_TIMESTAMP")
       .right.flatMap { s =>
-        val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
-        utils.fold(Try(format.parse(s)))(t => Left(t.getMessage), Right(_))
-      }
+      val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+      utils.fold(Try(format.parse(s)))(t => Left(t.getMessage), Right(_))
+    }
     require(initialPosition != "AT_TIMESTAMP" || timestampEither.isRight, timestampEither.left.getOrElse(""))
 
     val timestamp = timestampEither.right.toOption
@@ -62,44 +63,43 @@ package model {
   }
   case class BufferConfig(byteLimit: Long, recordLimit: Long, timeLimit: Long)
   case class StreamsConfig(
-    inStreamName: String,
-    outStreamName: String,
-    buffer: BufferConfig
-  )
+                            inStreamName: String,
+                            outStreamName: String,
+                            buffer: BufferConfig
+                          )
   case class ESClientConfig(
-    endpoint: String,
-    port: Int,
-    username: Option[String],
-    password: Option[String],
-    maxTimeout: Long,
-    ssl: Boolean
-  )
+                             endpoint: String,
+                             port: Int,
+                             username: Option[String],
+                             password: Option[String],
+                             maxTimeout: Long,
+                             ssl: Boolean
+                           )
   case class ESAWSConfig(signing: Boolean, region: String)
   case class ESClusterConfig(name: String, index: String, clusterType: String)
   case class ESConfig(
-    client: ESClientConfig,
-    aws: ESAWSConfig,
-    cluster: ESClusterConfig
-  )
+                       client: ESClientConfig,
+                       aws: ESAWSConfig,
+                       cluster: ESClusterConfig
+                     )
   case class SnowplowMonitoringConfig(
-    collectorUri: String,
-    collectorPort: Int,
-    ssl: Option[Boolean],
-    appId: String,
-    method: String
-  )
+                                       collectorUri: String,
+                                       collectorPort: Int,
+                                       ssl: Option[Boolean],
+                                       appId: String,
+                                       method: String
+                                     )
   case class MonitoringConfig(snowplow: SnowplowMonitoringConfig)
   case class ESLoaderConfig(
-    source: String,
-    sink: SinkConfig,
-    enabled: String,
-    aws: AWSConfig,
-    nsq: NSQConfig,
-    kinesis: KinesisConfig,
-    streams: StreamsConfig,
-    elasticsearch: ESConfig,
-    monitoring: Option[MonitoringConfig]
-  ) {
+                             source: String,
+                             sink: SinkConfig,
+                             enabled: String,
+                             aws: AWSConfig,
+                             queue: Queue,
+                             streams: StreamsConfig,
+                             elasticsearch: ESConfig,
+                             monitoring: Option[MonitoringConfig]
+                           ) {
     val streamType = enabled match {
       case "good" => Good
       case "bad" => Bad

@@ -55,25 +55,11 @@ aws {
   secretKey = iam
 }
 
-# config for NSQ
-nsq {
-  # Channel name for NSQ source
-  # If more than one application reading from the same NSQ topic at the same time,
-  # all of them must have unique channel name for getting all the data from the same topic
-  channelName = "{{nsqSourceChannelName}}"
+queue {
+  # What queue to use, can be "kinesis" or "nsq"
+  enabled="kinesis"
 
-  # Host name for nsqd
-  nsqdHost = "{{nsqdHost}}"
-  # HTTP port for nsqd
-  nsqdPort = {{nsqdPort}}
-
-  # Host name for nsqlookupd
-  nsqlookupdHost = "{{nsqlookupdHost}}"
-  # HTTP port for nsqd
-  nsqlookupdPort = {{nsqlookupdPort}}
-}
-
-kinesis {
+  # Config for Kinesis
   # "LATEST": most recent data.
   # "TRIM_HORIZON": oldest available data.
   # "AT_TIMESTAMP": Start from the record at or after the specified timestamp
@@ -95,6 +81,22 @@ kinesis {
   # "appName" is used for a DynamoDB table to maintain stream state.
   # You can set it automatically using: "SnowplowElasticsearchSink-${sink.kinesis.in.stream-name}"
   appName = "{{kinesisAppName}}"
+
+  # Config for NSQ
+  # Channel name for NSQ source
+  # If more than one application reading from the same NSQ topic at the same time,
+  # all of them must have unique channel name for getting all the data from the same topic
+  #channelName = "{{nsqSourceChannelName}}"
+
+  # Host name for nsqd
+  #nsqdHost = "{{nsqdHost}}"
+  # HTTP port for nsqd
+  #nsqdPort = {{nsqdPort}}
+
+  # Host name for nsqlookupd
+  #nsqlookupdHost = "{{nsqlookupdHost}}"
+  # HTTP port for nsqd
+  #nsqlookupdPort = {{nsqlookupdPort}}
 }
 
 # Common configuration section for all stream sources

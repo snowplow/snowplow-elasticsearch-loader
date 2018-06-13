@@ -1,21 +1,21 @@
 /**
- * Copyright (c) 2014-2017 Snowplow Analytics Ltd.
- * All rights reserved.
- *
- * This program is licensed to you under the Apache License Version 2.0,
- * and you may not use this file except in compliance with the Apache
- * License Version 2.0.
- * You may obtain a copy of the Apache License Version 2.0 at
- * http://www.apache.org/licenses/LICENSE-2.0.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the Apache License Version 2.0 is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied.
- *
- * See the Apache License Version 2.0 for the specific language
- * governing permissions and limitations there under.
- */
+  * Copyright (c) 2014-2017 Snowplow Analytics Ltd.
+  * All rights reserved.
+  *
+  * This program is licensed to you under the Apache License Version 2.0,
+  * and you may not use this file except in compliance with the Apache
+  * License Version 2.0.
+  * You may obtain a copy of the Apache License Version 2.0 at
+  * http://www.apache.org/licenses/LICENSE-2.0.
+  *
+  * Unless required by applicable law or agreed to in writing,
+  * software distributed under the Apache License Version 2.0 is distributed
+  * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+  * either express or implied.
+  *
+  * See the Apache License Version 2.0 for the specific language
+  * governing permissions and limitations there under.
+  */
 
 package com.snowplowanalytics.elasticsearch.loader
 
@@ -43,25 +43,27 @@ import clients._
 import model._
 
 /**
- * NSQSource executor
- *
- * @param streamType the type of stream, good, bad or plain-json
- * @param documentIndex the elasticsearch index name
- * @param documentType the elasticsearch index type
- * @param config ESLoader Configuration
- * @param goodSink the configured GoodSink
- * @param badSink the configured BadSink
- * @param elasticsearchSender function for sending to elasticsearch
- */
+  * NSQSource executor
+  *
+  * @param streamType the type of stream, good, bad or plain-json
+  * @param documentIndex the elasticsearch index name
+  * @param documentType the elasticsearch index type
+  * @param nsq Nsq NsqConfig
+  * @param config ESLoader Configuration
+  * @param goodSink the configured GoodSink
+  * @param badSink the configured BadSink
+  * @param elasticsearchSender function for sending to elasticsearch
+  */
 class NsqSourceExecutor(
-  streamType: StreamType,
-  documentIndex: String,
-  documentType: String,
-  config: ESLoaderConfig,
-  goodSink: Option[ISink],
-  badSink: ISink,
-  elasticsearchSender: ElasticsearchSender
-) extends Runnable {
+                         streamType: StreamType,
+                         documentIndex: String,
+                         documentType: String,
+                         nsq: Nsq,
+                         config: ESLoaderConfig,
+                         goodSink: Option[ISink],
+                         badSink: ISink,
+                         elasticsearchSender: ElasticsearchSender
+                       ) extends Runnable {
 
   lazy val log = LoggerFactory.getLogger(getClass())
 
@@ -79,12 +81,9 @@ class NsqSourceExecutor(
     case PlainJson => new PlainJsonTransformer(documentIndex, documentType)
   }
 
-  private val topicName = config.streams.inStreamName
-  private val channelName = config.nsq.channelName
-
- /**
-   * Consumer will be started to wait new message.
-   */
+  /**
+    * Consumer will be started to wait new message.
+    */
   override def run(): Unit = {
     val nsqCallback = new NSQMessageCallback {
       val nsqBufferSize = config.streams.buffer.recordLimit
@@ -107,18 +106,18 @@ class NsqSourceExecutor(
 
     val errorCallback = new NSQErrorCallback {
       override def error(e: NSQException): Unit =
-        log.error(s"Exception while consuming topic $topicName", e)
+        log.error(s"Exception while consuming topic ${config.streams.inStreamName}", e)
     }
 
     // use NSQLookupd
     val lookup = new DefaultNSQLookup
-    lookup.addLookupAddress(config.nsq.nsqlookupdHost, config.nsq.nsqlookupdPort)
+    lookup.addLookupAddress(nsq.nsqlookupdHost, nsq.nsqlookupdPort)
     val consumer = new NSQConsumer(lookup,
-                                   topicName,
-                                   channelName,
-                                   nsqCallback,
-                                   new NSQConfig(),
-                                   errorCallback)
+      config.streams.inStreamName,
+      nsq.channelName,
+      nsqCallback,
+      new NSQConfig(),
+      errorCallback)
     consumer.start()
   }
 }

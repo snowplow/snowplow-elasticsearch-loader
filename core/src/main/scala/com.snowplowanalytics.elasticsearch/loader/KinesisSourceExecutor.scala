@@ -108,7 +108,7 @@ class KinesisSourceExecutor(
     * @param metricFactory would be used to emit metrics in Amazon Kinesis Client Library
     */
   override def initialize(kinesisConnectorConfiguration: KinesisConnectorConfiguration, metricFactory: IMetricsFactory): Unit = {
-    var kinesisClientLibConfiguration = getKCLConfig(initialPosition, initialTimestamp, kinesisConnectorConfiguration)
+    val kinesisClientLibConfiguration = getKCLConfig(initialPosition, initialTimestamp, kinesisConnectorConfiguration)
 
     if (!kinesisConnectorConfiguration.CALL_PROCESS_RECORDS_EVEN_FOR_EMPTY_LIST) {
       LOG.warn("The false value of callProcessRecordsEvenForEmptyList will be ignored. It must be set to true for the bufferTimeMillisecondsLimit to work correctly.")
