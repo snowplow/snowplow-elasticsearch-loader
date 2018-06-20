@@ -17,6 +17,8 @@ package clients
 // Scala
 import com.google.common.base.Charsets
 import com.google.common.io.BaseEncoding
+import com.sksamuel.elastic4s.http.{RequestFailure, RequestSuccess}
+import com.sksamuel.elastic4s.http.bulk.BulkResponse
 import org.apache.http.{Header, HttpHost}
 import org.apache.http.message.BasicHeader
 import org.elasticsearch.client.RestClient
@@ -30,6 +32,7 @@ import com.sksamuel.elastic4s.http.ElasticDsl._
 
 // Scalaz
 import scalaz._
+import Scalaz._
 import scalaz.concurrent.Strategy
 
 // AMZ
@@ -94,12 +97,13 @@ class ElasticsearchSenderHTTP(
         // we retry with linear back-off if an exception happened
         .retry(delays, exPredicate(connectionAttemptStartTime))
         .map {
-          case bulkResponseResponse => bulkResponseResponse.items.zip(records)
+          case Right(bulkResponseResponse) => bulkResponseResponse.result.items.zip(records)
             .map { case (bulkResponseItem, record) =>
               handleResponse(bulkResponseItem.error.map(_.reason), record)
-            }.flatten
+            }.flatten.toList
+          case Left(requestFailure) => List((requestFailure.error.reason, requestFailure.error.reason.failureNel)) // the bulk request failed
         }.attempt.unsafePerformSync match {
-          case \/-(s) => s.toList
+          case \/-(s) => s
           case -\/(f) =>
             log.error(s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms", f)
             // if the request failed more than it should have we force shutdown
@@ -121,10 +125,14 @@ class ElasticsearchSenderHTTP(
   /** Logs the cluster health */
   def logClusterHealth(): Unit =
     client.execute(clusterHealth) onComplete {
-      case SSuccess(health) => health.status match {
-          case "green"  => log.info("Cluster health is green")
-          case "yellow" => log.warn("Cluster health is yellow")
-          case "red"    => log.error("Cluster health is red")
+      case SSuccess(health) => health match {
+        case Left(requestFailure) => log.error(s"Failure in cluster health request: ${requestFailure.error.reason}")
+        case Right(response) =>
+          response.result.status match {
+            case "green"  => log.info("Cluster health is green")
+            case "yellow" => log.warn("Cluster health is yellow")
+            case "red"    => log.error("Cluster health is red")
+          }
       }
       case SFailure(e) => log.error("Couldn't retrieve cluster health", e)
     }
