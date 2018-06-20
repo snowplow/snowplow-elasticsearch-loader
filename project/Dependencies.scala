@@ -21,7 +21,7 @@ object Dependencies {
     val kinesisClient    = "1.9.1"
     val kinesisConnector = "1.3.0"
     val validator        = "2.2.6"
-    val elasticsearch    = "2.4.5"
+    val elasticsearch    = "6.2.4"
     val nsqClient        = "1.1.0-rc1"
     // Scala
     val scopt            = "3.7.0"

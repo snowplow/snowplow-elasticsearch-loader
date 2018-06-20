@@ -91,20 +91,20 @@ class ElasticsearchSenderHTTP(
 
     val newFailures: List[EmitterInput] = if (actions.nonEmpty) {
       futureToTask(client.execute(bulk(actions)))
-        // we rety with linear backoff if an exception happened
+        // we retry with linear back-off if an exception happened
         .retry(delays, exPredicate(connectionAttemptStartTime))
-        .map { bulkResponse =>
-          bulkResponse.items.zip(records)
+        .map {
+          case bulkResponseResponse => bulkResponseResponse.items.zip(records)
             .map { case (bulkResponseItem, record) =>
               handleResponse(bulkResponseItem.error.map(_.reason), record)
             }.flatten
         }.attempt.unsafePerformSync match {
-        case \/-(s) => s.toList
-        case -\/(f) =>
-          log.error(s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms", f)
-          // if the request failed more than it should have we force shutdown
-          forceShutdown()
-          Nil
+          case \/-(s) => s.toList
+          case -\/(f) =>
+            log.error(s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms", f)
+            // if the request failed more than it should have we force shutdown
+            forceShutdown()
+            Nil
       }
     } else Nil
 
@@ -119,12 +119,12 @@ class ElasticsearchSenderHTTP(
   }
 
   /** Logs the cluster health */
-  override def logClusterHealth(): Unit =
+  def logClusterHealth(): Unit =
     client.execute(clusterHealth) onComplete {
       case SSuccess(health) => health.status match {
-        case "green"  => log.info("Cluster health is green")
-        case "yellow" => log.warn("Cluster health is yellow")
-        case "red"    => log.error("Cluster health is red")
+          case "green"  => log.info("Cluster health is green")
+          case "yellow" => log.warn("Cluster health is yellow")
+          case "red"    => log.error("Cluster health is red")
       }
       case SFailure(e) => log.error("Couldn't retrieve cluster health", e)
     }
