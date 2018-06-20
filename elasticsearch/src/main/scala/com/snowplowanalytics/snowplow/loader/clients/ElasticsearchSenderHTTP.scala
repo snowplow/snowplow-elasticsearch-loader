@@ -1,15 +1,15 @@
 /**
- * Copyright (c) 2014-2017 Snowplow Analytics Ltd. All rights reserved.
- *
- * This program is licensed to you under the Apache License Version 2.0,
- * and you may not use this file except in compliance with the Apache License Version 2.0.
- * You may obtain a copy of the Apache License Version 2.0 at http://www.apache.org/licenses/LICENSE-2.0.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the Apache License Version 2.0 is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
- */
+  * Copyright (c) 2014-2017 Snowplow Analytics Ltd. All rights reserved.
+  *
+  * This program is licensed to you under the Apache License Version 2.0,
+  * and you may not use this file except in compliance with the Apache License Version 2.0.
+  * You may obtain a copy of the Apache License Version 2.0 at http://www.apache.org/licenses/LICENSE-2.0.
+  *
+  * Unless required by applicable law or agreed to in writing,
+  * software distributed under the Apache License Version 2.0 is distributed on an
+  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
+  */
 
 package com.snowplowanalytics.elasticsearch.loader
 package clients
@@ -42,18 +42,18 @@ import org.slf4j.LoggerFactory
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
 
 class ElasticsearchSenderHTTP(
-  endpoint: String,
-  port: Int,
-  username: Option[String],
-  password: Option[String],
-  credentialsProvider: AWSCredentialsProvider,
-  region: String,
-  ssl: Boolean = false,
-  awsSigning: Boolean = false,
-  override val tracker: Option[Tracker] = None,
-  override val maxConnectionWaitTimeMs: Long = 60000L,
-  override val maxAttempts: Int = 6
-) extends Elastic4sSender {
+                               endpoint: String,
+                               port: Int,
+                               username: Option[String],
+                               password: Option[String],
+                               credentialsProvider: AWSCredentialsProvider,
+                               region: String,
+                               ssl: Boolean = false,
+                               awsSigning: Boolean = false,
+                               override val tracker: Option[Tracker] = None,
+                               override val maxConnectionWaitTimeMs: Long = 60000L,
+                               override val maxAttempts: Int = 6
+                             ) extends Elastic4sSender {
   require(maxAttempts > 0)
   require(maxConnectionWaitTimeMs > 0)
 
@@ -69,7 +69,7 @@ class ElasticsearchSenderHTTP(
         val userpass = BaseEncoding.base64().encode(s"${username.get}:${password.get}".getBytes(Charsets.UTF_8))
         Array(new BasicHeader("Authorization", s"Basic $userpass"))
       case _ => Array.empty[Header]
-      }
+    }
     val restClientBuilder = RestClient.builder(formedHost)
       .setHttpClientConfigCallback(httpClientConfigCallback)
       .setDefaultHeaders(headers)
@@ -99,13 +99,13 @@ class ElasticsearchSenderHTTP(
               handleResponse(bulkResponseItem.error.map(_.reason), record)
             }.flatten
         }.attempt.unsafePerformSync match {
-          case \/-(s) => s.toList
-          case -\/(f) =>
-            log.error(s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms", f)
-            // if the request failed more than it should have we force shutdown
-            forceShutdown()
-            Nil
-        }
+        case \/-(s) => s.toList
+        case -\/(f) =>
+          log.error(s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms", f)
+          // if the request failed more than it should have we force shutdown
+          forceShutdown()
+          Nil
+      }
     } else Nil
 
     log.info(s"Emitted ${successfulRecords.size - newFailures.size} records to Elasticseacrch")

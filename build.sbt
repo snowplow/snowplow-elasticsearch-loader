@@ -50,7 +50,7 @@ lazy val allSettings = buildSettings ++
 
 lazy val root = project.in(file("."))
   .settings(buildSettings)
-  .aggregate(core, http, tcp, tcp2x)
+  .aggregate(core, elasticsearch)
 
 lazy val core = project
   .settings(moduleName := "snowplow-elasticsearch-loader-core")
@@ -58,26 +58,12 @@ lazy val core = project
   .settings(BuildSettings.scalifySettings)
   .settings(libraryDependencies ++= commonDependencies)
 
-// project dealing with the ES HTTP API
-lazy val http = project
-  .settings(moduleName := "snowplow-elasticsearch-loader-http")
+// project dealing with the ES
+lazy val elasticsearch = project
+  .settings(moduleName := "snowplow-elasticsearch-loader")
   .settings(allSettings)
   .settings(libraryDependencies ++= Seq(
     Dependencies.Libraries.elastic4sHttp,
     Dependencies.Libraries.elastic4sTest
   ))
-  .dependsOn(core)
-
-// project dealing with the ES transport API for 5.x clusters
-lazy val tcp = project
-  .settings(moduleName := "snowplow-elasticsearch-loader-tcp")
-  .settings(allSettings)
-  .settings(libraryDependencies += Dependencies.Libraries.elastic4sTcp)
-  .dependsOn(core)
-
-// project dealing with the ES transport API for 2.x clusters
-lazy val tcp2x = project
-  .settings(moduleName := "snowplow-elasticsearch-loader-tcp-2x")
-  .settings(allSettings)
-  .settings(libraryDependencies += Dependencies.Libraries.elasticsearch)
   .dependsOn(core)
