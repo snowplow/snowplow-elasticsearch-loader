@@ -28,28 +28,15 @@ packages:
     build_version : <%= FUNC['sbt_version(.)'] %>
 
     build_commands:
-      - sbt "project http"  assembly
-      - sbt "project tcp"   assembly
-      - sbt "project tcp2x" assembly
+      - sbt "project elasticsearch"  assembly
 
     # Required: Artifact
     artifacts:
         # The artifact name is composed like so: {{prefix}}{{version}}{{suffix}}.zip
-      - prefix : "snowplow_elasticsearch_loader_http_"
+      - prefix : "snowplow_elasticsearch_loader_"
         suffix : ""
         type   : "zip"
         # The binaries to put in the zip
         binary_paths:
-          - http/target/scala-2.11/snowplow-elasticsearch-loader-http-<%= ENV['TRAVIS_TAG'] %>.jar
-      - prefix : "snowplow_elasticsearch_loader_tcp_"
-        suffix : ""
-        type   : "zip"
-        # The binaries to put in the zip
-        binary_paths:
-          - tcp/target/scala-2.11/snowplow-elasticsearch-loader-tcp-<%= ENV['TRAVIS_TAG'] %>.jar
-      - prefix : "snowplow_elasticsearch_loader_tcp_2x_"
-        suffix : ""
-        type   : "zip"
-        # The binaries to put in the zip
-        binary_paths:
-          - tcp2x/target/scala-2.11/snowplow-elasticsearch-loader-tcp-2x-<%= ENV['TRAVIS_TAG'] %>.jar
+          - elasticsearch/target/scala-2.12/snowplow-elasticsearch-loader-<%= ENV['TRAVIS_TAG'] %>.jar
+
