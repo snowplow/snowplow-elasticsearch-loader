@@ -54,16 +54,6 @@ object Dependencies {
     val awsSigner        = "io.ticofab"              %% "aws-request-signer"           % V.awsSigner
     val pureconfig       = "com.github.pureconfig"   %% "pureconfig"                   % V.pureconfig
     val elastic4sHttp    = "com.sksamuel.elastic4s"  %% "elastic4s-http"               % V.elastic4s
-    val elastic4sTcp     = ("com.sksamuel.elastic4s" %% "elastic4s-tcp"                % V.elastic4s)
-      .exclude("org.apache.logging.log4j", "log4j-1.2-api")
-      .exclude("io.netty", "netty-all")
-      .exclude("io.netty", "netty-buffer")
-      .exclude("io.netty", "netty-codec")
-      .exclude("io.netty", "netty-codec-http")
-      .exclude("io.netty", "netty-common")
-      .exclude("io.netty", "netty-handler")
-      .exclude("io.netty", "netty-resolver")
-      .exclude("io.netty", "netty-transport")
     // Scala (test only)
     val specs2           = "org.specs2"              %% "specs2-core"                  % V.specs2    % "test"
     val elastic4sTest    = "com.sksamuel.elastic4s"  %% "elastic4s-embedded"           % V.elastic4s % "test"

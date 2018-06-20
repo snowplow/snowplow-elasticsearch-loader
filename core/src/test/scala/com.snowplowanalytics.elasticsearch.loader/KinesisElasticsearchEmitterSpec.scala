@@ -42,7 +42,7 @@ import org.specs2.mutable.Specification
 
 // This project
 import sinks._
-import clients.ElasticsearchSender
+import clients._
 
 class MockElasticsearchSender extends ElasticsearchSender {
   var sentRecords: List[EmitterInput] = List.empty
