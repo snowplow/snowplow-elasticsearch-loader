@@ -44,7 +44,7 @@ object BuildSettings {
     sourceGenerators in Compile += Def.task {
       val dir = (sourceManaged in Compile).value
       val file = dir / "settings.scala"
-      IO.write(file, """package com.snowplowanalytics.elasticsearch.loader.generated
+      IO.write(file, """package com.snowplowanalytics.stream.loader.generated
         |object Settings {
         |  val organization = "%s"
         |  val version = "%s"
