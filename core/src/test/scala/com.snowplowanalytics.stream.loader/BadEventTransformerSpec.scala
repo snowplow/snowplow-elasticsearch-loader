@@ -12,6 +12,9 @@
  */
 package com.snowplowanalytics.stream.loader
 
+// Scala
+import org.json4s.jackson.JsonMethods._
+
 // Scalaz
 import scalaz._
 import Scalaz._
@@ -19,22 +22,26 @@ import Scalaz._
 // Specs2
 import org.specs2.mutable.Specification
 
+// This project
+import transformers.BadEventTransformer
+
 /**
  * Tests BadEventTransformer
  */
 class BadEventTransformerSpec extends Specification {
 
+  val documentIndex = "snowplow"
+  val documentType  = "enriched"
+
   "The from method" should {
     "successfully convert a bad event JSON to an ElasticsearchObject" in {
       val input =
         """{"line":"failed","errors":["Record does not match Thrift SnowplowRawEvent schema"]}"""
-      val result = new BadEventTransformer("snowplow", "bad")
-        .fromClass(input -> JsonRecord(input, None).success)
-      val elasticsearchObject =
-        result._2.getOrElse(throw new RuntimeException("Bad event failed transformation"))
-      elasticsearchObject.getIndex must_== "snowplow"
-      elasticsearchObject.getType must_== "bad"
-      elasticsearchObject.getSource must_== input
+      val result = new BadEventTransformer(documentIndex, documentType)
+        .fromClass(input -> JsonRecord(parse(input), documentIndex, documentType).success)
+      val json: String = compact(
+        render(result._2.getOrElse(throw new RuntimeException("Json failed transformation")).json))
+      json.toString must_== input
     }
   }
 

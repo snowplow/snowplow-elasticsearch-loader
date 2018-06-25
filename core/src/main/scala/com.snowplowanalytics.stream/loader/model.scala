@@ -77,7 +77,7 @@ package model {
     ssl: Boolean
   )
   case class ESAWSConfig(signing: Boolean, region: String)
-  case class ESClusterConfig(name: String, index: String, clusterType: String)
+  case class ESClusterConfig(name: String, index: String, documentType: String)
   case class ESConfig(
     client: ESClientConfig,
     aws: ESAWSConfig,
@@ -91,14 +91,14 @@ package model {
     method: String
   )
   case class MonitoringConfig(snowplow: SnowplowMonitoringConfig)
-  case class ESLoaderConfig(
+  case class StreamLoaderConfig(
     source: String,
     sink: SinkConfig,
     enabled: String,
     aws: AWSConfig,
     queue: Queue,
     streams: StreamsConfig,
-    elasticsearch: ESConfig,
+    elasticsearch: Option[ESConfig],
     monitoring: Option[MonitoringConfig]
   ) {
     val streamType = enabled match {

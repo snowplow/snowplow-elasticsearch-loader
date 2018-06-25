@@ -17,14 +17,18 @@
  * governing permissions and limitations there under.
  */
 package com.snowplowanalytics.stream.loader
+package transformers
+
+// Amazon
+import com.amazonaws.services.kinesis.connectors.interfaces.ITransformer
+import com.amazonaws.services.kinesis.model.Record
 
 // Java
 import java.nio.charset.StandardCharsets.UTF_8
 
-// Amazon
-import com.amazonaws.services.kinesis.connectors.interfaces.ITransformer
-import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
-import com.amazonaws.services.kinesis.model.Record
+// Scala
+import org.json4s.JsonAST.JObject
+import org.json4s._
 
 // Scalaz
 import scalaz._
@@ -35,11 +39,10 @@ import Scalaz._
 /**
  * Class to convert bad events to ElasticsearchObjects
  *
- * @param the elasticsearch index name
- * @param the elasticsearch index type
+ * @param documentIndex elasticsearch index name
  */
 class BadEventTransformer(documentIndex: String, documentType: String)
-    extends ITransformer[ValidatedRecord, EmitterInput]
+    extends ITransformer[ValidatedJsonRecord, EmitterJsonInput]
     with StdinTransformer {
 
   /**
@@ -48,25 +51,22 @@ class BadEventTransformer(documentIndex: String, documentType: String)
    * @param record Byte array representation of a bad row string
    * @return JsonRecord containing JSON string for the event and no event_id
    */
-  override def toClass(record: Record): ValidatedRecord = {
+  override def toClass(record: Record): ValidatedJsonRecord = {
     val recordString = new String(record.getData.array, UTF_8)
-    (recordString, JsonRecord(recordString, None).success)
+    (
+      recordString,
+      JsonRecord(JObject(JField("source", JString(recordString))), documentIndex, documentType).success)
   }
-
-  /**
-   * Convert a buffered bad event JSON to an ElasticsearchObject
-   *
-   * @param record JsonRecord containing a bad event JSON
-   * @return An ElasticsearchObject
-   */
-  override def fromClass(record: ValidatedRecord): EmitterInput =
-    (record._1, record._2.map(j => new ElasticsearchObject(documentIndex, documentType, j.json)))
 
   /**
    * Consume data from stdin rather than Kinesis
    *
    * @param line Line from stdin
-   * @return Line as an EmitterInput
+   * @return Line as an EmitterJsonInput
    */
-  def consumeLine(line: String): EmitterInput = fromClass(line -> JsonRecord(line, None).success)
+  def consumeLine(line: String): EmitterJsonInput =
+    fromClass(line -> JsonRecord(
+      JObject(JField("source", JString(line))),
+      documentIndex,
+      documentType).success)
 }
