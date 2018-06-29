@@ -16,7 +16,6 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.stream.loader
 
 // Scalaz
@@ -38,7 +37,7 @@ case class BadRow(line: String, errors: NonEmptyList[String]) {
   import BadRow._
 
   private val tstamp = System.currentTimeMillis()
-   // An ISO valid timestamp formatter
+  // An ISO valid timestamp formatter
   private val tstampFormat = DateTimeFormat
     .forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     .withZone(DateTimeZone.UTC)
@@ -46,9 +45,9 @@ case class BadRow(line: String, errors: NonEmptyList[String]) {
   private val errs = errors.map(toProcessingMessage)
 
   def toCompactJson: String = compact(
-    ("line"           -> line) ~
-    ("errors"         -> errs.toList.map(e => fromJsonNode(e.asJson))) ~
-    ("failure_tstamp" -> getTstamp(tstamp, tstampFormat))
+    ("line"             -> line) ~
+      ("errors"         -> errs.toList.map(e => fromJsonNode(e.asJson))) ~
+      ("failure_tstamp" -> getTstamp(tstamp, tstampFormat))
   )
 }
 
