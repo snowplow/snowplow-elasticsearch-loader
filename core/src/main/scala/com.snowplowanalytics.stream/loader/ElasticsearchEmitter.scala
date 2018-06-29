@@ -16,7 +16,6 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.stream.loader
 
 // Java
@@ -42,13 +41,14 @@ import clients._
  * @param bufferRecordLimit record limit for buffer
  * @param bufferByteLimit byte limit for buffer
  */
-class ElasticsearchEmitter (
+class ElasticsearchEmitter(
   elasticsearchSender: ElasticsearchSender,
   goodSink: Option[ISink],
   badSink: ISink,
   bufferRecordLimit: Long,
   bufferByteLimit: Long
 ) {
+
   /**
    * Emits good records to stdout or Elasticsearch.
    * All records which Elasticsearch rejects and all records which failed transformation
@@ -73,7 +73,7 @@ class ElasticsearchEmitter (
           Nil
         }
         case None if validRecords.isEmpty => Nil
-        case _ => sendToElasticsearch(validRecords)
+        case _                            => sendToElasticsearch(validRecords)
       }
 
       invalidRecords ++ elasticsearchRejects
@@ -86,12 +86,14 @@ class ElasticsearchEmitter (
    * @param records List of failed records
    */
   def fail(records: List[EmitterInput]): Unit =
-    records.foreach { _ match {
-      case (r, Failure(fs)) =>
-        val output = BadRow(r, fs).toCompactJson
-        badSink.store(output, None, false)
-      case (_, Success(_)) => ()
-    }}
+    records.foreach {
+      _ match {
+        case (r, Failure(fs)) =>
+          val output = BadRow(r, fs).toCompactJson
+          badSink.store(output, None, false)
+        case (_, Success(_)) => ()
+      }
+    }
 
   /**
    * Emits good records to Elasticsearch and bad records to Kinesis.
@@ -109,7 +111,7 @@ class ElasticsearchEmitter (
   }
 
   /**
-   * Splits the buffer into emittable chunks based on the 
+   * Splits the buffer into emittable chunks based on the
    * buffer settings defined in the config
    *
    * @param records The records to split
@@ -121,10 +123,10 @@ class ElasticsearchEmitter (
     recordLimit: Long
   ): List[List[EmitterInput]] = {
     // partition the records in
-    val remaining: ListBuffer[EmitterInput] = records.to[ListBuffer]
+    val remaining: ListBuffer[EmitterInput]     = records.to[ListBuffer]
     val buffers: ListBuffer[List[EmitterInput]] = new ListBuffer
-    val curBuffer: ListBuffer[EmitterInput] = new ListBuffer
-    var runningByteCount: Long = 0L
+    val curBuffer: ListBuffer[EmitterInput]     = new ListBuffer
+    var runningByteCount: Long                  = 0L
 
     while (remaining.nonEmpty) {
       val record = remaining.remove(0)

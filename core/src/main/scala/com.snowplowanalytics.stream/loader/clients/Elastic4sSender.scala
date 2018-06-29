@@ -10,7 +10,6 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.stream.loader
 package clients
 
@@ -56,22 +55,26 @@ trait Elastic4sSender extends ElasticsearchSender {
     record: EmitterInput
   ): Option[EmitterInput] = {
     error.foreach(e => log.error(s"Record [$record] failed with message $e"))
-    error.map { e =>
-      if (e.contains("DocumentAlreadyExistsException") || e.contains("VersionConflictEngineException"))
-        None
-      else
-        Some(record._1.take(maxSizeWhenReportingFailure) ->
-          s"Elasticsearch rejected record with message $e".failureNel[ElasticsearchObject])
-    }.getOrElse(None)
+    error
+      .map { e =>
+        if (e.contains("DocumentAlreadyExistsException") || e.contains(
+            "VersionConflictEngineException"))
+          None
+        else
+          Some(
+            record._1.take(maxSizeWhenReportingFailure) ->
+              s"Elasticsearch rejected record with message $e".failureNel[ElasticsearchObject])
+      }
+      .getOrElse(None)
   }
 
   /** Predicate about whether or not we should retry sending stuff to ES */
   def exPredicate(connectionStartTime: Long): (Throwable => Boolean) = _ match {
     case e: Exception =>
       log.error("ElasticsearchSender threw an unexpected exception ", e)
-      tracker foreach {
-        t => SnowplowTracking.sendFailureEvent(t, delays.head.toMillis, 0L,
-          connectionStartTime, e.getMessage)
+      tracker foreach { t =>
+        SnowplowTracking
+          .sendFailureEvent(t, delays.head.toMillis, 0L, connectionStartTime, e.getMessage)
       }
       true
     case _ => false
@@ -79,11 +82,10 @@ trait Elastic4sSender extends ElasticsearchSender {
 
   /** Turn a scala.concurrent.Future into a scalaz.concurrent.Task */
   def futureToTask[T](f: => Future[T])(implicit ec: ExecutionContext, s: Strategy): Task[T] =
-    Task.async {
-      register =>
-        f onComplete {
-          case Success(v) => s(register(v.right))
-          case Failure(ex) => s(register(ex.left))
-        }
+    Task.async { register =>
+      f onComplete {
+        case Success(v)  => s(register(v.right))
+        case Failure(ex) => s(register(ex.left))
+      }
     }
 }

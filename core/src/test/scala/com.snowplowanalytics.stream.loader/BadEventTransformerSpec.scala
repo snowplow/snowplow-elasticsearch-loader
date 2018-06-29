@@ -10,7 +10,6 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.stream.loader
 
 // Scalaz
@@ -27,9 +26,12 @@ class BadEventTransformerSpec extends Specification {
 
   "The from method" should {
     "successfully convert a bad event JSON to an ElasticsearchObject" in {
-      val input = """{"line":"failed","errors":["Record does not match Thrift SnowplowRawEvent schema"]}"""
-      val result = new BadEventTransformer("snowplow", "bad").fromClass(input -> JsonRecord(input, None).success)
-      val elasticsearchObject = result._2.getOrElse(throw new RuntimeException("Bad event failed transformation"))
+      val input =
+        """{"line":"failed","errors":["Record does not match Thrift SnowplowRawEvent schema"]}"""
+      val result = new BadEventTransformer("snowplow", "bad")
+        .fromClass(input -> JsonRecord(input, None).success)
+      val elasticsearchObject =
+        result._2.getOrElse(throw new RuntimeException("Bad event failed transformation"))
       elasticsearchObject.getIndex must_== "snowplow"
       elasticsearchObject.getType must_== "bad"
       elasticsearchObject.getSource must_== input

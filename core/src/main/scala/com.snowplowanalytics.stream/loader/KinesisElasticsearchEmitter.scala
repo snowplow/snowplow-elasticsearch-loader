@@ -16,7 +16,6 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics
 package stream.loader
 
@@ -60,11 +59,13 @@ class KinesisElasticsearchEmitter(
 ) extends IEmitter[EmitterInput] {
 
   // ElasticsearchEmitter instance
-  private val elasticsearchEmitter = new ElasticsearchEmitter(elasticsearchSender, 
-                                                              goodSink, 
-                                                              badSink, 
-                                                              configuration.BUFFER_RECORD_COUNT_LIMIT,  
-                                                              configuration.BUFFER_BYTE_SIZE_LIMIT)
+  private val elasticsearchEmitter = new ElasticsearchEmitter(
+    elasticsearchSender,
+    goodSink,
+    badSink,
+    configuration.BUFFER_RECORD_COUNT_LIMIT,
+    configuration.BUFFER_BYTE_SIZE_LIMIT)
+
   /**
    * Emits good records to stdout or Elasticsearch.
    * All records which Elasticsearch rejects and all records which failed transformation

@@ -16,7 +16,6 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.stream.loader.sinks
 
 // Java
@@ -35,7 +34,7 @@ import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder
 // Concurrent libraries
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Success, Failure}
+import scala.util.{Failure, Success}
 
 // SLF4j
 import org.slf4j.LoggerFactory
@@ -65,7 +64,8 @@ class KinesisSink(
     .withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
     .build()
 
-  require(streamExists(name),
+  require(
+    streamExists(name),
     s"Stream $name doesn't exist or is neither active nor updating (deleted or creating)")
 
   /**
@@ -74,13 +74,14 @@ class KinesisSink(
    * @param name Name of the stream to look for
    * @return Whether the stream both exists and is active
    */
-  def streamExists(name: String): Boolean = try {
-    val describeStreamResult = client.describeStream(name)
-    val status = describeStreamResult.getStreamDescription.getStreamStatus
-    status == "ACTIVE" || status == "UPDATING"
-  } catch {
-    case rnfe: ResourceNotFoundException => false
-  }
+  def streamExists(name: String): Boolean =
+    try {
+      val describeStreamResult = client.describeStream(name)
+      val status               = describeStreamResult.getStreamDescription.getStreamStatus
+      status == "ACTIVE" || status == "UPDATING"
+    } catch {
+      case rnfe: ResourceNotFoundException => false
+    }
 
   private def put(name: String, data: ByteBuffer, key: String): Future[PutRecordResult] = Future {
     val putRecordRequest = {

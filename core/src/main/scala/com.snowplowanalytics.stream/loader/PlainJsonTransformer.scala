@@ -16,7 +16,6 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.stream.loader
 
 // Java
@@ -43,7 +42,8 @@ import Scalaz._
  * @param documentType the elasticsearch index type
  */
 class PlainJsonTransformer(documentIndex: String, documentType: String)
-  extends ITransformer[ValidatedRecord, EmitterInput] with StdinTransformer {
+    extends ITransformer[ValidatedRecord, EmitterInput]
+    with StdinTransformer {
 
   /**
    * Convert an Amazon Kinesis record to a json string
@@ -73,10 +73,10 @@ class PlainJsonTransformer(documentIndex: String, documentType: String)
    * @param jsonString the JSON string to be parsed
    * @return the parsed JsonRecord
    */
-  private def toJsonRecord(jsonString: String): ValidationNel[String, JsonRecord] = {    
+  private def toJsonRecord(jsonString: String): ValidationNel[String, JsonRecord] = {
     parseOpt(jsonString) match {
-      case Some(jvalue) => JsonRecord(jsonString, None).success 
-      case None => "Json parsing error".failureNel
+      case Some(jvalue) => JsonRecord(jsonString, None).success
+      case None         => "Json parsing error".failureNel
     }
   }
 
