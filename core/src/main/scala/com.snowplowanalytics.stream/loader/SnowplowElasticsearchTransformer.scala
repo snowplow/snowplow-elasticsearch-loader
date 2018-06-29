@@ -16,7 +16,6 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.stream.loader
 
 // Java
@@ -45,7 +44,8 @@ import com.snowplowanalytics.snowplow.analytics.scalasdk.json.EventTransformer._
  * @param documentType the elasticsearch index type
  */
 class SnowplowElasticsearchTransformer(documentIndex: String, documentType: String)
-  extends ITransformer[ValidatedRecord, EmitterInput] with StdinTransformer {
+    extends ITransformer[ValidatedRecord, EmitterInput]
+    with StdinTransformer {
 
   /**
    * Convert an Amazon Kinesis record to a JSON string
@@ -65,9 +65,10 @@ class SnowplowElasticsearchTransformer(documentIndex: String, documentType: Stri
    * @return An EmitterInput
    */
   override def fromClass(record: ValidatedRecord): EmitterInput =
-    record.map(_.map(r => r.id match {
-      case Some(id) => new ElasticsearchObject(documentIndex, documentType, id, r.json)
-      case None => new ElasticsearchObject(documentIndex, documentType, r.json)
+    record.map(_.map(r =>
+      r.id match {
+        case Some(id) => new ElasticsearchObject(documentIndex, documentType, id, r.json)
+        case None     => new ElasticsearchObject(documentIndex, documentType, r.json)
     }))
 
   /**
@@ -78,8 +79,8 @@ class SnowplowElasticsearchTransformer(documentIndex: String, documentType: Stri
    */
   private def toJsonRecord(record: String): ValidationNel[String, JsonRecord] =
     jsonifyGoodEvent(record.split("\t", -1)) match {
-      case Left(h :: t) => NonEmptyList(h, t: _*).failure
-      case Left(Nil) => "Empty list of failures but reported failure, should not happen".failureNel
+      case Left(h :: t)     => NonEmptyList(h, t: _*).failure
+      case Left(Nil)        => "Empty list of failures but reported failure, should not happen".failureNel
       case Right((_, json)) => JsonRecord(compact(render(json)), extractEventId(json)).success
     }
 
@@ -91,7 +92,7 @@ class SnowplowElasticsearchTransformer(documentIndex: String, documentType: Stri
   private def extractEventId(json: JValue): Option[String] = {
     json \ "event_id" match {
       case JString(eid) => eid.some
-      case _ => None
+      case _            => None
     }
   }
 

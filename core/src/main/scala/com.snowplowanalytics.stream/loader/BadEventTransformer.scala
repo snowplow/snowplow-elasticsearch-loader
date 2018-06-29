@@ -16,7 +16,6 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.stream.loader
 
 // Java
@@ -40,7 +39,8 @@ import Scalaz._
  * @param the elasticsearch index type
  */
 class BadEventTransformer(documentIndex: String, documentType: String)
-  extends ITransformer[ValidatedRecord, EmitterInput] with StdinTransformer {
+    extends ITransformer[ValidatedRecord, EmitterInput]
+    with StdinTransformer {
 
   /**
    * Convert an Amazon Kinesis record to a JSON string
