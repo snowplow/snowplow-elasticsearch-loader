@@ -16,7 +16,6 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.stream.loader
 
 // Amazon
@@ -84,9 +83,8 @@ object CredentialsLookup {
   private def isEnv(key: String): Boolean = (key == "env")
 
   // Wrap BasicAWSCredential objects.
-  class BasicAWSCredentialsProvider(basic: BasicAWSCredentials) extends
-      AWSCredentialsProvider{
+  class BasicAWSCredentialsProvider(basic: BasicAWSCredentials) extends AWSCredentialsProvider {
     @Override def getCredentials: AWSCredentials = basic
-    @Override def refresh = {}
+    @Override def refresh                        = {}
   }
 }

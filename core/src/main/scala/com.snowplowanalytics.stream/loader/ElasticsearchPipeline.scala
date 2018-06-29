@@ -16,7 +16,6 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics
 package stream.loader
 
@@ -59,11 +58,12 @@ class KinesisElasticsearchPipeline(
   override def getEmitter(configuration: KinesisConnectorConfiguration): IEmitter[EmitterInput] =
     new KinesisElasticsearchEmitter(configuration, goodSink, badSink, elasticsearchSender, tracker)
 
-  override def getBuffer(configuration: KinesisConnectorConfiguration) = new BasicMemoryBuffer[ValidatedRecord](configuration)
+  override def getBuffer(configuration: KinesisConnectorConfiguration) =
+    new BasicMemoryBuffer[ValidatedRecord](configuration)
 
   override def getTransformer(c: KinesisConnectorConfiguration) = streamType match {
-    case Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
-    case Bad => new BadEventTransformer(documentIndex, documentType)
+    case Good      => new SnowplowElasticsearchTransformer(documentIndex, documentType)
+    case Bad       => new BadEventTransformer(documentIndex, documentType)
     case PlainJson => new PlainJsonTransformer(documentIndex, documentType)
   }
 

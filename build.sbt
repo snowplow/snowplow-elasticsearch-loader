@@ -10,7 +10,6 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-
 lazy val commonDependencies = Seq(
   // Java
   Dependencies.Libraries.config,
@@ -33,22 +32,26 @@ lazy val commonDependencies = Seq(
 )
 
 lazy val buildSettings = Seq(
-  organization  := "com.snowplowanalytics",
-  name          := "snowplow-elasticsearch-loader",
-  version       := "0.10.1",
-  description   := "Load the contents of a Kinesis stream or NSQ topic to Elasticsearch",
-  scalaVersion  := "2.12.6",
+  organization := "com.snowplowanalytics",
+  name := "snowplow-elasticsearch-loader",
+  version := "0.10.1",
+  description := "Load the contents of a Kinesis stream or NSQ topic to Elasticsearch",
+  scalaVersion := "2.12.6",
   scalacOptions := BuildSettings.compilerOptions,
-  javacOptions  := BuildSettings.javaCompilerOptions,
-  resolvers     += Resolver.jcenterRepo,
-  shellPrompt   := { _ => "elasticsearch-loader> " }
+  javacOptions := BuildSettings.javaCompilerOptions,
+  resolvers += Resolver.jcenterRepo,
+  shellPrompt := { _ =>
+    "elasticsearch-loader> "
+  },
+  scalafmtOnCompile := true
 )
 
 lazy val allSettings = buildSettings ++
   BuildSettings.sbtAssemblySettings ++
   Seq(libraryDependencies ++= commonDependencies)
 
-lazy val root = project.in(file("."))
+lazy val root = project
+  .in(file("."))
   .settings(buildSettings)
   .aggregate(core, elasticsearch)
 
@@ -62,8 +65,9 @@ lazy val core = project
 lazy val elasticsearch = project
   .settings(moduleName := "snowplow-elasticsearch-loader")
   .settings(allSettings)
-  .settings(libraryDependencies ++= Seq(
-    Dependencies.Libraries.elastic4sHttp,
-    Dependencies.Libraries.elastic4sTest
-  ))
+  .settings(
+    libraryDependencies ++= Seq(
+      Dependencies.Libraries.elastic4sHttp,
+      Dependencies.Libraries.elastic4sTest
+    ))
   .dependsOn(core)

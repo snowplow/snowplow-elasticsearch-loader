@@ -16,7 +16,6 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-
 package com.snowplowanalytics.stream.loader
 package sinks
 
@@ -27,12 +26,12 @@ import java.nio.charset.StandardCharsets.UTF_8
 import com.snowplowanalytics.client.nsq.NSQProducer
 
 /**
-  * NSQ sink
-  *
-  * @param host host for Nsq
-  * @param port port for Nsq
-  * @param outStreamName Nsq out stream
-  */
+ * NSQ sink
+ *
+ * @param host host for Nsq
+ * @param port port for Nsq
+ * @param outStreamName Nsq out stream
+ */
 class NsqSink(host: String, port: Int, outStreamName: String) extends ISink {
 
   private val producer = new NSQProducer().addAddress(host, port).start()
@@ -47,4 +46,3 @@ class NsqSink(host: String, port: Int, outStreamName: String) extends ISink {
   override def store(output: String, key: Option[String], good: Boolean): Unit =
     producer.produce(outStreamName, output.getBytes(UTF_8))
 }
-
