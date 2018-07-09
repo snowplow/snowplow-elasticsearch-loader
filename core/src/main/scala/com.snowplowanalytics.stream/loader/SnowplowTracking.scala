@@ -16,16 +16,17 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-package com.snowplowanalytics.stream.loader
+package com.snowplowanalytics
+package stream.loader
 
 // json4s
-import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
 import org.json4s._
 import org.json4s.JsonDSL._
 
-// Tracker
-import com.snowplowanalytics.snowplow.scalatracker.Tracker
-import com.snowplowanalytics.snowplow.scalatracker.emitters.AsyncEmitter
+// Snowplow
+import iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
+import snowplow.scalatracker.Tracker
+import snowplow.scalatracker.emitters.AsyncEmitter
 
 // This project
 import model._
@@ -39,7 +40,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object SnowplowTracking {
 
   private val HeartbeatInterval = 300000L
-  private val StorageType       = "ELASTICSEARCH"
 
   /**
    * Configure a Tracker based on the configuration HOCON
@@ -55,7 +55,7 @@ object SnowplowTracking {
     val method = config.method
     val emitter =
       AsyncEmitter.createAndStart(endpoint, Some(port), config.ssl.getOrElse(false), None)
-    new Tracker(List(emitter), generated.Settings.name, appName)
+    new Tracker(List(emitter), com.snowplowanalytics.stream.loader.generated.Settings.name, appName)
   }
 
   /**
@@ -72,6 +72,7 @@ object SnowplowTracking {
     lastRetryPeriod: Long,
     failureCount: Long,
     initialFailureTime: Long,
+    storageType: String,
     message: String): Unit = {
 
     tracker.trackSelfDescribingEvent(
@@ -81,7 +82,7 @@ object SnowplowTracking {
           "storage_write_failed",
           "jsonschema",
           SchemaVer.Full(1, 0, 0)),
-        ("storage"              -> StorageType) ~
+        ("storage"              -> storageType) ~
           ("failureCount"       -> failureCount) ~
           ("initialFailureTime" -> initialFailureTime) ~
           ("lastRetryPeriod"    -> lastRetryPeriod) ~

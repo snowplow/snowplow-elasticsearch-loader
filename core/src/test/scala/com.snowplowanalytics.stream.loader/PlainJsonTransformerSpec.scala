@@ -12,23 +12,37 @@
  */
 package com.snowplowanalytics.stream.loader
 
+// Scala
+import org.json4s.jackson.JsonMethods.{compact, parse, render}
+
+// Scalaz
+import scalaz._
+import Scalaz._
+
 // Specs2
 import org.specs2.mutable.Specification
+
+// This project
+import transformers.PlainJsonTransformer
 
 /**
  * Tests PlainJsonTransformer
  */
 class PlainJsonTransformerSpec extends Specification {
 
+  val documentIndex = "snowplow"
+  val documentType  = "enriched"
+
   "The from method" should {
-    "successfully convert a  plain JSON to an ElasticsearchObject" in {
-      val input  = """{"key1":"value1", "key2":"value2", "key3":"value3"}"""
-      val result = new PlainJsonTransformer("snowplow", "PlainJson").consumeLine(input)
-      val elasticsearchObject =
-        result._2.getOrElse(throw new RuntimeException("Plain Json failed transformation"))
-      elasticsearchObject.getIndex must_== "snowplow"
-      elasticsearchObject.getType must_== "PlainJson"
-      elasticsearchObject.getSource must_== input
+    "successfully convert a  plain JSON to an JsonRecord" in {
+      val input = """{"key1":"value1","key2":"value2","key3":"value3"}"""
+
+      val result = new PlainJsonTransformer(documentIndex, documentType)
+        .fromClass(input -> JsonRecord(parse(input), documentIndex, documentType).success)
+      val json: String = compact(
+        render(
+          result._2.getOrElse(throw new RuntimeException("Plain Json failed transformation")).json))
+      json.toString must_== input
     }
   }
 
