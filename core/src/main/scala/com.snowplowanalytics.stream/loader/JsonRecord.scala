@@ -24,7 +24,5 @@ import org.json4s.JValue
  * Format in which Snowplow events are buffered
  *
  * @param json The JSON string for the event
- * @param documentIndex documentIndex
- * @param documentType documentType
  */
-case class JsonRecord(json: JValue, documentIndex: String, documentType: String)
+case class JsonRecord(json: JValue)

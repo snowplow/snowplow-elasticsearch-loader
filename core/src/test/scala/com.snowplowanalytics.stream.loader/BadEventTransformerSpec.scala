@@ -37,8 +37,7 @@ class BadEventTransformerSpec extends Specification {
     "successfully convert a bad event JSON to an ElasticsearchObject" in {
       val input =
         """{"line":"failed","errors":["Record does not match Thrift SnowplowRawEvent schema"]}"""
-      val result = new BadEventTransformer(documentIndex, documentType)
-        .fromClass(input -> JsonRecord(parse(input), documentIndex, documentType).success)
+      val result = new BadEventTransformer().fromClass(input -> JsonRecord(parse(input)).success)
       val json: String = compact(
         render(result._2.getOrElse(throw new RuntimeException("Json failed transformation")).json))
       json.toString must_== input

@@ -34,6 +34,7 @@ class ElasticsearchBulkSenderSpec extends Specification {
   val client       = node.elastic4sclient()
   val creds        = CredentialsLookup.getCredentialsProvider("a", "s")
   val documentType = "enriched"
+  val index        = "idx"
   val sender = new ElasticsearchBulkSender(
     node.ip,
     node.port,
@@ -42,20 +43,18 @@ class ElasticsearchBulkSenderSpec extends Specification {
     false,
     None,
     None,
+    index,
+    documentType,
     10000L,
     creds)
 
-  val index = "idx"
   client.execute(createIndex(index)).await
 
   "send" should {
     "successfully send stuff" in {
 
-      val validInput: EmitterJsonInput = "good" -> JsonRecord(
-        parse("""{"s":"json"}"""),
-        index,
-        documentType).success
-      val input = List(validInput)
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("""{"s":"json"}""")).success
+      val input                        = List(validInput)
 
       sender.send(input) must_== List.empty
       // eventual consistency

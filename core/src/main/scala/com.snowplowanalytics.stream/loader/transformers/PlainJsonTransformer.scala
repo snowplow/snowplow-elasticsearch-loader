@@ -39,9 +39,8 @@ import Scalaz._
 /**
  * Class to convert plain JSON to EmitterInputs
  *
- * @param documentIndex the elasticsearch index name
  */
-class PlainJsonTransformer(documentIndex: String, documentType: String)
+class PlainJsonTransformer
     extends ITransformer[ValidatedJsonRecord, EmitterJsonInput]
     with StdinTransformer {
 
@@ -65,7 +64,7 @@ class PlainJsonTransformer(documentIndex: String, documentType: String)
   private def toJsonRecord(jsonString: String): ValidationNel[String, JsonRecord] = {
     parseOpt(jsonString) match {
       case Some(jvalue) =>
-        JsonRecord(jvalue ++ ("id" -> UUID.randomUUID().toString), documentIndex, documentType).success
+        JsonRecord(jvalue ++ ("id" -> UUID.randomUUID().toString)).success
       case None => "Json parsing error".failureNel
     }
   }

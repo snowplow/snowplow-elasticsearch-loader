@@ -44,6 +44,8 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
         esConfig.aws.signing,
         esConfig.client.username,
         esConfig.client.password,
+        esConfig.cluster.index,
+        esConfig.cluster.documentType,
         esConfig.client.maxTimeout,
         CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey),
         tracker
@@ -63,8 +65,6 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
         queue,
         new KinesisPipeline(
           config.streamType,
-          esConfig.cluster.index,
-          esConfig.cluster.documentType,
           goodSink,
           badSink,
           bulkSender,
@@ -76,27 +76,16 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
 
     // Read records from NSQ
     case ("nsq", queue: Nsq, Some(esConfig), Success(badSink)) =>
-      new NsqSourceExecutor(
-        config.streamType,
-        esConfig.cluster.index,
-        esConfig.cluster.documentType,
-        queue,
-        config,
-        goodSink,
-        badSink,
-        bulkSender).success
+      new NsqSourceExecutor(config.streamType, queue, config, goodSink, badSink, bulkSender).success
 
     // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
     // TODO reduce code duplication
     case ("stdin", _, Some(esConfig), Success(badSink)) =>
       new Runnable {
         val transformer = config.streamType match {
-          case Good =>
-            new EnrichedEventJsonTransformer(esConfig.cluster.index, esConfig.cluster.documentType)
-          case PlainJson =>
-            new PlainJsonTransformer(esConfig.cluster.index, esConfig.cluster.documentType)
-          case Bad =>
-            new BadEventTransformer(esConfig.cluster.index, esConfig.cluster.documentType)
+          case Good      => new EnrichedEventJsonTransformer
+          case PlainJson => new PlainJsonTransformer
+          case Bad       => new BadEventTransformer
         }
 
         def run = for (ln <- scala.io.Source.stdin.getLines) {

@@ -37,7 +37,6 @@ import snowplow.scalatracker.Tracker
  * KinesisElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter
  *
  * @param streamType the type of stream, good, bad or plain-json
- * @param documentIndex the elasticsearch index name
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
  * @param bulkSender The Client to use
@@ -45,8 +44,6 @@ import snowplow.scalatracker.Tracker
  */
 class KinesisPipeline(
   streamType: StreamType,
-  documentIndex: String,
-  documentType: String,
   goodSink: Option[ISink],
   badSink: ISink,
   bulkSender: BulkSender[EmitterJsonInput],
@@ -63,9 +60,9 @@ class KinesisPipeline(
     new BasicMemoryBuffer[ValidatedJsonRecord](configuration)
 
   override def getTransformer(c: KinesisConnectorConfiguration) = streamType match {
-    case Good      => new EnrichedEventJsonTransformer(documentIndex, documentType)
-    case PlainJson => new PlainJsonTransformer(documentIndex, documentType)
-    case Bad       => new BadEventTransformer(documentIndex, documentType)
+    case Good      => new EnrichedEventJsonTransformer
+    case PlainJson => new PlainJsonTransformer
+    case Bad       => new BadEventTransformer
 
   }
 
