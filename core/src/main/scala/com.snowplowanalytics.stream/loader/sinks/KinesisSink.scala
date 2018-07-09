@@ -16,40 +16,40 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-package com.snowplowanalytics.stream.loader.sinks
+package com.snowplowanalytics.stream.loader
+package sinks
 
 // Java
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets.UTF_8
 
+// SLF4j
+import org.slf4j.LoggerFactory
+
 // Scala
-import scala.util.Random
+import scala.util.{Failure, Random, Success}
 
 // Amazon
 import com.amazonaws.services.kinesis.model._
-import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder
 
 // Concurrent libraries
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Failure, Success}
-
-// SLF4j
-import org.slf4j.LoggerFactory
 
 /**
  * Kinesis Sink
  *
- * @param provider AWSCredentialsProvider
+ * @param accessKey accessKey
+ * @param secretKey secretKey
  * @param endpoint Kinesis stream endpoint
  * @param region Kinesis region
  * @param name Kinesis stream name
- * @param config Configuration for the Kinesis stream
  */
 class KinesisSink(
-  provider: AWSCredentialsProvider,
+  accessKey: String,
+  secretKey: String,
   endpoint: String,
   region: String,
   name: String
@@ -60,7 +60,7 @@ class KinesisSink(
   // Explicitly create a client so we can configure the end point
   val client = AmazonKinesisClientBuilder
     .standard()
-    .withCredentials(provider)
+    .withCredentials(CredentialsLookup.getCredentialsProvider(accessKey, secretKey))
     .withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
     .build()
 

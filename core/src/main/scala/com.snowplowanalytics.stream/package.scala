@@ -18,9 +18,6 @@
  */
 package com.snowplowanalytics.stream
 
-// Amazon
-import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
-
 // Scalaz
 import scalaz._
 
@@ -34,12 +31,12 @@ package object loader {
    * a validated ElasticsearchObject created from it (or list of errors
    * if the creation process failed)
    */
-  type ValidatedRecord = (String, ValidationNel[String, JsonRecord])
+  type ValidatedJsonRecord = (String, ValidationNel[String, JsonRecord])
 
   /**
    * The input type for the ElasticsearchSender objects
    */
-  type EmitterInput = (String, ValidationNel[String, ElasticsearchObject])
+  type EmitterJsonInput = (String, ValidationNel[String, JsonRecord])
 
   /**
    * Functions used to change a TSV pair to a JObject

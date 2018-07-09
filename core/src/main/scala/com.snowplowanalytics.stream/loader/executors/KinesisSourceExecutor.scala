@@ -16,8 +16,12 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-package com.snowplowanalytics
-package stream.loader
+package com.snowplowanalytics.stream.loader
+package executors
+
+// Java
+import java.util.Date
+import java.util.Properties
 
 // Logging
 import org.slf4j.LoggerFactory
@@ -28,49 +32,32 @@ import com.amazonaws.services.kinesis.connectors.{
   KinesisConnectorExecutorBase,
   KinesisConnectorRecordProcessorFactory
 }
+import com.amazonaws.services.kinesis.connectors.interfaces.IKinesisConnectorPipeline
 
 // AWS Client Library
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
 import com.amazonaws.services.kinesis.metrics.interfaces.IMetricsFactory
 
-// Java
-import java.util.Date
-
-// Tracker
-import snowplow.scalatracker.Tracker
+// Scalaz
+import scalaz._
+import Scalaz._
 
 // This project
-import clients.ElasticsearchSender
-import sinks._
 import model._
 
 /**
  * Boilerplate class for Kinesis Conenector
- *
- * @param streamType the type of stream, good, bad or plain-json
- * @param documentIndex the elasticsearch index name
- * @param documentType the elasticsearch index type
- * @param config the KCL configuration
- * @param initialPosition initial position for kinesis stream
- * @param initialTimestamp timestamp for "AT_TIMESTAMP" initial position
- * @param goodSink the configured GoodSink
- * @param badSink the configured BadSink
- * @param elasticsearchSender function for sending to elasticsearch
- * @param tracker a Tracker instance
+ * @param streamLoaderConfig streamLoaderConfig
+ * @param kinesis  queue settings
+ * @param kinesisConnectorPipeline kinesisConnectorPipeline
+
  */
-class KinesisSourceExecutor(
-  streamType: StreamType,
-  documentIndex: String,
-  documentType: String,
-  config: KinesisConnectorConfiguration,
-  initialPosition: String,
-  initialTimestamp: Option[Date],
-  goodSink: Option[ISink],
-  badSink: ISink,
-  elasticsearchSender: ElasticsearchSender,
-  tracker: Option[Tracker] = None
-) extends KinesisConnectorExecutorBase[ValidatedRecord, EmitterInput] {
+class KinesisSourceExecutor[A, B](
+  streamLoaderConfig: StreamLoaderConfig,
+  kinesis: Kinesis,
+  kinesisConnectorPipeline: IKinesisConnectorPipeline[A, B]
+) extends KinesisConnectorExecutorBase[A, B] {
 
   val LOG = LoggerFactory.getLogger(getClass)
 
@@ -107,6 +94,57 @@ class KinesisSourceExecutor(
   }
 
   /**
+   * Builds a KinesisConnectorConfiguration
+   *
+   * @param config the configuration HOCON
+   * @param queue queue configuration
+   * @return A KinesisConnectorConfiguration
+   */
+  def convertConfig(config: StreamLoaderConfig, queue: Kinesis): KinesisConnectorConfiguration = {
+    val props = new Properties
+    props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT, queue.endpoint)
+    props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME, queue.appName.trim)
+    props.setProperty(
+      KinesisConnectorConfiguration.PROP_INITIAL_POSITION_IN_STREAM,
+      queue.initialPosition)
+    props.setProperty(KinesisConnectorConfiguration.PROP_MAX_RECORDS, queue.maxRecords.toString)
+
+    // So that the region of the DynamoDB table is correct
+    props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME, queue.region)
+
+    props.setProperty(
+      KinesisConnectorConfiguration.PROP_KINESIS_INPUT_STREAM,
+      config.streams.inStreamName)
+
+    props.setProperty(
+      KinesisConnectorConfiguration.PROP_ELASTICSEARCH_ENDPOINT,
+      config.elasticsearch.get.client.endpoint)
+    props.setProperty(
+      KinesisConnectorConfiguration.PROP_ELASTICSEARCH_CLUSTER_NAME,
+      config.elasticsearch.get.cluster.name)
+    props.setProperty(
+      KinesisConnectorConfiguration.PROP_ELASTICSEARCH_PORT,
+      config.elasticsearch.get.client.port.toString)
+
+    props.setProperty(
+      KinesisConnectorConfiguration.PROP_BUFFER_BYTE_SIZE_LIMIT,
+      config.streams.buffer.byteLimit.toString)
+    props.setProperty(
+      KinesisConnectorConfiguration.PROP_BUFFER_RECORD_COUNT_LIMIT,
+      config.streams.buffer.recordLimit.toString)
+    props.setProperty(
+      KinesisConnectorConfiguration.PROP_BUFFER_MILLISECONDS_LIMIT,
+      config.streams.buffer.timeLimit.toString)
+
+    props.setProperty(KinesisConnectorConfiguration.PROP_CONNECTOR_DESTINATION, "elasticsearch")
+    props.setProperty(KinesisConnectorConfiguration.PROP_RETRY_LIMIT, "1")
+
+    new KinesisConnectorConfiguration(
+      props,
+      CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey))
+  }
+
+  /**
    * Initialize the Amazon Kinesis Client Library configuration and worker with metrics factory
    *
    * @param kinesisConnectorConfiguration Amazon Kinesis connector configuration
@@ -116,7 +154,7 @@ class KinesisSourceExecutor(
     kinesisConnectorConfiguration: KinesisConnectorConfiguration,
     metricFactory: IMetricsFactory): Unit = {
     val kinesisClientLibConfiguration =
-      getKCLConfig(initialPosition, initialTimestamp, kinesisConnectorConfiguration)
+      getKCLConfig(kinesis.initialPosition, kinesis.timestamp, kinesisConnectorConfiguration)
 
     if (!kinesisConnectorConfiguration.CALL_PROCESS_RECORDS_EVEN_FOR_EMPTY_LIST) {
       LOG.warn(
@@ -142,18 +180,11 @@ class KinesisSourceExecutor(
     LOG.info(getClass().getSimpleName() + " worker created")
   }
 
-  initialize(config, null)
+  def getKinesisConnectorRecordProcessorFactory =
+    new KinesisConnectorRecordProcessorFactory[A, B](
+      kinesisConnectorPipeline,
+      convertConfig(streamLoaderConfig, kinesis))
 
-  override def getKinesisConnectorRecordProcessorFactory = {
-    new KinesisConnectorRecordProcessorFactory[ValidatedRecord, EmitterInput](
-      new KinesisElasticsearchPipeline(
-        streamType,
-        documentIndex,
-        documentType,
-        goodSink,
-        badSink,
-        elasticsearchSender,
-        tracker),
-      config)
-  }
+  initialize(convertConfig(streamLoaderConfig, kinesis), null)
+
 }
