@@ -74,6 +74,7 @@ package model {
     username: Option[String],
     password: Option[String],
     maxTimeout: Long,
+    maxRetries: Int,
     ssl: Boolean
   )
   case class ESAWSConfig(signing: Boolean, region: String)
