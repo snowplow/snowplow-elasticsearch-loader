@@ -17,8 +17,18 @@
  * governing permissions and limitations there under.
  */
 package com.snowplowanalytics.stream.loader
+package transformers
 
 /** Like the connector library's ITransformer, but for consuming from stdin */
 trait StdinTransformer {
-  def consumeLine(line: String): EmitterInput
+  def consumeLine(line: String): EmitterJsonInput
+
+  /**
+   * Convert plain json to an EmitterInput
+   *
+   * @param record ValidatedRecord containing plain JSON
+   * @return An EmitterInput
+   */
+  def fromClass(record: ValidatedJsonRecord): EmitterJsonInput =
+    record
 }

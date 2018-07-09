@@ -17,6 +17,7 @@
  * governing permissions and limitations there under.
  */
 package com.snowplowanalytics.stream.loader
+package transformers
 
 // Java
 import java.nio.charset.StandardCharsets.UTF_8
@@ -24,12 +25,12 @@ import java.util.UUID
 
 // Amazon
 import com.amazonaws.services.kinesis.connectors.interfaces.ITransformer
-import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
 import com.amazonaws.services.kinesis.model.Record
 
-// json4s
+// Scala
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
+import org.json4s.JsonDSL._
 
 // Scalaz
 import scalaz._
@@ -39,10 +40,9 @@ import Scalaz._
  * Class to convert plain JSON to EmitterInputs
  *
  * @param documentIndex the elasticsearch index name
- * @param documentType the elasticsearch index type
  */
 class PlainJsonTransformer(documentIndex: String, documentType: String)
-    extends ITransformer[ValidatedRecord, EmitterInput]
+    extends ITransformer[ValidatedJsonRecord, EmitterJsonInput]
     with StdinTransformer {
 
   /**
@@ -51,20 +51,9 @@ class PlainJsonTransformer(documentIndex: String, documentType: String)
    * @param record Byte array representation of an enriched event string
    * @return ValidatedRecord for the event
    */
-  override def toClass(record: Record): ValidatedRecord = {
+  override def toClass(record: Record): ValidatedJsonRecord = {
     val recordString = new String(record.getData.array, UTF_8)
     (recordString, toJsonRecord(recordString))
-  }
-
-  /**
-   * Convert plain json to an EmitterInput
-   *
-   * @param record ValidatedRecord containing plain JSON
-   * @return An EmitterInput
-   */
-  override def fromClass(record: ValidatedRecord): EmitterInput = {
-    val uuid = UUID.randomUUID().toString // generate unique UUID for every Json document
-    record.map(_.map(r => new ElasticsearchObject(documentIndex, documentType, uuid, r.json)))
   }
 
   /**
@@ -75,8 +64,9 @@ class PlainJsonTransformer(documentIndex: String, documentType: String)
    */
   private def toJsonRecord(jsonString: String): ValidationNel[String, JsonRecord] = {
     parseOpt(jsonString) match {
-      case Some(jvalue) => JsonRecord(jsonString, None).success
-      case None         => "Json parsing error".failureNel
+      case Some(jvalue) =>
+        JsonRecord(jvalue ++ ("id" -> UUID.randomUUID().toString), documentIndex, documentType).success
+      case None => "Json parsing error".failureNel
     }
   }
 
@@ -86,7 +76,7 @@ class PlainJsonTransformer(documentIndex: String, documentType: String)
    * @param line Line from stdin/NSQ
    * @return Line as an EmitterInput
    */
-  override def consumeLine(line: String): EmitterInput =
+  def consumeLine(line: String): EmitterJsonInput =
     fromClass(line -> toJsonRecord(line))
 
 }

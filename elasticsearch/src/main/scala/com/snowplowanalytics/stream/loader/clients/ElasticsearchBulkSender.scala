@@ -13,49 +13,48 @@
 package com.snowplowanalytics.stream.loader
 package clients
 
-// Scala
+// AWS
+import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
+import com.amazonaws.auth.AWSCredentialsProvider
+
+// Java
 import com.google.common.base.Charsets
 import com.google.common.io.BaseEncoding
-import com.sksamuel.elastic4s.http.{RequestFailure, RequestSuccess}
-import com.sksamuel.elastic4s.http.bulk.BulkResponse
+import org.slf4j.LoggerFactory
+
+// Scala
+import com.sksamuel.elastic4s.http.{HttpClient, NoOpHttpClientConfigCallback}
+import com.sksamuel.elastic4s.http.ElasticDsl._
 import org.apache.http.{Header, HttpHost}
 import org.apache.http.message.BasicHeader
 import org.elasticsearch.client.RestClient
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure => SFailure, Success => SSuccess}
+import org.json4s.jackson.JsonMethods._
 
-// elastic4s
-import com.sksamuel.elastic4s.http.{HttpClient, NoOpHttpClientConfigCallback}
-import com.sksamuel.elastic4s.http.ElasticDsl._
+// Concurrent
+import scalaz.concurrent.Strategy
+import scala.concurrent.ExecutionContext.Implicits.global
 
 // Scalaz
 import scalaz._
 import Scalaz._
-import scalaz.concurrent.Strategy
-
-// AMZ
-import com.amazonaws.auth.AWSCredentialsProvider
-
-// SLF4j
-import org.slf4j.LoggerFactory
 
 // Tracker
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
 
-class ElasticsearchSenderHTTP(
+class ElasticsearchBulkSender(
   endpoint: String,
   port: Int,
+  ssl: Boolean,
+  region: String,
+  awsSigning: Boolean,
   username: Option[String],
   password: Option[String],
-  credentialsProvider: AWSCredentialsProvider,
-  region: String,
-  ssl: Boolean = false,
-  awsSigning: Boolean = false,
-  override val tracker: Option[Tracker] = None,
   override val maxConnectionWaitTimeMs: Long = 60000L,
+  credentialsProvider: AWSCredentialsProvider,
+  override val tracker: Option[Tracker] = None,
   override val maxAttempts: Int = 6
-) extends Elastic4sSender {
+) extends BulkSender[EmitterJsonInput] {
   require(maxAttempts > 0)
   require(maxConnectionWaitTimeMs > 0)
 
@@ -80,23 +79,29 @@ class ElasticsearchSenderHTTP(
     HttpClient.fromRestClient(restClientBuilder.build())
   }
 
-  implicit val strategy = Strategy.DefaultExecutorService
-
   // do not close the es client, otherwise it will fail when resharding
   override def close(): Unit = ()
 
-  override def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput] = {
+  override def send(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
     val connectionAttemptStartTime = System.currentTimeMillis()
 
     val (successes, oldFailures) = records.partition(_._2.isSuccess)
-    val successfulRecords        = successes.collect { case (_, Success(record)) => record }
-    val actions = successfulRecords
-      .map(r => indexInto(r.getIndex / r.getType) id r.getId doc (r.getSource))
+    val successfulRecords = successes.collect {
+      case (_, Success(r)) =>
+        utils.extractEventId(r.json) match {
+          case Some(id) =>
+            new ElasticsearchObject(r.documentIndex, r.documentType, id, compact(render(r.json)))
+          case None =>
+            new ElasticsearchObject(r.documentIndex, r.documentType, compact(render(r.json)))
+        }
+    }
+    val actions =
+      successfulRecords.map(r => indexInto(r.getIndex / r.getType) id r.getId doc r.getSource)
 
-    val newFailures: List[EmitterInput] = if (actions.nonEmpty) {
+    val newFailures: List[EmitterJsonInput] = if (actions.nonEmpty) {
       futureToTask(client.execute(bulk(actions)))
       // we retry with linear back-off if an exception happened
-        .retry(delays, exPredicate(connectionAttemptStartTime))
+        .retry(delays, exPredicate(connectionAttemptStartTime, "elasticsearch"))
         .map {
           case Right(bulkResponseResponse) =>
             bulkResponseResponse.result.items
@@ -124,7 +129,7 @@ class ElasticsearchSenderHTTP(
     } else Nil
 
     log.info(s"Emitted ${successfulRecords.size - newFailures.size} records to Elasticseacrch")
-    if (newFailures.nonEmpty) logClusterHealth()
+    if (newFailures.nonEmpty) logHealth()
 
     val allFailures = oldFailures ++ newFailures
 
@@ -134,7 +139,7 @@ class ElasticsearchSenderHTTP(
   }
 
   /** Logs the cluster health */
-  def logClusterHealth(): Unit =
+  override def logHealth(): Unit =
     client.execute(clusterHealth) onComplete {
       case SSuccess(health) =>
         health match {
@@ -149,4 +154,29 @@ class ElasticsearchSenderHTTP(
         }
       case SFailure(e) => log.error("Couldn't retrieve cluster health", e)
     }
+
+  /**
+   * Handle the response given for a bulk request, by producing a failure if we failed to insert
+   * a given item.
+   * @param error possible error
+   * @param record associated to this item
+   * @return a failure if an unforeseen error happened (e.g. not that the document already exists)
+   */
+  private def handleResponse(
+    error: Option[String],
+    record: EmitterJsonInput
+  ): Option[EmitterJsonInput] = {
+    error.foreach(e => log.error(s"Record [$record] failed with message $e"))
+    error
+      .map { e =>
+        if (e.contains("DocumentAlreadyExistsException") || e.contains(
+            "VersionConflictEngineException"))
+          None
+        else
+          Some(
+            record._1.take(maxSizeWhenReportingFailure) ->
+              s"Elasticsearch rejected record with message $e".failureNel)
+      }
+      .getOrElse(None)
+  }
 }

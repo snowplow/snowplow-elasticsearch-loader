@@ -18,12 +18,39 @@
  */
 package com.snowplowanalytics.stream.loader
 
+// Scala
 import scala.util.{Failure, Success, Try}
+import org.json4s.JValue
+import org.json4s.JsonAST.JString
+
+// Scalaz
+import scalaz.Scalaz._
+import scalaz._
 
 object utils {
   // to rm once 2.12 as well as the right projections
   def fold[A, B](t: Try[A])(ft: Throwable => B, fa: A => B): B = t match {
     case Success(a) => fa(a)
     case Failure(t) => ft(t)
+  }
+
+  /**
+   * Extract the event_id field from an event JSON for use as a document ID
+   * @param json object produced by the Snowplow Analytics SDK
+   * @return Option boxing event_id
+   */
+  def extractEventId(json: JValue): Option[String] =
+    extractField(json, "event_id")
+
+  /**
+   * Extract any field
+   * @param json object produced by the Snowplow Analytics SDK
+   * @return Option boxing event_id
+   */
+  def extractField(json: JValue, filedName: String): Option[String] = {
+    json \ filedName match {
+      case JString(eid) => eid.some
+      case _            => None
+    }
   }
 }

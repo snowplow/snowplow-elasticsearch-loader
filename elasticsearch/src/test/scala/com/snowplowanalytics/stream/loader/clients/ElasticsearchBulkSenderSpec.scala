@@ -10,11 +10,10 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-package com.snowplowanalytics.stream.loader
-package clients
+package com.snowplowanalytics.stream.loader.clients
 
-// Amazon
-import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
+import com.snowplowanalytics.stream.loader.{CredentialsLookup, EmitterJsonInput, JsonRecord}
+import org.json4s.jackson.JsonMethods._
 
 // elastic4s
 import com.sksamuel.elastic4s.ElasticDsl._
@@ -22,34 +21,43 @@ import com.sksamuel.elastic4s.embedded.LocalNode
 
 // scalaz
 import scalaz._
+import Scalaz._
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 // specs2
 import org.specs2.mutable.Specification
 
-class ElasticsearchSenderHTTPSpec extends Specification {
+class ElasticsearchBulkSenderSpec extends Specification {
   val node = LocalNode("es", System.getProperty("java.io.tmpdir"))
   node.start()
-  val client = node.elastic4sclient()
-  val creds  = CredentialsLookup.getCredentialsProvider("a", "s")
-  val sender = new ElasticsearchSenderHTTP(
+  val client       = node.elastic4sclient()
+  val creds        = CredentialsLookup.getCredentialsProvider("a", "s")
+  val documentType = "enriched"
+  val sender = new ElasticsearchBulkSender(
     node.ip,
     node.port,
-    None,
-    None,
-    creds,
+    false,
     "region",
     false,
-    false,
     None,
-    1000L,
-    1)
+    None,
+    10000L,
+    creds)
+
   val index = "idx"
   client.execute(createIndex(index)).await
 
-  "sendToElasticsearch" should {
+  "send" should {
     "successfully send stuff" in {
-      val data = List(("a", Success(new ElasticsearchObject(index, "t", "i", """{"s":"json"}"""))))
-      sender.sendToElasticsearch(data) must_== List.empty
+
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(
+        parse("""{"s":"json"}"""),
+        index,
+        documentType).success
+      val input = List(validInput)
+
+      sender.send(input) must_== List.empty
       // eventual consistency
       Thread.sleep(1000)
       client.execute(search(index)).await.hits.head.sourceAsString must_== """{"s":"json"}"""
@@ -57,7 +65,7 @@ class ElasticsearchSenderHTTPSpec extends Specification {
 
     "report old failures" in {
       val data = List(("a", Failure(NonEmptyList("f"))))
-      sender.sendToElasticsearch(data) must_== List(("a", Failure(NonEmptyList("f"))))
+      sender.send(data) must_== List(("a", Failure(NonEmptyList("f"))))
     }
   }
 }

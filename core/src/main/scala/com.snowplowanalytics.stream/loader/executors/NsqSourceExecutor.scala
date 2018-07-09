@@ -17,6 +17,7 @@
  * governing permissions and limitations there under.
  */
 package com.snowplowanalytics.stream.loader
+package executors
 
 // NSQ
 import com.snowplowanalytics.client.nsq.NSQConsumer
@@ -32,6 +33,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 // Scala
 import scala.collection.mutable.ListBuffer
+import collection.JavaConverters._
 
 // Logging
 import org.slf4j.LoggerFactory
@@ -40,6 +42,7 @@ import org.slf4j.LoggerFactory
 import sinks._
 import clients._
 import model._
+import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, PlainJsonTransformer}
 
 /**
  * NSQSource executor
@@ -51,34 +54,34 @@ import model._
  * @param config ESLoader Configuration
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
- * @param elasticsearchSender function for sending to elasticsearch
+ * @param bulkSender function for sending to storage
  */
 class NsqSourceExecutor(
   streamType: StreamType,
   documentIndex: String,
   documentType: String,
   nsq: Nsq,
-  config: ESLoaderConfig,
+  config: StreamLoaderConfig,
   goodSink: Option[ISink],
   badSink: ISink,
-  elasticsearchSender: ElasticsearchSender
+  bulkSender: BulkSender[EmitterJsonInput]
 ) extends Runnable {
 
   lazy val log = LoggerFactory.getLogger(getClass())
 
   // nsq messages will be buffered in msgBuffer until buffer size become equal to nsqBufferSize
-  private val msgBuffer = new ListBuffer[EmitterInput]()
+  private val msgBuffer = new ListBuffer[EmitterJsonInput]()
   // ElasticsearchEmitter instance
-  private val elasticsearchEmitter = new ElasticsearchEmitter(
-    elasticsearchSender,
+  private val emitter = new Emitter(
+    bulkSender,
     goodSink,
     badSink,
     config.streams.buffer.recordLimit,
     config.streams.buffer.byteLimit)
   private val transformer = streamType match {
-    case Good      => new SnowplowElasticsearchTransformer(documentIndex, documentType)
-    case Bad       => new BadEventTransformer(documentIndex, documentType)
+    case Good      => new EnrichedEventJsonTransformer(documentIndex, documentType)
     case PlainJson => new PlainJsonTransformer(documentIndex, documentType)
+    case Bad       => new BadEventTransformer(documentIndex, documentType)
   }
 
   /**
@@ -96,8 +99,8 @@ class NsqSourceExecutor(
           msg.finished()
 
           if (msgBuffer.size == nsqBufferSize) {
-            val elasticsearchRejects = elasticsearchEmitter.attemptEmit(msgBuffer.toList)
-            elasticsearchEmitter.fail(elasticsearchRejects)
+            val rejectedRecords = emitter.emit(msgBuffer.toList)
+            emitter.fail(rejectedRecords.asJava)
             msgBuffer.clear()
           }
         }

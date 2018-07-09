@@ -14,6 +14,7 @@ package com.snowplowanalytics.stream.loader
 
 // Java
 import java.util.Properties
+import org.slf4j.Logger
 
 // Scala
 import scala.collection.mutable.ListBuffer
@@ -23,11 +24,11 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 
 // AWS Kinesis Connector libs
 import com.amazonaws.services.kinesis.connectors.{KinesisConnectorConfiguration, UnmodifiableBuffer}
-import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
 import com.amazonaws.services.kinesis.connectors.impl.BasicMemoryBuffer
 
 // Scala
 import scala.collection.JavaConverters._
+import org.json4s.jackson.JsonMethods._
 
 // Scalaz
 import scalaz._
@@ -40,46 +41,51 @@ import org.specs2.mutable.Specification
 import sinks._
 import clients._
 
-class MockElasticsearchSender extends ElasticsearchSender {
-  var sentRecords: List[EmitterInput]       = List.empty
-  var callCount: Int                        = 0
-  val calls: ListBuffer[List[EmitterInput]] = new ListBuffer
-
-  override def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput] = {
+class MockElasticsearchSender extends BulkSender[EmitterJsonInput] {
+  var sentRecords: List[EmitterJsonInput]       = List.empty
+  var callCount: Int                            = 0
+  val calls: ListBuffer[List[EmitterJsonInput]] = new ListBuffer
+  override val log: Logger                      = null
+  override def send(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
     sentRecords = sentRecords ::: records
     callCount += 1
     calls += records
     List.empty
   }
-  override def close()                  = {}
-  override def logClusterHealth(): Unit = ()
-  override val tracker                  = None
+  override def close()                       = {}
+  override def logHealth(): Unit             = ()
+  override val tracker                       = None
+  override val maxConnectionWaitTimeMs: Long = 1000L
+  override val maxAttempts: Int              = 1
 }
 
-class KinesisElasticsearchEmitterSpec extends Specification {
+class EmitterSpec extends Specification {
+  val documentType = "enriched"
 
   "The emitter" should {
     "return all invalid records" in {
 
-      val fakeSender = new ElasticsearchSender {
-        override def sendToElasticsearch(records: List[EmitterInput]): List[EmitterInput] =
-          List.empty
-        override def close(): Unit            = ()
-        override def logClusterHealth(): Unit = ()
-        override val tracker                  = None
+      val fakeSender = new BulkSender[EmitterJsonInput] {
+        override def send(records: List[EmitterJsonInput]): List[EmitterJsonInput] = List.empty
+        override def close(): Unit                                                 = ()
+        override def logHealth(): Unit                                             = ()
+        override val tracker                                                       = None
+        override val log: Logger                                                   = null
+        override val maxConnectionWaitTimeMs: Long                                 = 1000L
+        override val maxAttempts: Int                                              = 1
       }
 
       val kcc =
         new KinesisConnectorConfiguration(new Properties, new DefaultAWSCredentialsProviderChain)
-      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, fakeSender)
+      val eem = new Emitter(fakeSender, None, new StdouterrSink, 1, 1L)
 
-      val validInput: EmitterInput   = "good" -> new ElasticsearchObject("index", "type", "{}").success
-      val invalidInput: EmitterInput = "bad"  -> "malformed event".failureNel
+      val validInput: EmitterJsonInput   = "good" -> JsonRecord(parse("{}"), documentType, null).success
+      val invalidInput: EmitterJsonInput = "bad"  -> "malformed event".failureNel
 
       val input = List(validInput, invalidInput)
 
-      val bmb = new BasicMemoryBuffer[EmitterInput](kcc, input.asJava)
-      val ub  = new UnmodifiableBuffer[EmitterInput](bmb)
+      val bmb = new BasicMemoryBuffer[EmitterJsonInput](kcc, input.asJava)
+      val ub  = new UnmodifiableBuffer[EmitterJsonInput](bmb)
 
       val actual = eem.emit(ub)
 
@@ -92,17 +98,14 @@ class KinesisElasticsearchEmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
+      val eem = new Emitter(ess, None, new StdouterrSink, 1, 1000L)
 
-      val validInput: EmitterInput = "good" -> new ElasticsearchObject(
-        "index" * 10000,
-        "type",
-        "{}").success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), documentType, null).success
 
       val input = List.fill(50)(validInput)
 
-      val bmb = new BasicMemoryBuffer[EmitterInput](kcc, input.asJava)
-      val ub  = new UnmodifiableBuffer[EmitterInput](bmb)
+      val bmb = new BasicMemoryBuffer[EmitterJsonInput](kcc, input.asJava)
+      val ub  = new UnmodifiableBuffer[EmitterJsonInput](bmb)
 
       eem.emit(ub)
 
@@ -119,17 +122,14 @@ class KinesisElasticsearchEmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
+      val eem = new Emitter(ess, None, new StdouterrSink, 1, 1000L)
 
-      val validInput: EmitterInput = "good" -> new ElasticsearchObject(
-        "index" * 10000,
-        "type",
-        "{}").success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), documentType, null).success
 
       val input = List(validInput)
 
-      val bmb = new BasicMemoryBuffer[EmitterInput](kcc, input.asJava)
-      val ub  = new UnmodifiableBuffer[EmitterInput](bmb)
+      val bmb = new BasicMemoryBuffer[EmitterJsonInput](kcc, input.asJava)
+      val ub  = new UnmodifiableBuffer[EmitterJsonInput](bmb)
 
       eem.emit(ub)
 
@@ -146,14 +146,14 @@ class KinesisElasticsearchEmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
+      val eem = new Emitter(ess, None, new StdouterrSink, 100, 1048576L)
 
-      val validInput: EmitterInput = "good" -> new ElasticsearchObject("index", "type", "{}").success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), documentType, null).success
 
       val input = List.fill(50)(validInput)
 
-      val bmb = new BasicMemoryBuffer[EmitterInput](kcc, input.asJava)
-      val ub  = new UnmodifiableBuffer[EmitterInput](bmb)
+      val bmb = new BasicMemoryBuffer[EmitterJsonInput](kcc, input.asJava)
+      val ub  = new UnmodifiableBuffer[EmitterJsonInput](bmb)
 
       eem.emit(ub)
 
@@ -170,14 +170,14 @@ class KinesisElasticsearchEmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
+      val eem = new Emitter(ess, None, new StdouterrSink, 1, 1048576L)
 
-      val validInput: EmitterInput = "good" -> new ElasticsearchObject("index", "type", "{}").success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), documentType, null).success
 
       val input = List(validInput)
 
-      val bmb = new BasicMemoryBuffer[EmitterInput](kcc, input.asJava)
-      val ub  = new UnmodifiableBuffer[EmitterInput](bmb)
+      val bmb = new BasicMemoryBuffer[EmitterJsonInput](kcc, input.asJava)
+      val ub  = new UnmodifiableBuffer[EmitterJsonInput](bmb)
 
       eem.emit(ub)
 
@@ -194,15 +194,15 @@ class KinesisElasticsearchEmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new KinesisElasticsearchEmitter(kcc, None, new StdouterrSink, ess)
+      val eem = new Emitter(ess, None, new StdouterrSink, 2, 200L)
 
       // record size is 95 bytes
-      val validInput: EmitterInput = "good" -> new ElasticsearchObject("index", "type", "{}").success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), documentType, null).success
 
       val input = List.fill(20)(validInput)
 
-      val bmb = new BasicMemoryBuffer[EmitterInput](kcc, input.asJava)
-      val ub  = new UnmodifiableBuffer[EmitterInput](bmb)
+      val bmb = new BasicMemoryBuffer[EmitterJsonInput](kcc, input.asJava)
+      val ub  = new UnmodifiableBuffer[EmitterJsonInput](bmb)
 
       eem.emit(ub)
 

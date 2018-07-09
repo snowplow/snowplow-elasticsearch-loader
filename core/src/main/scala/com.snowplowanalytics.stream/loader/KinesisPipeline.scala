@@ -27,45 +27,48 @@ import com.amazonaws.services.kinesis.connectors.impl.{AllPassFilter, BasicMemor
 // This project
 import sinks._
 import model._
+import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, PlainJsonTransformer}
+import clients.BulkSender
 
 // Tracker
 import snowplow.scalatracker.Tracker
-
-// This project
-import clients.ElasticsearchSender
 
 /**
  * KinesisElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter
  *
  * @param streamType the type of stream, good, bad or plain-json
  * @param documentIndex the elasticsearch index name
- * @param documentType the elasticsearch index type
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
- * @param elasticsearchSender The ES Client to use
+ * @param bulkSender The Client to use
  * @param tracker a Tracker instance
  */
-class KinesisElasticsearchPipeline(
+class KinesisPipeline(
   streamType: StreamType,
   documentIndex: String,
   documentType: String,
   goodSink: Option[ISink],
   badSink: ISink,
-  elasticsearchSender: ElasticsearchSender,
+  bulkSender: BulkSender[EmitterJsonInput],
+  bufferRecordLimit: Long,
+  bufferByteLimit: Long,
   tracker: Option[Tracker] = None
-) extends IKinesisConnectorPipeline[ValidatedRecord, EmitterInput] {
+) extends IKinesisConnectorPipeline[ValidatedJsonRecord, EmitterJsonInput] {
 
-  override def getEmitter(configuration: KinesisConnectorConfiguration): IEmitter[EmitterInput] =
-    new KinesisElasticsearchEmitter(configuration, goodSink, badSink, elasticsearchSender, tracker)
+  override def getEmitter(
+    configuration: KinesisConnectorConfiguration): IEmitter[EmitterJsonInput] =
+    new Emitter(bulkSender, goodSink, badSink, bufferRecordLimit, bufferByteLimit)
 
   override def getBuffer(configuration: KinesisConnectorConfiguration) =
-    new BasicMemoryBuffer[ValidatedRecord](configuration)
+    new BasicMemoryBuffer[ValidatedJsonRecord](configuration)
 
   override def getTransformer(c: KinesisConnectorConfiguration) = streamType match {
-    case Good      => new SnowplowElasticsearchTransformer(documentIndex, documentType)
-    case Bad       => new BadEventTransformer(documentIndex, documentType)
+    case Good      => new EnrichedEventJsonTransformer(documentIndex, documentType)
     case PlainJson => new PlainJsonTransformer(documentIndex, documentType)
+    case Bad       => new BadEventTransformer(documentIndex, documentType)
+
   }
 
-  override def getFilter(c: KinesisConnectorConfiguration) = new AllPassFilter[ValidatedRecord]()
+  override def getFilter(c: KinesisConnectorConfiguration) =
+    new AllPassFilter[ValidatedJsonRecord]()
 }
