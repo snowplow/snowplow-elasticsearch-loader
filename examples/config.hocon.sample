@@ -135,6 +135,7 @@ elasticsearch {
     username = "{{elasticsearchUsername}}"
     password = "{{elasticsearchPassword}}"
     maxTimeout = "{{elasticsearchMaxTimeout}}"
+    maxRetries = {{elasticsearchMaxRetries}}
     ssl = {{sslBool}}
   }
 
