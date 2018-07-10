@@ -46,7 +46,8 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
         esConfig.client.password,
         esConfig.client.maxTimeout,
         CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey),
-        tracker
+        tracker,
+        esConfig.client.maxRetries
       )
   }
 
