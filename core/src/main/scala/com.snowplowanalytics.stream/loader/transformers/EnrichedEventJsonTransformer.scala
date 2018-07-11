@@ -36,10 +36,8 @@ import com.snowplowanalytics.snowplow.analytics.scalasdk.json.EventTransformer._
 /**
  * Class to convert successfully enriched events to EmitterInputs
  *
- * @param documentIndex the elasticsearch index name
- * @param documentType elasticsearch doc type
  */
-class EnrichedEventJsonTransformer(documentIndex: String, documentType: String)
+class EnrichedEventJsonTransformer
     extends ITransformer[ValidatedJsonRecord, EmitterJsonInput]
     with StdinTransformer {
 
@@ -65,7 +63,7 @@ class EnrichedEventJsonTransformer(documentIndex: String, documentType: String)
     jsonifyGoodEvent(record.split("\t", -1)) match {
       case Left(h :: t)     => NonEmptyList(h, t: _*).failure
       case Left(Nil)        => "Empty list of failures but reported failure, should not happen".failureNel
-      case Right((_, json)) => JsonRecord(json, documentIndex, documentType).success
+      case Right((_, json)) => JsonRecord(json).success
     }
 
   /**

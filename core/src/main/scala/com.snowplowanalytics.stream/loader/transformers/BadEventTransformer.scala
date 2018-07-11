@@ -39,9 +39,8 @@ import Scalaz._
 /**
  * Class to convert bad events to ElasticsearchObjects
  *
- * @param documentIndex elasticsearch index name
  */
-class BadEventTransformer(documentIndex: String, documentType: String)
+class BadEventTransformer
     extends ITransformer[ValidatedJsonRecord, EmitterJsonInput]
     with StdinTransformer {
 
@@ -53,9 +52,7 @@ class BadEventTransformer(documentIndex: String, documentType: String)
    */
   override def toClass(record: Record): ValidatedJsonRecord = {
     val recordString = new String(record.getData.array, UTF_8)
-    (
-      recordString,
-      JsonRecord(JObject(JField("source", JString(recordString))), documentIndex, documentType).success)
+    (recordString, JsonRecord(JObject(JField("source", JString(recordString)))).success)
   }
 
   /**
@@ -65,8 +62,5 @@ class BadEventTransformer(documentIndex: String, documentType: String)
    * @return Line as an EmitterJsonInput
    */
   def consumeLine(line: String): EmitterJsonInput =
-    fromClass(line -> JsonRecord(
-      JObject(JField("source", JString(line))),
-      documentIndex,
-      documentType).success)
+    fromClass(line -> JsonRecord(JObject(JField("source", JString(line)))).success)
 }
