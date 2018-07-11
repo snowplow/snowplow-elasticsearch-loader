@@ -48,8 +48,6 @@ import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, PlainJso
  * NSQSource executor
  *
  * @param streamType the type of stream, good, bad or plain-json
- * @param documentIndex the elasticsearch index name
- * @param documentType the elasticsearch index type
  * @param nsq Nsq NsqConfig
  * @param config ESLoader Configuration
  * @param goodSink the configured GoodSink
@@ -58,8 +56,6 @@ import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, PlainJso
  */
 class NsqSourceExecutor(
   streamType: StreamType,
-  documentIndex: String,
-  documentType: String,
   nsq: Nsq,
   config: StreamLoaderConfig,
   goodSink: Option[ISink],
@@ -79,9 +75,9 @@ class NsqSourceExecutor(
     config.streams.buffer.recordLimit,
     config.streams.buffer.byteLimit)
   private val transformer = streamType match {
-    case Good      => new EnrichedEventJsonTransformer(documentIndex, documentType)
-    case PlainJson => new PlainJsonTransformer(documentIndex, documentType)
-    case Bad       => new BadEventTransformer(documentIndex, documentType)
+    case Good      => new EnrichedEventJsonTransformer
+    case PlainJson => new PlainJsonTransformer
+    case Bad       => new BadEventTransformer
   }
 
   /**

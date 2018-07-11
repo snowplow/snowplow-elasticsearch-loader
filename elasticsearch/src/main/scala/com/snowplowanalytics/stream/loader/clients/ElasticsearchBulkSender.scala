@@ -50,6 +50,8 @@ class ElasticsearchBulkSender(
   awsSigning: Boolean,
   username: Option[String],
   password: Option[String],
+  documentIndex: String,
+  documentType: String,
   override val maxConnectionWaitTimeMs: Long = 60000L,
   credentialsProvider: AWSCredentialsProvider,
   override val tracker: Option[Tracker] = None,
@@ -84,15 +86,14 @@ class ElasticsearchBulkSender(
 
   override def send(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
     val connectionAttemptStartTime = System.currentTimeMillis()
-
-    val (successes, oldFailures) = records.partition(_._2.isSuccess)
+    val (successes, oldFailures)   = records.partition(_._2.isSuccess)
     val successfulRecords = successes.collect {
       case (_, Success(r)) =>
         utils.extractEventId(r.json) match {
           case Some(id) =>
-            new ElasticsearchObject(r.documentIndex, r.documentType, id, compact(render(r.json)))
+            new ElasticsearchObject(documentIndex, documentType, id, compact(render(r.json)))
           case None =>
-            new ElasticsearchObject(r.documentIndex, r.documentType, compact(render(r.json)))
+            new ElasticsearchObject(documentIndex, documentType, compact(render(r.json)))
         }
     }
     val actions =
