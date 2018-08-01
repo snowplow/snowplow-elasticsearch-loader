@@ -33,9 +33,10 @@ package model {
   case class AWSConfig(accessKey: String, secretKey: String)
   case class NSQConfig(
     channelName: String,
-    host: String,
-    port: Int,
-    lookupPort: Int
+    nsqdHost: String,
+    nsqdPort: Int,
+    nsqlookupdHost: String,
+    nsqlookupdPort: Int
   )
   case class KinesisConfig(
     initialPosition: String,

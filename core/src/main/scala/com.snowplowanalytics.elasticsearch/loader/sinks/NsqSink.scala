@@ -36,7 +36,8 @@ import model._
  */
 class NsqSink(config: ESLoaderConfig) extends ISink {
 
-  private val producer = new NSQProducer().addAddress(config.nsq.host, config.nsq.port).start()
+  private val producer =
+    new NSQProducer().addAddress(config.nsq.nsqdHost, config.nsq.nsqdPort).start()
 
   /**
    * Writes a string to NSQ
