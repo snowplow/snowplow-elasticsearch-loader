@@ -68,10 +68,10 @@ class NsqSourceExecutor(
   // nsq messages will be buffered in msgBuffer until buffer size become equal to nsqBufferSize
   private val msgBuffer = new ListBuffer[EmitterInput]()
   // ElasticsearchEmitter instance
-  private val elasticsearchEmitter = new ElasticsearchEmitter(elasticsearchSender, 
-                                                              goodSink, 
-                                                              badSink, 
-                                                              config.streams.buffer.recordLimit,  
+  private val elasticsearchEmitter = new ElasticsearchEmitter(elasticsearchSender,
+                                                              goodSink,
+                                                              badSink,
+                                                              config.streams.buffer.recordLimit,
                                                               config.streams.buffer.byteLimit)
   private val transformer = streamType match {
     case Good => new SnowplowElasticsearchTransformer(documentIndex, documentType)
@@ -88,14 +88,14 @@ class NsqSourceExecutor(
   override def run(): Unit = {
     val nsqCallback = new NSQMessageCallback {
       val nsqBufferSize = config.streams.buffer.recordLimit
-  
+
       override def message(msg: NSQMessage): Unit = {
         val msgStr = new String(msg.getMessage(), UTF_8)
         msgBuffer.synchronized {
           val emitterInput = transformer.consumeLine(msgStr)
           msgBuffer += emitterInput
           msg.finished()
-          
+
           if (msgBuffer.size == nsqBufferSize) {
             val elasticsearchRejects = elasticsearchEmitter.attempEmit(msgBuffer.toList)
             elasticsearchEmitter.fail(elasticsearchRejects)
@@ -106,19 +106,19 @@ class NsqSourceExecutor(
     }
 
     val errorCallback = new NSQErrorCallback {
-      override def error(e: NSQException): Unit = 
+      override def error(e: NSQException): Unit =
         log.error(s"Exception while consuming topic $topicName", e)
     }
 
     // use NSQLookupd
     val lookup = new DefaultNSQLookup
-    lookup.addLookupAddress(config.nsq.host, config.nsq.lookupPort)
+    lookup.addLookupAddress(config.nsq.nsqlookupdHost, config.nsq.nsqlookupdPort)
     val consumer = new NSQConsumer(lookup,
                                    topicName,
                                    channelName,
                                    nsqCallback,
                                    new NSQConfig(),
                                    errorCallback)
-    consumer.start() 
-  }   
+    consumer.start()
+  }
 }

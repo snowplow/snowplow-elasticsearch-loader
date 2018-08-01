@@ -32,7 +32,7 @@ sink {
   # Sinks currently supported are:
   # "kinesis" for writing bad records to Kinesis
   # "stderr" for writing bad records to stderr
-  # "nsq" for writing bad records to NSQ    
+  # "nsq" for writing bad records to NSQ
   # "none" for ignoring bad records
   bad = "{{elasticsearchBadOutputDestination}}"
 }
@@ -61,15 +61,16 @@ nsq {
   # If more than one application reading from the same NSQ topic at the same time,
   # all of them must have unique channel name for getting all the data from the same topic
   channelName = "{{nsqSourceChannelName}}"
-     
-  # Host name for NSQ tools
-  host = "{{nsqHost}}"
 
+  # Host name for nsqd
+  nsqdHost = "{{nsqdHost}}"
   # HTTP port for nsqd
-  port = {{nsqdPort}}
+  nsqdPort = {{nsqdPort}}
 
-  # HTTP port for nsqlookupd
-  lookupPort = {{nsqlookupdPort}}
+  # Host name for nsqlookupd
+  nsqlookupdHost = "{{nsqlookupdHost}}"
+  # HTTP port for nsqd
+  nsqlookupdPort = {{nsqlookupdPort}}
 }
 
 kinesis {
@@ -99,7 +100,7 @@ kinesis {
 # Common configuration section for all stream sources
 streams {
   inStreamName = "{{inStreamName}}"
-  
+
   # Stream for enriched events which are rejected by Elasticsearch
   outStreamName = "{{outStreamName}}"
 
