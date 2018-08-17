@@ -86,11 +86,11 @@ trait StreamLoaderApp extends App {
     streamLoaderConf
   }
 
-  val config: StreamLoaderConfig = parseConfig().get
+  lazy val config: StreamLoaderConfig = parseConfig().get
 
-  val tracker = config.monitoring.map(e => SnowplowTracking.initializeTracker(e.snowplow))
+  lazy val tracker = config.monitoring.map(e => SnowplowTracking.initializeTracker(e.snowplow))
 
-  val badSinkValidated = config.sink.bad match {
+  lazy val badSinkValidated = config.sink.bad match {
     case "stderr" => (new StdouterrSink).success
     case "nsq" =>
       config.queue match {
