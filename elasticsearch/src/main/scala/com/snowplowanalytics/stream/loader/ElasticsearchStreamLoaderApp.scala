@@ -32,7 +32,7 @@ import model._
 
 /** Main entry point for the Elasticsearch HTTP sink */
 object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
-  val bulkSender: BulkSender[EmitterJsonInput] = config.elasticsearch match {
+  lazy val bulkSender: BulkSender[EmitterJsonInput] = config.elasticsearch match {
     case None =>
       throw new RuntimeException("No configuration for Elasticsearch found.")
     case Some(esConfig) =>
@@ -53,12 +53,12 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
       )
   }
 
-  val goodSink = config.sink.good match {
+  lazy val goodSink = config.sink.good match {
     case "stdout"        => Some(new StdouterrSink)
     case "elasticsearch" => None
   }
 
-  val executor = (config.source, config.queue, config.elasticsearch, badSinkValidated) match {
+  lazy val executor = (config.source, config.queue, config.elasticsearch, badSinkValidated) match {
     // Read records from Kinesis
     case ("kinesis", queue: Kinesis, Some(esConfig), Success(badSink)) =>
       new KinesisSourceExecutor[ValidatedJsonRecord, EmitterJsonInput](
