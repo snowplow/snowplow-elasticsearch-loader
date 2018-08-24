@@ -22,7 +22,7 @@ object Dependencies {
     val kinesisClient    = "1.9.1"
     val kinesisConnector = "1.3.0"
     val validator        = "2.2.6"
-    val elasticsearch    = "6.2.4"
+    val elasticsearch    = "6.3.2"
     val nsqClient        = "1.1.0-rc1"
     val jackson          = "2.9.6"
     // TODO: consider removing paranamer version override when upgrading other libaries
