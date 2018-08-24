@@ -23,7 +23,7 @@ import com.google.common.io.BaseEncoding
 import org.slf4j.LoggerFactory
 
 // Scala
-import com.sksamuel.elastic4s.http.{HttpClient, NoOpHttpClientConfigCallback}
+import com.sksamuel.elastic4s.http.{ElasticClient, NoOpHttpClientConfigCallback}
 import com.sksamuel.elastic4s.http.ElasticDsl._
 import org.apache.http.{Header, HttpHost}
 import org.apache.http.message.BasicHeader
@@ -78,13 +78,14 @@ class ElasticsearchBulkSender(
       .builder(formedHost)
       .setHttpClientConfigCallback(httpClientConfigCallback)
       .setDefaultHeaders(headers)
-    HttpClient.fromRestClient(restClientBuilder.build())
+    ElasticClient.fromRestClient(restClientBuilder.build())
   }
 
   // do not close the es client, otherwise it will fail when resharding
   override def close(): Unit = ()
 
   override def send(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
+
     val connectionAttemptStartTime = System.currentTimeMillis()
     val (successes, oldFailures)   = records.partition(_._2.isSuccess)
     val successfulRecords = successes.collect {
@@ -103,18 +104,15 @@ class ElasticsearchBulkSender(
       futureToTask(client.execute(bulk(actions)))
       // we retry with linear back-off if an exception happened
         .retry(delays, exPredicate(connectionAttemptStartTime, "elasticsearch"))
-        .map {
-          case Right(bulkResponseResponse) =>
-            bulkResponseResponse.result.items
-              .zip(records)
-              .map {
-                case (bulkResponseItem, record) =>
-                  handleResponse(bulkResponseItem.error.map(_.reason), record)
-              }
-              .flatten
-              .toList
-          case Left(requestFailure) =>
-            List((requestFailure.error.reason, requestFailure.error.reason.failureNel)) // the bulk request failed
+        .map { bulkResponseResponse =>
+          bulkResponseResponse.result.items
+            .zip(records)
+            .map {
+              case (bulkResponseItem, record) =>
+                handleResponse(bulkResponseItem.error.map(_.reason), record)
+            }
+            .flatten
+            .toList
         }
         .attempt
         .unsafePerformSync match {
@@ -144,9 +142,7 @@ class ElasticsearchBulkSender(
     client.execute(clusterHealth) onComplete {
       case SSuccess(health) =>
         health match {
-          case Left(requestFailure) =>
-            log.error(s"Failure in cluster health request: ${requestFailure.error.reason}")
-          case Right(response) =>
+          case response =>
             response.result.status match {
               case "green"  => log.info("Cluster health is green")
               case "yellow" => log.warn("Cluster health is yellow")

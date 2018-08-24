@@ -18,6 +18,7 @@ object Dependencies {
     // Java
     val config           = "1.3.3"
     val slf4j            = "1.7.5"
+    val log4j            = "2.11.1"
     val kinesisClient    = "1.9.1"
     val kinesisConnector = "1.3.0"
     val validator        = "2.2.6"
@@ -34,7 +35,7 @@ object Dependencies {
     val snowplowTracker  = "0.5.0"
     val analyticsSDK     = "0.3.0"
     val awsSigner        = "0.5.0"
-    val elastic4s        = "6.2.4"
+    val elastic4s        = "6.3.6"
     val pureconfig       = "0.9.1"
     // Scala (test only)
     val specs2           = "4.1.0"
@@ -45,6 +46,8 @@ object Dependencies {
     val config           = "com.typesafe"                     %  "config"                       % V.config
     val slf4j            = "org.slf4j"                        %  "slf4j-simple"                 % V.slf4j
     val log4jOverSlf4j   = "org.slf4j"                        %  "log4j-over-slf4j"             % V.slf4j
+    val log4jCore        = "org.apache.logging.log4j"         %  "log4j-core"                    % V.log4j
+    val log4jApi         = "org.apache.logging.log4j"         %  "log4j-api"                     % V.log4j
     val kinesisClient    = "com.amazonaws"                    %  "amazon-kinesis-client"        % V.kinesisClient
     val kinesisConnector = "com.amazonaws"                    %  "amazon-kinesis-connectors"    % V.kinesisConnector
     val validator        = "com.github.fge"                   %  "json-schema-validator"        % V.validator
