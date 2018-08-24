@@ -16,8 +16,8 @@ import com.snowplowanalytics.stream.loader.{CredentialsLookup, EmitterJsonInput,
 import org.json4s.jackson.JsonMethods._
 
 // elastic4s
-import com.sksamuel.elastic4s.ElasticDsl._
 import com.sksamuel.elastic4s.embedded.LocalNode
+import com.sksamuel.elastic4s.http.ElasticDsl._
 
 // scalaz
 import scalaz._
@@ -31,7 +31,7 @@ import org.specs2.mutable.Specification
 class ElasticsearchBulkSenderSpec extends Specification {
   val node = LocalNode("es", System.getProperty("java.io.tmpdir"))
   node.start()
-  val client       = node.elastic4sclient()
+  val client       = node.client(true)
   val creds        = CredentialsLookup.getCredentialsProvider("a", "s")
   val documentType = "enriched"
   val index        = "idx"
@@ -59,7 +59,14 @@ class ElasticsearchBulkSenderSpec extends Specification {
       sender.send(input) must_== List.empty
       // eventual consistency
       Thread.sleep(1000)
-      client.execute(search(index)).await.hits.head.sourceAsString must_== """{"s":"json"}"""
+      client
+        .execute(search(index))
+        .await
+        .result
+        .hits
+        .hits
+        .head
+        .sourceAsString must_== """{"s":"json"}"""
     }
 
     "report old failures" in {
