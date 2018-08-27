@@ -53,6 +53,8 @@ class ElasticsearchBulkSender(
   documentIndex: String,
   documentType: String,
   override val maxConnectionWaitTimeMs: Long = 60000L,
+  shardsCount: Option[Int],
+  replicasCount: Option[Int],
   credentialsProvider: AWSCredentialsProvider,
   override val tracker: Option[Tracker] = None,
   override val maxAttempts: Int = 6
@@ -97,6 +99,21 @@ class ElasticsearchBulkSender(
             new ElasticsearchObject(documentIndex, documentType, compact(render(r.json)))
         }
     }
+
+    // blindly creating the index, the error is ignored if the index would exists
+    successfulRecords.map(_.getIndex).distinct.map(index => {
+      val createIndexRequest = createIndex(index)
+      shardsCount match {
+        case Some(value) => createIndexRequest.shards(value)
+        case None =>
+      }
+      replicasCount match {
+        case Some(value) => createIndexRequest.replicas(value)
+        case None =>
+      }
+      client.execute(createIndexRequest).await
+    })
+
     val actions =
       successfulRecords.map(r => indexInto(r.getIndex / r.getType) id r.getId doc r.getSource)
 

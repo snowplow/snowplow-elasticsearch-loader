@@ -127,7 +127,10 @@ elasticsearch {
   #   - for transport this is usually 9300
   # - username (optional, remove if not active): http basic auth username
   # - password (optional, remove if not active): http basic auth password
-  # - max-timeout: the maximum attempt time before a client restart
+  # - maxTimeout: the maximum attempt time before a client restart
+  # - maxRetries: the maximum attempts count before a client restart
+  # - shardsCount (optional, remove to use defaults): shards in the index
+  # - replicasCount (optional, remove to use defaults): shards for the index
   # - ssl: if using the http client, whether to use ssl or not
   client {
     endpoint = "{{elasticsearchEndpoint}}"
@@ -136,6 +139,8 @@ elasticsearch {
     password = "{{elasticsearchPassword}}"
     maxTimeout = "{{elasticsearchMaxTimeout}}"
     maxRetries = {{elasticsearchMaxRetries}}
+    shardsCount = {{elasticsearchShardsCount}}
+    replicasCount = {{elasticsearchReplicasCount}}
     ssl = {{sslBool}}
   }
 

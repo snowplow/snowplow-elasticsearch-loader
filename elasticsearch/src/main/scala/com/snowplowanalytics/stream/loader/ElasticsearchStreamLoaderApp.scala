@@ -47,6 +47,8 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
         esConfig.cluster.index,
         esConfig.cluster.documentType,
         esConfig.client.maxTimeout,
+        esConfig.client.shardsCount,
+        esConfig.client.replicasCount,
         CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey),
         tracker,
         esConfig.client.maxRetries
