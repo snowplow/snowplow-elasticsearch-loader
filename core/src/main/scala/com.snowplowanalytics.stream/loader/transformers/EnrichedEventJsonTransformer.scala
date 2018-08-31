@@ -25,6 +25,11 @@ import com.amazonaws.services.kinesis.model.Record
 
 // Java
 import java.nio.charset.StandardCharsets.UTF_8
+import java.text.SimpleDateFormat
+import org.joda.time.{DateTime, DateTimeZone}
+
+// Scala
+import org.json4s.JsonAST.JString
 
 // Scalaz
 import scalaz.Scalaz._
@@ -37,9 +42,16 @@ import com.snowplowanalytics.snowplow.analytics.scalasdk.json.EventTransformer._
  * Class to convert successfully enriched events to EmitterInputs
  *
  */
-class EnrichedEventJsonTransformer
+class EnrichedEventJsonTransformer(shardDateField: Option[String], shardDateFormat: Option[String])
     extends ITransformer[ValidatedJsonRecord, EmitterJsonInput]
     with StdinTransformer {
+
+  private val dateFormatter = shardDateFormat match {
+    case Some(format) => new SimpleDateFormat(format).some
+    case _            => None
+  }
+
+  private val shardingField = shardDateField.getOrElse("derived_tstamp")
 
   /**
    * Convert an Amazon Kinesis record to a JSON string
@@ -61,9 +73,27 @@ class EnrichedEventJsonTransformer
    */
   private def toJsonRecord(record: String): ValidationNel[String, JsonRecord] =
     jsonifyGoodEvent(record.split("\t", -1)) match {
-      case Left(h :: t)     => NonEmptyList(h, t: _*).failure
-      case Left(Nil)        => "Empty list of failures but reported failure, should not happen".failureNel
-      case Right((_, json)) => JsonRecord(json).success
+      case Left(h :: t) => NonEmptyList(h, t: _*).failure
+      case Left(Nil)    => "Empty list of failures but reported failure, should not happen".failureNel
+      case Right((_, json)) =>
+        dateFormatter match {
+          case Some(formatter) =>
+            val shard = json \ shardingField match {
+              case JString(timestampString) =>
+                formatter
+                  .format(
+                    DateTime
+                      .parse(timestampString)
+                      .withZone(DateTimeZone.UTC)
+                      .getMillis
+                  )
+                  .some
+              case _ => None
+            }
+            JsonRecord(json, shard).success
+          case None =>
+            JsonRecord(json, None).success
+        }
     }
 
   /**

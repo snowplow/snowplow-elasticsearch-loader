@@ -60,6 +60,8 @@ class NsqSourceExecutor(
   config: StreamLoaderConfig,
   goodSink: Option[ISink],
   badSink: ISink,
+  shardDateField: Option[String],
+  shardDateFormat: Option[String],
   bulkSender: BulkSender[EmitterJsonInput]
 ) extends Runnable {
 
@@ -75,7 +77,7 @@ class NsqSourceExecutor(
     config.streams.buffer.recordLimit,
     config.streams.buffer.byteLimit)
   private val transformer = streamType match {
-    case Good      => new EnrichedEventJsonTransformer
+    case Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
     case PlainJson => new PlainJsonTransformer
     case Bad       => new BadEventTransformer
   }

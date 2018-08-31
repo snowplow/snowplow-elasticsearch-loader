@@ -47,6 +47,8 @@ class KinesisPipeline(
   goodSink: Option[ISink],
   badSink: ISink,
   bulkSender: BulkSender[EmitterJsonInput],
+  shardDateField: Option[String],
+  shardDateFormat: Option[String],
   bufferRecordLimit: Long,
   bufferByteLimit: Long,
   tracker: Option[Tracker] = None
@@ -60,7 +62,7 @@ class KinesisPipeline(
     new BasicMemoryBuffer[ValidatedJsonRecord](configuration)
 
   override def getTransformer(c: KinesisConnectorConfiguration) = streamType match {
-    case Good      => new EnrichedEventJsonTransformer
+    case Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
     case PlainJson => new PlainJsonTransformer
     case Bad       => new BadEventTransformer
 

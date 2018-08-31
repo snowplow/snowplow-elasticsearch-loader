@@ -64,7 +64,7 @@ class PlainJsonTransformer
   private def toJsonRecord(jsonString: String): ValidationNel[String, JsonRecord] = {
     parseOpt(jsonString) match {
       case Some(jvalue) =>
-        JsonRecord(jvalue ++ ("id" -> UUID.randomUUID().toString)).success
+        JsonRecord(jvalue ++ ("id" -> UUID.randomUUID().toString), None).success
       case None => "Json parsing error".failureNel
     }
   }
