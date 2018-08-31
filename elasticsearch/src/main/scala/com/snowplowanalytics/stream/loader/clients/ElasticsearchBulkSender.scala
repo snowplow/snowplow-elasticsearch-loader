@@ -90,11 +90,15 @@ class ElasticsearchBulkSender(
     val (successes, oldFailures)   = records.partition(_._2.isSuccess)
     val successfulRecords = successes.collect {
       case (_, Success(r)) =>
+        val index = r.shard match {
+          case Some(shardSuffix) => documentIndex + shardSuffix
+          case None              => documentIndex
+        }
         utils.extractEventId(r.json) match {
           case Some(id) =>
-            new ElasticsearchObject(documentIndex, documentType, id, compact(render(r.json)))
+            new ElasticsearchObject(index, documentType, id, compact(render(r.json)))
           case None =>
-            new ElasticsearchObject(documentIndex, documentType, compact(render(r.json)))
+            new ElasticsearchObject(index, documentType, compact(render(r.json)))
         }
     }
     val actions =

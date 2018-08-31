@@ -37,7 +37,8 @@ class PlainJsonTransformerSpec extends Specification {
     "successfully convert a  plain JSON to an JsonRecord" in {
       val input = """{"key1":"value1","key2":"value2","key3":"value3"}"""
 
-      val result = new PlainJsonTransformer().fromClass(input -> JsonRecord(parse(input)).success)
+      val result =
+        new PlainJsonTransformer().fromClass(input -> JsonRecord(parse(input), None).success)
       val json: String = compact(
         render(
           result._2.getOrElse(throw new RuntimeException("Plain Json failed transformation")).json))
