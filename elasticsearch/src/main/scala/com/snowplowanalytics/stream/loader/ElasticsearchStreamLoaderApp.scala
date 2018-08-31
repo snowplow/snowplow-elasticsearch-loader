@@ -69,6 +69,8 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
           goodSink,
           badSink,
           bulkSender,
+          esConfig.client.shardDateField,
+          esConfig.client.shardDateFormat,
           config.streams.buffer.recordLimit,
           config.streams.buffer.byteLimit,
           tracker
@@ -77,14 +79,25 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
 
     // Read records from NSQ
     case ("nsq", queue: Nsq, Some(esConfig), Success(badSink)) =>
-      new NsqSourceExecutor(config.streamType, queue, config, goodSink, badSink, bulkSender).success
+      new NsqSourceExecutor(
+        config.streamType,
+        queue,
+        config,
+        goodSink,
+        badSink,
+        esConfig.client.shardDateField,
+        esConfig.client.shardDateFormat,
+        bulkSender).success
 
     // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
     // TODO reduce code duplication
     case ("stdin", _, Some(esConfig), Success(badSink)) =>
       new Runnable {
         val transformer = config.streamType match {
-          case Good      => new EnrichedEventJsonTransformer
+          case Good =>
+            new EnrichedEventJsonTransformer(
+              esConfig.client.shardDateField,
+              esConfig.client.shardDateFormat)
           case PlainJson => new PlainJsonTransformer
           case Bad       => new BadEventTransformer
         }

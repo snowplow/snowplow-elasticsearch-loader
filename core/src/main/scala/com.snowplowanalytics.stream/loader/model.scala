@@ -74,6 +74,8 @@ package model {
     port: Int,
     username: Option[String],
     password: Option[String],
+    shardDateFormat: Option[String],
+    shardDateField: Option[String],
     maxTimeout: Long,
     maxRetries: Int,
     ssl: Boolean

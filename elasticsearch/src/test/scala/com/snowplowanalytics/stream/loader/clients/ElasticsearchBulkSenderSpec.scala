@@ -53,7 +53,7 @@ class ElasticsearchBulkSenderSpec extends Specification {
   "send" should {
     "successfully send stuff" in {
 
-      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("""{"s":"json"}""")).success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("""{"s":"json"}"""), None).success
       val input                        = List(validInput)
 
       sender.send(input) must_== List.empty

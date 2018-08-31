@@ -24,5 +24,6 @@ import org.json4s.JValue
  * Format in which Snowplow events are buffered
  *
  * @param json The JSON string for the event
+ * @param shard optional shard to send the data
  */
-case class JsonRecord(json: JValue)
+case class JsonRecord(json: JValue, shard: Option[String])

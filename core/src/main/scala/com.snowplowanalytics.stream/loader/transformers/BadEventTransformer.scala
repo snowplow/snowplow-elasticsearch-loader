@@ -52,7 +52,7 @@ class BadEventTransformer
    */
   override def toClass(record: Record): ValidatedJsonRecord = {
     val recordString = new String(record.getData.array, UTF_8)
-    (recordString, JsonRecord(JObject(JField("source", JString(recordString)))).success)
+    (recordString, JsonRecord(JObject(JField("source", JString(recordString))), None).success)
   }
 
   /**
@@ -62,5 +62,5 @@ class BadEventTransformer
    * @return Line as an EmitterJsonInput
    */
   def consumeLine(line: String): EmitterJsonInput =
-    fromClass(line -> JsonRecord(JObject(JField("source", JString(line)))).success)
+    fromClass(line -> JsonRecord(JObject(JField("source", JString(line))), None).success)
 }

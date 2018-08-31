@@ -127,6 +127,8 @@ elasticsearch {
   #   - for transport this is usually 9300
   # - username (optional, remove if not active): http basic auth username
   # - password (optional, remove if not active): http basic auth password
+  # - shardDateFormat (optional, remove if not needed): formatting used for sharding good stream, i.e. _yyyy-MM-dd
+  # - shardDateField (optional, if not specified derived_tstamp is used): timestamp field for sharding good stream
   # - max-timeout: the maximum attempt time before a client restart
   # - ssl: if using the http client, whether to use ssl or not
   client {
@@ -134,6 +136,8 @@ elasticsearch {
     port = "{{elasticsearchTransportPort}}"
     username = "{{elasticsearchUsername}}"
     password = "{{elasticsearchPassword}}"
+    shardDateFormat = "{{elasticsearchShardDateFormat}}"
+    shardDateField = "{{elasticsearchShardDateField}}"
     maxTimeout = "{{elasticsearchMaxTimeout}}"
     maxRetries = {{elasticsearchMaxRetries}}
     ssl = {{sslBool}}
