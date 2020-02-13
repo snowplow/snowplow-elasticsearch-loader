@@ -14,7 +14,6 @@
 // SBT
 import sbt._
 import Keys._
-import scala.io.Source
 
 object BuildSettings {
 
