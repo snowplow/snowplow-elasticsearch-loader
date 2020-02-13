@@ -25,9 +25,10 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.jacksonDatabind,
   Dependencies.Libraries.jacksonCbor,
   // Scala
+  Dependencies.Libraries.cats,
+  Dependencies.Libraries.catsEffect,
+  Dependencies.Libraries.catsRetry,
   Dependencies.Libraries.scopt,
-  Dependencies.Libraries.scalaz7,
-  Dependencies.Libraries.scalazC7,
   Dependencies.Libraries.snowplowTracker,
   Dependencies.Libraries.analyticsSDK,
   Dependencies.Libraries.awsSigner,

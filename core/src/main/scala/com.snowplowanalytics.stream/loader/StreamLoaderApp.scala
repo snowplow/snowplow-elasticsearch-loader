@@ -27,9 +27,9 @@ import com.typesafe.config.ConfigFactory
 // Scala
 import scopt.OptionParser
 
-// Scalaz
-import scalaz._
-import Scalaz._
+// cats
+import cats.data.Validated
+import cats.syntax.validated._
 
 // Pureconfig
 import pureconfig._
@@ -43,7 +43,7 @@ import model._
  */
 trait StreamLoaderApp extends App {
 
-  val executor: Validation[String, Runnable]
+  val executor: Validated[String, Runnable]
   lazy val arguments = args
 
   private def parseConfig(): Option[StreamLoaderConfig] = {
@@ -67,7 +67,7 @@ trait StreamLoaderApp extends App {
       case None    => ConfigFactory.empty()
     }
 
-    if (config.isEmpty()) {
+    if (config.isEmpty) {
       System.err.println("Empty configuration file")
       System.exit(1)
     }
@@ -91,14 +91,14 @@ trait StreamLoaderApp extends App {
   lazy val tracker = config.monitoring.map(e => SnowplowTracking.initializeTracker(e.snowplow))
 
   lazy val badSinkValidated = config.sink.bad match {
-    case "stderr" => (new StdouterrSink).success
+    case "stderr" => (new StdouterrSink).valid
     case "nsq" =>
       config.queue match {
         case queue: Nsq =>
-          new NsqSink(queue.nsqdHost, queue.nsqdPort, config.streams.outStreamName).success
-        case _ => "queue config is not valid for Nsq".failure
+          new NsqSink(queue.nsqdHost, queue.nsqdPort, config.streams.outStreamName).valid
+        case _ => "queue config is not valid for Nsq".invalid
       }
-    case "none" => (new NullSink).success
+    case "none" => (new NullSink).valid
     case "kinesis" =>
       config.queue match {
         case queue: Kinesis =>
@@ -107,8 +107,8 @@ trait StreamLoaderApp extends App {
             config.aws.secretKey,
             queue.endpoint,
             queue.region,
-            config.streams.outStreamName).success
-        case _ => "queue config is not valid for Kinesis".failure
+            config.streams.outStreamName).valid
+        case _ => "queue config is not valid for Kinesis".invalid
       }
   }
 

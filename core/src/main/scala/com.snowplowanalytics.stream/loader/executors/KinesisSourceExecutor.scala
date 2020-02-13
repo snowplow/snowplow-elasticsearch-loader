@@ -39,10 +39,6 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibC
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
 import com.amazonaws.services.kinesis.metrics.interfaces.IMetricsFactory
 
-// Scalaz
-import scalaz._
-import Scalaz._
-
 // This project
 import model._
 

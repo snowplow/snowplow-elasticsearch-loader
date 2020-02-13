@@ -32,9 +32,8 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.JsonDSL._
 
-// Scalaz
-import scalaz._
-import Scalaz._
+import cats.data.ValidatedNel
+import cats.syntax.validated._
 
 /**
  * Class to convert plain JSON to EmitterInputs
@@ -61,11 +60,11 @@ class PlainJsonTransformer
    * @param jsonString the JSON string to be parsed
    * @return the parsed JsonRecord
    */
-  private def toJsonRecord(jsonString: String): ValidationNel[String, JsonRecord] = {
+  private def toJsonRecord(jsonString: String): ValidatedNel[String, JsonRecord] = {
     parseOpt(jsonString) match {
       case Some(jvalue) =>
-        JsonRecord(jvalue ++ ("id" -> UUID.randomUUID().toString), None).success
-      case None => "Json parsing error".failureNel
+        JsonRecord(jvalue ++ ("id" -> UUID.randomUUID().toString), None).validNel
+      case None => "Json parsing error".invalidNel
     }
   }
 

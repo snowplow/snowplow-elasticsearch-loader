@@ -23,9 +23,8 @@ import scala.util.{Failure, Success, Try}
 import org.json4s.JValue
 import org.json4s.JsonAST.JString
 
-// Scalaz
-import scalaz.Scalaz._
-import scalaz._
+// cats
+import cats.syntax.option._
 
 object utils {
   // to rm once 2.12 as well as the right projections

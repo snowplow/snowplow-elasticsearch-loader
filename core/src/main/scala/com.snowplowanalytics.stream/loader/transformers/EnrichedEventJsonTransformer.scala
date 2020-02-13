@@ -31,9 +31,10 @@ import org.joda.time.{DateTime, DateTimeZone}
 // Scala
 import org.json4s.JsonAST.JString
 
-// Scalaz
-import scalaz.Scalaz._
-import scalaz._
+// cats
+import cats.data.{NonEmptyList, ValidatedNel}
+import cats.syntax.validated._
+import cats.syntax.option._
 
 // Snowplow
 import com.snowplowanalytics.snowplow.analytics.scalasdk.json.EventTransformer._
@@ -71,10 +72,10 @@ class EnrichedEventJsonTransformer(shardDateField: Option[String], shardDateForm
    * @param record the record to be parsed
    * @return the parsed JsonRecord or a list of failures
    */
-  private def toJsonRecord(record: String): ValidationNel[String, JsonRecord] =
+  private def toJsonRecord(record: String): ValidatedNel[String, JsonRecord] =
     jsonifyGoodEvent(record.split("\t", -1)) match {
-      case Left(h :: t) => NonEmptyList(h, t: _*).failure
-      case Left(Nil)    => "Empty list of failures but reported failure, should not happen".failureNel
+      case Left(h :: t) => NonEmptyList.of(h, t: _*).invalid
+      case Left(Nil)    => "Empty list of failures but reported failure, should not happen".invalidNel
       case Right((_, json)) =>
         dateFormatter match {
           case Some(formatter) =>
@@ -90,9 +91,9 @@ class EnrichedEventJsonTransformer(shardDateField: Option[String], shardDateForm
                   .some
               case _ => None
             }
-            JsonRecord(json, shard).success
+            JsonRecord(json, shard).validNel
           case None =>
-            JsonRecord(json, None).success
+            JsonRecord(json, None).validNel
         }
     }
 

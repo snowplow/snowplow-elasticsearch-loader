@@ -18,8 +18,8 @@
  */
 package com.snowplowanalytics.stream
 
-// Scalaz
-import scalaz._
+// cats
+import cats.data.ValidatedNel
 
 // json4s
 import org.json4s._
@@ -31,15 +31,15 @@ package object loader {
    * a validated ElasticsearchObject created from it (or list of errors
    * if the creation process failed)
    */
-  type ValidatedJsonRecord = (String, ValidationNel[String, JsonRecord])
+  type ValidatedJsonRecord = (String, ValidatedNel[String, JsonRecord])
 
   /**
    * The input type for the ElasticsearchSender objects
    */
-  type EmitterJsonInput = (String, ValidationNel[String, JsonRecord])
+  type EmitterJsonInput = (String, ValidatedNel[String, JsonRecord])
 
   /**
    * Functions used to change a TSV pair to a JObject
    */
-  type TsvToJsonConverter = (String, String) => ValidationNel[String, JObject]
+  type TsvToJsonConverter = (String, String) => ValidatedNel[String, JObject]
 }

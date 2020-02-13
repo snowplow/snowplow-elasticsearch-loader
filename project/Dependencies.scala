@@ -30,8 +30,10 @@ object Dependencies {
                                    // but there is json4s-core_2.12 3.2.11 that overrides it back to 2.6
 
     // Scala
+    val cats             = "1.6.1"
+    val catsEffect       = "1.3.1"
+    val catsRetry        = "0.2.5"
     val scopt            = "3.7.0"
-    val scalaz7          = "7.2.22"
     val snowplowTracker  = "0.5.0"
     val analyticsSDK     = "0.3.0"
     val awsSigner        = "0.5.0"
@@ -46,8 +48,8 @@ object Dependencies {
     val config           = "com.typesafe"                     %  "config"                       % V.config
     val slf4j            = "org.slf4j"                        %  "slf4j-simple"                 % V.slf4j
     val log4jOverSlf4j   = "org.slf4j"                        %  "log4j-over-slf4j"             % V.slf4j
-    val log4jCore        = "org.apache.logging.log4j"         %  "log4j-core"                    % V.log4j
-    val log4jApi         = "org.apache.logging.log4j"         %  "log4j-api"                     % V.log4j
+    val log4jCore        = "org.apache.logging.log4j"         %  "log4j-core"                   % V.log4j
+    val log4jApi         = "org.apache.logging.log4j"         %  "log4j-api"                    % V.log4j
     val kinesisClient    = "com.amazonaws"                    %  "amazon-kinesis-client"        % V.kinesisClient
     val kinesisConnector = "com.amazonaws"                    %  "amazon-kinesis-connectors"    % V.kinesisConnector
     val validator        = "com.github.fge"                   %  "json-schema-validator"        % V.validator
@@ -57,16 +59,17 @@ object Dependencies {
     val jacksonCbor      = "com.fasterxml.jackson.dataformat" %  "jackson-dataformat-cbor"      % V.jackson
     val jacksonDatabind  = "com.fasterxml.jackson.core"       %  "jackson-databind"             % V.jackson
     // Scala
+    val cats             = "org.typelevel"                    %% "cats-core"                    % V.cats
+    val catsEffect       = "org.typelevel"                    %% "cats-effect"                  % V.catsEffect
+    val catsRetry        = "com.github.cb372"                 %% "cats-retry-cats-effect"       % V.catsRetry
     val scopt            = "com.github.scopt"                 %% "scopt"                        % V.scopt
-    val scalaz7          = "org.scalaz"                       %% "scalaz-core"                  % V.scalaz7
-    val scalazC7         = "org.scalaz"                       %% "scalaz-concurrent"            % V.scalaz7
     val snowplowTracker  = "com.snowplowanalytics"            %% "snowplow-scala-tracker"       % V.snowplowTracker
     val analyticsSDK     = "com.snowplowanalytics"            %% "snowplow-scala-analytics-sdk" % V.analyticsSDK
     val awsSigner        = "io.ticofab"                       %% "aws-request-signer"           % V.awsSigner
     val pureconfig       = "com.github.pureconfig"            %% "pureconfig"                   % V.pureconfig
     val elastic4sHttp    = "com.sksamuel.elastic4s"           %% "elastic4s-http"               % V.elastic4s
     // Scala (test only)
-    val specs2           = "org.specs2"                       %% "specs2-core"                  % V.specs2    % "test"
-    val elastic4sTest    = "com.sksamuel.elastic4s"           %% "elastic4s-embedded"           % V.elastic4s % "test"
+    val specs2           = "org.specs2"                       %% "specs2-core"                  % V.specs2    % Test
+    val elastic4sTest    = "com.sksamuel.elastic4s"           %% "elastic4s-embedded"           % V.elastic4s % Test
   }
 }

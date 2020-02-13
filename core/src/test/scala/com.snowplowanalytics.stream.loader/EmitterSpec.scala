@@ -30,9 +30,8 @@ import com.amazonaws.services.kinesis.connectors.impl.BasicMemoryBuffer
 import scala.collection.JavaConverters._
 import org.json4s.jackson.JsonMethods._
 
-// Scalaz
-import scalaz._
-import Scalaz._
+// cats
+import cats.syntax.validated._
 
 // Specs2
 import org.specs2.mutable.Specification
@@ -79,8 +78,8 @@ class EmitterSpec extends Specification {
         new KinesisConnectorConfiguration(new Properties, new DefaultAWSCredentialsProviderChain)
       val eem = new Emitter(fakeSender, None, new StdouterrSink, 1, 1L)
 
-      val validInput: EmitterJsonInput   = "good" -> JsonRecord(parse("{}"), None).success
-      val invalidInput: EmitterJsonInput = "bad"  -> "malformed event".failureNel
+      val validInput: EmitterJsonInput   = "good" -> JsonRecord(parse("{}"), None).valid
+      val invalidInput: EmitterJsonInput = "bad"  -> "malformed event".invalidNel
 
       val input = List(validInput, invalidInput)
 
@@ -100,7 +99,7 @@ class EmitterSpec extends Specification {
       val ess = new MockElasticsearchSender
       val eem = new Emitter(ess, None, new StdouterrSink, 1, 1000L)
 
-      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), None).success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), None).valid
 
       val input = List.fill(50)(validInput)
 
@@ -124,7 +123,7 @@ class EmitterSpec extends Specification {
       val ess = new MockElasticsearchSender
       val eem = new Emitter(ess, None, new StdouterrSink, 1, 1000L)
 
-      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), None).success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), None).valid
 
       val input = List(validInput)
 
@@ -148,7 +147,7 @@ class EmitterSpec extends Specification {
       val ess = new MockElasticsearchSender
       val eem = new Emitter(ess, None, new StdouterrSink, 100, 1048576L)
 
-      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), None).success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), None).valid
 
       val input = List.fill(50)(validInput)
 
@@ -172,7 +171,7 @@ class EmitterSpec extends Specification {
       val ess = new MockElasticsearchSender
       val eem = new Emitter(ess, None, new StdouterrSink, 1, 1048576L)
 
-      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), None).success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), None).valid
 
       val input = List(validInput)
 
@@ -197,7 +196,7 @@ class EmitterSpec extends Specification {
       val eem = new Emitter(ess, None, new StdouterrSink, 2, 200L)
 
       // record size is 95 bytes
-      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), None).success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("{}"), None).valid
 
       val input = List.fill(20)(validInput)
 

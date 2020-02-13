@@ -15,9 +15,8 @@ package com.snowplowanalytics.stream.loader
 // Scala
 import org.json4s.jackson.JsonMethods._
 
-// Scalaz
-import scalaz._
-import Scalaz._
+// cats
+import cats.syntax.validated._
 
 // Specs2
 import org.specs2.mutable.Specification
@@ -38,7 +37,7 @@ class BadEventTransformerSpec extends Specification {
       val input =
         """{"line":"failed","errors":["Record does not match Thrift SnowplowRawEvent schema"]}"""
       val result =
-        new BadEventTransformer().fromClass(input -> JsonRecord(parse(input), None).success)
+        new BadEventTransformer().fromClass(input -> JsonRecord(parse(input), None).valid)
       val json: String = compact(
         render(result._2.getOrElse(throw new RuntimeException("Json failed transformation")).json))
       json.toString must_== input

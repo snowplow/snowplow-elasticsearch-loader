@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2016 Snowplow Analytics Ltd.
+ * Copyright (c) 2014-2020 Snowplow Analytics Ltd.
  * All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
@@ -20,17 +20,20 @@ package com.snowplowanalytics.stream.loader
 package clients
 
 // Java
+import java.util.concurrent.TimeUnit
+
 import org.slf4j.Logger
 
 // Scala
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.Random
 
-// Scalaz
-import scalaz._
-import Scalaz._
-import scalaz.concurrent.{Strategy, Task}
+// cats
+import cats.effect.IO
+import cats.Applicative
+
+import retry.{PolicyDecision, RetryPolicy}
 
 // Snowplow
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
@@ -41,15 +44,26 @@ trait BulkSender[A] {
 
   val maxConnectionWaitTimeMs: Long
   val maxAttempts: Int
-  val delays: Seq[FiniteDuration] = 0.milliseconds +:
-    Seq.fill(maxAttempts - 1)((maxConnectionWaitTimeMs / maxAttempts).milliseconds)
+
+  implicit def delayPolicy[M[_]: Applicative]: RetryPolicy[M] =
+    RetryPolicy.lift { status =>
+      if (status.retriesSoFar >= maxAttempts) PolicyDecision.GiveUp
+      else {
+        val maxDelay                  = 2.milliseconds * Math.pow(2, status.retriesSoFar).toLong
+        val randomDelayNanos          = (maxDelay.toNanos * Random.nextDouble()).toLong
+        val maxConnectionWaitTimeNano = maxConnectionWaitTimeMs * 1000
+        val delayNanos =
+          if (maxConnectionWaitTimeMs >= randomDelayNanos) maxConnectionWaitTimeNano
+          else randomDelayNanos
+        PolicyDecision.DelayAndRetry(new FiniteDuration(delayNanos, TimeUnit.NANOSECONDS))
+      }
+    }
 
   // With previous versions of ES there were hard limits regarding the size of the payload (32768
   // bytes) and since we don't really need the whole payload in those cases we cut it at 20k so that
   // it can be sent to a bad sink. This way we don't have to compute the size of the byte
   // representation of the utf-8 string.
   val maxSizeWhenReportingFailure = 20000
-  implicit val strategy           = Strategy.DefaultExecutorService
 
   def send(records: List[A]): List[A]
   def close(): Unit
@@ -76,34 +90,15 @@ trait BulkSender[A] {
     try {
       Thread.sleep(sleepTime)
     } catch {
-      case e: InterruptedException => ()
+      case _: InterruptedException => ()
     }
 
   /** Predicate about whether or not we should retry sending stuff to ES */
-  def exPredicate(connectionStartTime: Long, storageType: String): (Throwable => Boolean) =
-    _ match {
-      case e: Exception =>
-        log.error("Storage threw an unexpected exception ", e)
-        tracker foreach { t =>
-          SnowplowTracking.sendFailureEvent(
-            t,
-            delays.head.toMillis,
-            0L,
-            connectionStartTime,
-            storageType,
-            e.getMessage)
-        }
-        true
-      case _ => false
-    }
+  def exPredicate: Throwable => Boolean = {
+    case _: Exception => true
+    case _            => false
+  }
 
-  /** Turn a scala.concurrent.Future into a scalaz.concurrent.Task */
-  def futureToTask[T](f: => Future[T])(implicit ec: ExecutionContext, s: Strategy): Task[T] =
-    Task.async { register =>
-      f onComplete {
-        case Success(v)  => s(register(v.right))
-        case Failure(ex) => s(register(ex.left))
-      }
-    }
-
+  def futureToTask[T](f: => Future[T]): IO[T] =
+    IO.fromFuture(IO.delay(f))
 }

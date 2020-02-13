@@ -51,8 +51,6 @@ object SnowplowTracking {
     val endpoint = config.collectorUri
     val port     = config.collectorPort
     val appName  = config.appId
-    // Not yet used
-    val method = config.method
     val emitter =
       AsyncEmitter.createAndStart(endpoint, Some(port), config.ssl.getOrElse(false), None)
     new Tracker(List(emitter), com.snowplowanalytics.stream.loader.generated.Settings.name, appName)

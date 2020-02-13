@@ -19,9 +19,8 @@ import org.json4s.jackson.JsonMethods._
 import com.sksamuel.elastic4s.embedded.LocalNode
 import com.sksamuel.elastic4s.http.ElasticDsl._
 
-// scalaz
-import scalaz._
-import Scalaz._
+// cats
+import cats.syntax.validated._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -53,7 +52,7 @@ class ElasticsearchBulkSenderSpec extends Specification {
   "send" should {
     "successfully send stuff" in {
 
-      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("""{"s":"json"}"""), None).success
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("""{"s":"json"}"""), None).valid
       val input                        = List(validInput)
 
       sender.send(input) must_== List.empty
@@ -70,8 +69,8 @@ class ElasticsearchBulkSenderSpec extends Specification {
     }
 
     "report old failures" in {
-      val data = List(("a", Failure(NonEmptyList("f"))))
-      sender.send(data) must_== List(("a", Failure(NonEmptyList("f"))))
+      val data = List(("a", "f".invalidNel))
+      sender.send(data) must_== List(("a", "f".invalidNel))
     }
   }
 }

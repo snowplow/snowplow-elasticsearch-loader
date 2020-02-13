@@ -18,9 +18,9 @@
  */
 package com.snowplowanalytics.stream.loader
 
-// Scalaz
-import scalaz._
-import Scalaz._
+// cats
+import cats.data.Validated
+import cats.syntax.validated._
 
 // This project
 import clients.BulkSender
@@ -60,7 +60,7 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
 
   lazy val executor = (config.source, config.queue, config.elasticsearch, badSinkValidated) match {
     // Read records from Kinesis
-    case ("kinesis", queue: Kinesis, Some(esConfig), Success(badSink)) =>
+    case ("kinesis", queue: Kinesis, Some(esConfig), Validated.Valid(badSink)) =>
       new KinesisSourceExecutor[ValidatedJsonRecord, EmitterJsonInput](
         config,
         queue,
@@ -75,10 +75,10 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
           config.streams.buffer.byteLimit,
           tracker
         )
-      ).success
+      ).valid
 
     // Read records from NSQ
-    case ("nsq", queue: Nsq, Some(esConfig), Success(badSink)) =>
+    case ("nsq", queue: Nsq, Some(esConfig), Validated.Valid(badSink)) =>
       new NsqSourceExecutor(
         config.streamType,
         queue,
@@ -87,11 +87,11 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
         badSink,
         esConfig.client.shardDateField,
         esConfig.client.shardDateFormat,
-        bulkSender).success
+        bulkSender).valid
 
     // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
     // TODO reduce code duplication
-    case ("stdin", _, Some(esConfig), Success(badSink)) =>
+    case ("stdin", _, Some(esConfig), Validated.Valid(badSink)) =>
       new Runnable {
         val transformer = config.streamType match {
           case Good =>
@@ -109,14 +109,14 @@ object ElasticsearchStreamLoaderApp extends StreamLoaderApp {
             s =>
               goodSink match {
                 case Some(gs) => gs.store(s.json.toString, None, true)
-                case None     => bulkSender.send(List(ln -> s.success))
+                case None     => bulkSender.send(List(ln -> s.valid))
             }
           )
         }
-      }.success
-    case (_, _, _, Failure(badSinkError)) =>
-      s"badSink configuration is not correct: $badSinkError".failure
-    case _ => "Source must be set to 'stdin', 'kinesis' or 'nsq'".failure
+      }.valid
+    case (_, _, _, Validated.Invalid(badSinkError)) =>
+      s"badSink configuration is not correct: $badSinkError".invalid
+    case _ => "Source must be set to 'stdin', 'kinesis' or 'nsq'".invalid
   }
   executor.fold(
     err => throw new RuntimeException(err),

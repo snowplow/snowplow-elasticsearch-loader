@@ -18,9 +18,8 @@
  */
 package com.snowplowanalytics.stream.loader
 
-// Scalaz
-import scalaz._
-import Scalaz._
+// cats
+import cats.data.NonEmptyList
 
 // json4s
 import org.json4s.JsonDSL._

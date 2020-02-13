@@ -23,21 +23,25 @@ import com.google.common.io.BaseEncoding
 import org.slf4j.LoggerFactory
 
 // Scala
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure => SFailure, Success => SSuccess}
+
 import com.sksamuel.elastic4s.http.{ElasticClient, NoOpHttpClientConfigCallback}
 import com.sksamuel.elastic4s.http.ElasticDsl._
 import org.apache.http.{Header, HttpHost}
 import org.apache.http.message.BasicHeader
 import org.elasticsearch.client.RestClient
-import scala.util.{Failure => SFailure, Success => SSuccess}
 import org.json4s.jackson.JsonMethods._
 
-// Concurrent
-import scalaz.concurrent.Strategy
-import scala.concurrent.ExecutionContext.Implicits.global
+// cats
+import cats.effect.{IO, Timer}
+import cats.data.Validated
+import cats.syntax.functor._
+import cats.syntax.validated._
 
-// Scalaz
-import scalaz._
-import Scalaz._
+import retry.implicits._
+import retry.RetryDetails
+import retry.CatsEffect._
 
 // Tracker
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
@@ -87,9 +91,9 @@ class ElasticsearchBulkSender(
   override def send(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
 
     val connectionAttemptStartTime = System.currentTimeMillis()
-    val (successes, oldFailures)   = records.partition(_._2.isSuccess)
+    val (successes, oldFailures)   = records.partition(_._2.isValid)
     val successfulRecords = successes.collect {
-      case (_, Success(r)) =>
+      case (_, Validated.Valid(r)) =>
         val index = r.shard match {
           case Some(shardSuffix) => documentIndex + shardSuffix
           case None              => documentIndex
@@ -104,24 +108,49 @@ class ElasticsearchBulkSender(
     val actions =
       successfulRecords.map(r => indexInto(r.getIndex / r.getType) id r.getId doc r.getSource)
 
+    implicit def onError(error: Throwable, details: RetryDetails): IO[Unit] = {
+      val duration = (error, details) match {
+        case (error, RetryDetails.GivingUp(_, totalDelay)) =>
+          IO(log.error("Storage threw an unexpected exception. Giving up ", error)).as(totalDelay)
+        case (error, RetryDetails.WillDelayAndRetry(nextDelay, retriesSoFar, cumulativeDelay)) =>
+          IO(log.error(
+            s"Storage threw an unexpected exception, after $retriesSoFar retries. Next attempt in $nextDelay ",
+            error)).as(cumulativeDelay)
+      }
+
+      duration.flatMap { delay =>
+        IO {
+          tracker.foreach { t =>
+            SnowplowTracking.sendFailureEvent(
+              t,
+              delay.toMillis,
+              0L,
+              connectionAttemptStartTime,
+              "elasticsearch",
+              error.getMessage)
+          }
+        }
+      }
+    }
+
+    implicit val ioTimer: Timer[IO] = cats.effect.IO.timer(concurrent.ExecutionContext.global)
+
     val newFailures: List[EmitterJsonInput] = if (actions.nonEmpty) {
       futureToTask(client.execute(bulk(actions)))
-      // we retry with linear back-off if an exception happened
-        .retry(delays, exPredicate(connectionAttemptStartTime, "elasticsearch"))
+        .retryingOnSomeErrors(exPredicate)
         .map { bulkResponseResponse =>
           bulkResponseResponse.result.items
             .zip(records)
-            .map {
+            .flatMap {
               case (bulkResponseItem, record) =>
                 handleResponse(bulkResponseItem.error.map(_.reason), record)
             }
-            .flatten
             .toList
         }
         .attempt
-        .unsafePerformSync match {
-        case \/-(s) => s
-        case -\/(f) =>
+        .unsafeRunSync() match {
+        case Right(s) => s
+        case Left(f) =>
           log.error(
             s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms",
             f)
@@ -169,15 +198,14 @@ class ElasticsearchBulkSender(
   ): Option[EmitterJsonInput] = {
     error.foreach(e => log.error(s"Record [$record] failed with message $e"))
     error
-      .map { e =>
+      .flatMap { e =>
         if (e.contains("DocumentAlreadyExistsException") || e.contains(
             "VersionConflictEngineException"))
           None
         else
           Some(
             record._1.take(maxSizeWhenReportingFailure) ->
-              s"Elasticsearch rejected record with message $e".failureNel)
+              s"Elasticsearch rejected record with message $e".invalidNel)
       }
-      .getOrElse(None)
   }
 }

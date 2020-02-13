@@ -26,9 +26,8 @@ import com.amazonaws.services.kinesis.connectors.interfaces.IEmitter
 import java.io.IOException
 import java.util.{List => List}
 
-// Scalaz
-import scalaz._
-import Scalaz._
+// cats
+import cats.data.Validated
 
 // Scala
 import scala.collection.mutable.ListBuffer
@@ -74,14 +73,14 @@ class Emitter(
       null
     } else {
       val (validRecords: SList[EmitterJsonInput], invalidRecords: SList[EmitterJsonInput]) =
-        records.partition(_._2.isSuccess)
+        records.partition(_._2.isValid)
       // Send all valid records to stdout / Sink and return those rejected by it
       val rejects = goodSink match {
-        case Some(s) => {
-          validRecords.foreach(recordTuple =>
-            recordTuple.map(record => record.map(r => s.store(r.json.toString, None, true))))
+        case Some(s) =>
+          validRecords.foreach {
+            case (_, record) => record.map(r => s.store(r.json.toString, None, true))
+          }
           Nil
-        }
         case None if validRecords.isEmpty => Nil
         case _                            => emit(validRecords)
       }
@@ -111,7 +110,7 @@ class Emitter(
    * @param records     The records to split
    * @param byteLimit   emitter byte limit
    * @param recordLimit emitter record limit
-   * @returns a list of buffers
+   * @return a list of buffers
    */
   private def splitBuffer(
     records: SList[EmitterJsonInput],
@@ -128,8 +127,8 @@ class Emitter(
       val record = remaining.remove(0)
 
       val byteCount: Long = record match {
-        case (_, Success(obj)) => obj.toString.getBytes("UTF-8").length.toLong
-        case (_, Failure(_))   => 0L // This record will be ignored in the sender
+        case (_, Validated.Valid(obj)) => obj.toString.getBytes("UTF-8").length.toLong
+        case (_, Validated.Invalid(_)) => 0L // This record will be ignored in the sender
       }
 
       if ((curBuffer.length + 1) > recordLimit || (runningByteCount + byteCount) > byteLimit) {
@@ -156,7 +155,7 @@ class Emitter(
   /**
    * Closes the Sink client when the KinesisConnectorRecordProcessor is shut down
    */
-  override def shutdown(): Unit = bulkSender.close
+  override def shutdown(): Unit = bulkSender.close()
 
   /**
    * Handles records rejected by the JsonTransformer or by Sink
@@ -165,10 +164,10 @@ class Emitter(
    */
   override def fail(records: List[EmitterJsonInput]): Unit = {
     records.asScala.foreach {
-      case (r: String, Failure(fs)) =>
+      case (r: String, Validated.Invalid(fs)) =>
         val output = BadRow(r, fs).toCompactJson
         badSink.store(output, None, false)
-      case (_, Success(_)) => ()
+      case (_, Validated.Valid(_)) => ()
     }
   }
 

@@ -30,9 +30,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import org.json4s.JsonAST.JObject
 import org.json4s._
 
-// Scalaz
-import scalaz._
-import Scalaz._
+import cats.syntax.validated._
 
 // TODO consider giving BadEventTransformer its own types
 
@@ -52,7 +50,7 @@ class BadEventTransformer
    */
   override def toClass(record: Record): ValidatedJsonRecord = {
     val recordString = new String(record.getData.array, UTF_8)
-    (recordString, JsonRecord(JObject(JField("source", JString(recordString))), None).success)
+    (recordString, JsonRecord(JObject(JField("source", JString(recordString))), None).valid)
   }
 
   /**
@@ -62,5 +60,5 @@ class BadEventTransformer
    * @return Line as an EmitterJsonInput
    */
   def consumeLine(line: String): EmitterJsonInput =
-    fromClass(line -> JsonRecord(JObject(JField("source", JString(line))), None).success)
+    fromClass(line -> JsonRecord(JObject(JField("source", JString(line))), None).valid)
 }
