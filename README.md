@@ -9,10 +9,12 @@ Elasticsearch are written to a separate Kinesis stream.
 
 ## Building
 
-Assuming you already have [SBT 1.1.5][sbt] installed:
+Assuming you already have [SBT][sbt] installed:
 
-    $ git clone git://github.com/snowplow/snowplow-elasticsearch-loader.git
-    $ sbt compile
+```bash
+$ git clone git://github.com/snowplow/snowplow-elasticsearch-loader.git
+$ sbt compile
+```
 
 ## Usage
 
@@ -30,7 +32,9 @@ Usage: snowplow-elasticsearch-loader [options]
 
 Create your own config file:
 
-    $ cp examples/config.hocon.sample my.conf
+```bash
+$ cp examples/config.hocon.sample my.conf
+```
 
 Update the configuration to fit your needs like modifying the AWS credentials:
 
@@ -43,7 +47,9 @@ aws {
 
 Next, start the loader, making sure to specify your new config file:
 
-    $ java -jar snowplow-elasticsearch-loader-http-0.11.0.jar --config my.conf
+```bash
+$ java -jar snowplow-elasticsearch-loader-http-0.11.0.jar --config my.conf
+```
 
 ## Find out more
 
