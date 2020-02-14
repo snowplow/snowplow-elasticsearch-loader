@@ -38,8 +38,8 @@ class PlainJsonTransformerSpec extends Specification {
 
       val result =
         new PlainJsonTransformer().fromClass(input -> JsonRecord(parse(input), None).valid)
-      val json: String = compact(
-        render(
+      val json: String =
+        compact(render(
           result._2.getOrElse(throw new RuntimeException("Plain Json failed transformation")).json))
       json.toString must_== input
     }

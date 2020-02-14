@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory
 // This project
 import sinks._
 import clients._
-import model._
+import com.snowplowanalytics.stream.loader.Config._
 import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, PlainJsonTransformer}
 
 /**
@@ -56,7 +56,7 @@ import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, PlainJso
  */
 class NsqSourceExecutor(
   streamType: StreamType,
-  nsq: Nsq,
+  nsq: Queue.Nsq,
   config: StreamLoaderConfig,
   goodSink: Option[ISink],
   badSink: ISink,
@@ -70,23 +70,24 @@ class NsqSourceExecutor(
   // nsq messages will be buffered in msgBuffer until buffer size become equal to nsqBufferSize
   private val msgBuffer = new ListBuffer[EmitterJsonInput]()
   // ElasticsearchEmitter instance
-  private val emitter = new Emitter(
-    bulkSender,
-    goodSink,
-    badSink,
-    config.streams.buffer.recordLimit,
-    config.streams.buffer.byteLimit)
+  private val emitter =
+    new Emitter(
+      bulkSender,
+      goodSink,
+      badSink,
+      config.streams.buffer.recordLimit,
+      config.streams.buffer.byteLimit)
   private val transformer = streamType match {
-    case Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
-    case PlainJson => new PlainJsonTransformer
-    case Bad       => new BadEventTransformer
+    case StreamType.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
+    case StreamType.PlainJson => new PlainJsonTransformer
+    case StreamType.Bad       => new BadEventTransformer
   }
 
   /**
    * Consumer will be started to wait new message.
    */
   override def run(): Unit = {
-    val nsqCallback = new NSQMessageCallback {
+    val nsqCallback: NSQMessageCallback = new NSQMessageCallback {
       val nsqBufferSize = config.streams.buffer.recordLimit
 
       override def message(msg: NSQMessage): Unit = {
@@ -113,13 +114,14 @@ class NsqSourceExecutor(
     // use NSQLookupd
     val lookup = new DefaultNSQLookup
     lookup.addLookupAddress(nsq.nsqlookupdHost, nsq.nsqlookupdPort)
-    val consumer = new NSQConsumer(
-      lookup,
-      config.streams.inStreamName,
-      nsq.channelName,
-      nsqCallback,
-      new NSQConfig(),
-      errorCallback)
+    val consumer =
+      new NSQConsumer(
+        lookup,
+        config.streams.inStreamName,
+        nsq.channelName,
+        nsqCallback,
+        new NSQConfig(),
+        errorCallback)
     consumer.start()
   }
 }

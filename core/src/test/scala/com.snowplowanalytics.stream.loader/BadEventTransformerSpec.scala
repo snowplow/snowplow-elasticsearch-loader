@@ -38,8 +38,10 @@ class BadEventTransformerSpec extends Specification {
         """{"line":"failed","errors":["Record does not match Thrift SnowplowRawEvent schema"]}"""
       val result =
         new BadEventTransformer().fromClass(input -> JsonRecord(parse(input), None).valid)
-      val json: String = compact(
-        render(result._2.getOrElse(throw new RuntimeException("Json failed transformation")).json))
+      val json: String =
+        compact(
+          render(
+            result._2.getOrElse(throw new RuntimeException("Json failed transformation")).json))
       json.toString must_== input
     }
   }

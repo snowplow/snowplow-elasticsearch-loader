@@ -26,25 +26,29 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure => SFailure, Success => SSuccess}
 
-import com.sksamuel.elastic4s.http.{ElasticClient, NoOpHttpClientConfigCallback}
+import org.elasticsearch.client.RestClient
+
+import com.sksamuel.elastic4s.IndexAndType
+import com.sksamuel.elastic4s.indexes.IndexRequest
+import com.sksamuel.elastic4s.http.{ElasticClient, NoOpHttpClientConfigCallback, Response}
 import com.sksamuel.elastic4s.http.ElasticDsl._
+import com.sksamuel.elastic4s.http.bulk.BulkResponse
+
 import org.apache.http.{Header, HttpHost}
 import org.apache.http.message.BasicHeader
-import org.elasticsearch.client.RestClient
 import org.json4s.jackson.JsonMethods._
 
-// cats
 import cats.effect.{IO, Timer}
 import cats.data.Validated
-import cats.syntax.functor._
 import cats.syntax.validated._
 
 import retry.implicits._
-import retry.RetryDetails
+import retry.{RetryDetails, RetryPolicy}
 import retry.CatsEffect._
 
-// Tracker
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
+
+import com.snowplowanalytics.stream.loader.Config.StreamLoaderConfig
 
 class ElasticsearchBulkSender(
   endpoint: String,
@@ -56,13 +60,15 @@ class ElasticsearchBulkSender(
   password: Option[String],
   documentIndex: String,
   documentType: String,
-  override val maxConnectionWaitTimeMs: Long = 60000L,
+  val maxConnectionWaitTimeMs: Long,
   credentialsProvider: AWSCredentialsProvider,
-  override val tracker: Option[Tracker] = None,
-  override val maxAttempts: Int = 6
+  val tracker: Option[Tracker],
+  val maxAttempts: Int = 6
 ) extends BulkSender[EmitterJsonInput] {
   require(maxAttempts > 0)
   require(maxConnectionWaitTimeMs > 0)
+
+  import ElasticsearchBulkSender._
 
   override val log = LoggerFactory.getLogger(getClass)
 
@@ -72,7 +78,7 @@ class ElasticsearchBulkSender(
       else NoOpHttpClientConfigCallback
     val formedHost = new HttpHost(endpoint, port, if (ssl) "https" else "http")
     val headers: Array[Header] = (username, password) match {
-      case (Some(u), Some(p)) =>
+      case (Some(_), Some(_)) =>
         val userpass =
           BaseEncoding.base64().encode(s"${username.get}:${password.get}".getBytes(Charsets.UTF_8))
         Array(new BasicHeader("Authorization", s"Basic $userpass"))
@@ -89,64 +95,25 @@ class ElasticsearchBulkSender(
   override def close(): Unit = ()
 
   override def send(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
-
     val connectionAttemptStartTime = System.currentTimeMillis()
-    val (successes, oldFailures)   = records.partition(_._2.isValid)
-    val successfulRecords = successes.collect {
-      case (_, Validated.Valid(r)) =>
-        val index = r.shard match {
-          case Some(shardSuffix) => documentIndex + shardSuffix
-          case None              => documentIndex
-        }
-        utils.extractEventId(r.json) match {
-          case Some(id) =>
-            new ElasticsearchObject(index, documentType, id, compact(render(r.json)))
-          case None =>
-            new ElasticsearchObject(index, documentType, compact(render(r.json)))
-        }
+    implicit def onErrorHandler: (Throwable, RetryDetails) => IO[Unit] =
+      BulkSender.onError(log, tracker, connectionAttemptStartTime)
+    implicit def retryPolicy: RetryPolicy[IO] =
+      BulkSender.delayPolicy[IO](maxAttempts, maxConnectionWaitTimeMs)
+
+    // oldFailures - failed at the transformation step
+    val (successes, oldFailures) = records.partition(_._2.isValid)
+    val esObjects = successes.collect {
+      case (_, Validated.Valid(jsonRecord)) => composeObject(jsonRecord)
     }
-    val actions =
-      successfulRecords.map(r => indexInto(r.getIndex / r.getType) id r.getId doc r.getSource)
+    val actions = esObjects.map(composeRequest)
 
-    implicit def onError(error: Throwable, details: RetryDetails): IO[Unit] = {
-      val duration = (error, details) match {
-        case (error, RetryDetails.GivingUp(_, totalDelay)) =>
-          IO(log.error("Storage threw an unexpected exception. Giving up ", error)).as(totalDelay)
-        case (error, RetryDetails.WillDelayAndRetry(nextDelay, retriesSoFar, cumulativeDelay)) =>
-          IO(log.error(
-            s"Storage threw an unexpected exception, after $retriesSoFar retries. Next attempt in $nextDelay ",
-            error)).as(cumulativeDelay)
-      }
-
-      duration.flatMap { delay =>
-        IO {
-          tracker.foreach { t =>
-            SnowplowTracking.sendFailureEvent(
-              t,
-              delay.toMillis,
-              0L,
-              connectionAttemptStartTime,
-              "elasticsearch",
-              error.getMessage)
-          }
-        }
-      }
-    }
-
-    implicit val ioTimer: Timer[IO] = cats.effect.IO.timer(concurrent.ExecutionContext.global)
-
+    // Sublist of records that could not be inserted
     val newFailures: List[EmitterJsonInput] = if (actions.nonEmpty) {
-      futureToTask(client.execute(bulk(actions)))
-        .retryingOnSomeErrors(exPredicate)
-        .map { bulkResponseResponse =>
-          bulkResponseResponse.result.items
-            .zip(records)
-            .flatMap {
-              case (bulkResponseItem, record) =>
-                handleResponse(bulkResponseItem.error.map(_.reason), record)
-            }
-            .toList
-        }
+      BulkSender
+        .futureToTask(client.execute(bulk(actions)))
+        .retryingOnSomeErrors(BulkSender.exPredicate)
+        .map(extractResult(records))
         .attempt
         .unsafeRunSync() match {
         case Right(s) => s
@@ -160,7 +127,7 @@ class ElasticsearchBulkSender(
       }
     } else Nil
 
-    log.info(s"Emitted ${successfulRecords.size - newFailures.size} records to Elasticseacrch")
+    log.info(s"Emitted ${esObjects.size - newFailures.size} records to Elasticseacrch")
     if (newFailures.nonEmpty) logHealth()
 
     val allFailures = oldFailures ++ newFailures
@@ -168,6 +135,34 @@ class ElasticsearchBulkSender(
     if (allFailures.nonEmpty) log.warn(s"Returning ${allFailures.size} records as failed")
 
     allFailures
+  }
+
+  /**
+   * Get sublist of records that could not be inserted
+   * @param records list of original records to send
+   * @param response response with successful and failed results
+   */
+  def extractResult(records: List[EmitterJsonInput])(
+    response: Response[BulkResponse]): List[EmitterJsonInput] =
+    response.result.items
+      .zip(records)
+      .flatMap {
+        case (bulkResponseItem, record) =>
+          handleResponse(bulkResponseItem.error.map(_.reason), record)
+      }
+      .toList
+
+  def composeObject(jsonRecord: JsonRecord): ElasticsearchObject = {
+    val index = jsonRecord.shard match {
+      case Some(shardSuffix) => documentIndex + shardSuffix
+      case None              => documentIndex
+    }
+    utils.extractEventId(jsonRecord.json) match {
+      case Some(id) =>
+        new ElasticsearchObject(index, documentType, id, compact(render(jsonRecord.json)))
+      case None =>
+        new ElasticsearchObject(index, documentType, compact(render(jsonRecord.json)))
+    }
   }
 
   /** Logs the cluster health */
@@ -194,8 +189,7 @@ class ElasticsearchBulkSender(
    */
   private def handleResponse(
     error: Option[String],
-    record: EmitterJsonInput
-  ): Option[EmitterJsonInput] = {
+    record: EmitterJsonInput): Option[EmitterJsonInput] = {
     error.foreach(e => log.error(s"Record [$record] failed with message $e"))
     error
       .flatMap { e =>
@@ -207,5 +201,31 @@ class ElasticsearchBulkSender(
             record._1.take(maxSizeWhenReportingFailure) ->
               s"Elasticsearch rejected record with message $e".invalidNel)
       }
+  }
+}
+
+object ElasticsearchBulkSender {
+  implicit val ioTimer: Timer[IO] =
+    IO.timer(concurrent.ExecutionContext.global)
+
+  def composeRequest(obj: ElasticsearchObject): IndexRequest =
+    indexInto(IndexAndType(obj.getIndex, obj.getType)).id(obj.getId).doc(obj.getSource)
+
+  def apply(config: StreamLoaderConfig, tracker: Option[Tracker]): ElasticsearchBulkSender = {
+    new ElasticsearchBulkSender(
+      config.elasticsearch.client.endpoint,
+      config.elasticsearch.client.port,
+      config.elasticsearch.client.ssl,
+      config.elasticsearch.aws.region,
+      config.elasticsearch.aws.signing,
+      config.elasticsearch.client.username,
+      config.elasticsearch.client.password,
+      config.elasticsearch.cluster.index,
+      config.elasticsearch.cluster.documentType,
+      config.elasticsearch.client.maxTimeout,
+      CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey),
+      tracker,
+      config.elasticsearch.client.maxRetries
+    )
   }
 }

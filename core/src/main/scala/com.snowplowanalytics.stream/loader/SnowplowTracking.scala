@@ -29,7 +29,7 @@ import snowplow.scalatracker.Tracker
 import snowplow.scalatracker.emitters.AsyncEmitter
 
 // This project
-import model._
+import Config._
 
 // Execution Context
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -93,24 +93,28 @@ object SnowplowTracking {
    *
    * @param tracker a Tracker instance
    */
-  def initializeSnowplowTracking(tracker: Tracker): Unit = {
-    trackApplicationInitialization(tracker)
+  def initializeSnowplowTracking(tracker: Option[Tracker]): Unit = {
+    tracker match {
+      case Some(t) =>
+        trackApplicationInitialization(t)
 
-    Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run(): Unit =
-        trackApplicationShutdown(tracker)
-    })
+        Runtime.getRuntime.addShutdownHook(new Thread() {
+          override def run(): Unit =
+            trackApplicationShutdown(t)
+        })
 
-    val heartbeatThread = new Thread {
-      override def run(): Unit = {
-        while (true) {
-          trackApplicationHeartbeat(tracker, HeartbeatInterval)
-          Thread.sleep(HeartbeatInterval)
+        val heartbeatThread = new Thread {
+          override def run(): Unit = {
+            while (true) {
+              trackApplicationHeartbeat(t, HeartbeatInterval)
+              Thread.sleep(HeartbeatInterval)
+            }
+          }
         }
-      }
-    }
 
-    heartbeatThread.start()
+        heartbeatThread.start()
+      case None => ()
+    }
   }
 
   /**

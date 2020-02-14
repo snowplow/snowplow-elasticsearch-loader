@@ -24,14 +24,13 @@ import com.amazonaws.services.kinesis.connectors.interfaces.IEmitter
 
 // Java
 import java.io.IOException
-import java.util.{List => List}
+import java.util.{List => JList}
 
 // cats
 import cats.data.Validated
 
 // Scala
 import scala.collection.mutable.ListBuffer
-import scala.collection.immutable.{List => SList}
 import scala.collection.JavaConverters._
 
 // This project
@@ -56,7 +55,7 @@ class Emitter(
 ) extends IEmitter[EmitterJsonInput] {
 
   @throws[IOException]
-  override def emit(buffer: UnmodifiableBuffer[EmitterJsonInput]): List[EmitterJsonInput] =
+  override def emit(buffer: UnmodifiableBuffer[EmitterJsonInput]): JList[EmitterJsonInput] =
     attemptEmit(buffer.getRecords.asScala.toList).asJava
 
   /**
@@ -68,11 +67,11 @@ class Emitter(
    * @return list of inputs which failed transformation or which the sink rejected
    */
   @throws[IOException]
-  private def attemptEmit(records: SList[EmitterJsonInput]): SList[EmitterJsonInput] = {
+  private def attemptEmit(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
     if (records.isEmpty) {
       null
     } else {
-      val (validRecords: SList[EmitterJsonInput], invalidRecords: SList[EmitterJsonInput]) =
+      val (validRecords: List[EmitterJsonInput], invalidRecords: List[EmitterJsonInput]) =
         records.partition(_._2.isValid)
       // Send all valid records to stdout / Sink and return those rejected by it
       val rejects = goodSink match {
@@ -96,12 +95,11 @@ class Emitter(
    * @param records List of records to send
    * @return List of inputs which the sink rejected
    */
-  def emit(records: SList[EmitterJsonInput]): SList[EmitterJsonInput] = {
-    val failures: SList[SList[EmitterJsonInput]] = for {
+  def emit(records: List[EmitterJsonInput]): List[EmitterJsonInput] =
+    for {
       recordSlice <- splitBuffer(records, bufferByteLimit, bufferRecordLimit)
-    } yield bulkSender.send(recordSlice)
-    failures.flatten
-  }
+      result      <- bulkSender.send(recordSlice)
+    } yield result
 
   /**
    * Splits the buffer into emittable chunks based on the
@@ -113,15 +111,15 @@ class Emitter(
    * @return a list of buffers
    */
   private def splitBuffer(
-    records: SList[EmitterJsonInput],
+    records: List[EmitterJsonInput],
     byteLimit: Long,
     recordLimit: Long
-  ): SList[SList[EmitterJsonInput]] = {
+  ): List[List[EmitterJsonInput]] = {
     // partition the records in
-    val remaining: ListBuffer[EmitterJsonInput]      = records.to[ListBuffer]
-    val buffers: ListBuffer[SList[EmitterJsonInput]] = new ListBuffer
-    val curBuffer: ListBuffer[EmitterJsonInput]      = new ListBuffer
-    var runningByteCount: Long                       = 0L
+    val remaining: ListBuffer[EmitterJsonInput]     = records.to[ListBuffer]
+    val buffers: ListBuffer[List[EmitterJsonInput]] = new ListBuffer
+    val curBuffer: ListBuffer[EmitterJsonInput]     = new ListBuffer
+    var runningByteCount: Long                      = 0L
 
     while (remaining.nonEmpty) {
       val record = remaining.remove(0)
@@ -162,7 +160,7 @@ class Emitter(
    *
    * @param records List of failed records
    */
-  override def fail(records: List[EmitterJsonInput]): Unit = {
+  override def fail(records: JList[EmitterJsonInput]): Unit = {
     records.asScala.foreach {
       case (r: String, Validated.Invalid(fs)) =>
         val output = BadRow(r, fs).toCompactJson

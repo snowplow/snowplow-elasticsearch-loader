@@ -28,11 +28,12 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.cats,
   Dependencies.Libraries.catsEffect,
   Dependencies.Libraries.catsRetry,
-  Dependencies.Libraries.scopt,
+  Dependencies.Libraries.decline,
   Dependencies.Libraries.snowplowTracker,
   Dependencies.Libraries.analyticsSDK,
   Dependencies.Libraries.awsSigner,
   Dependencies.Libraries.pureconfig,
+  Dependencies.Libraries.pureconfigEnum,
   // Scala (test only)
   Dependencies.Libraries.specs2
 )

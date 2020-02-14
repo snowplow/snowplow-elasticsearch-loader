@@ -32,20 +32,50 @@ import scala.util.Random
 // cats
 import cats.effect.IO
 import cats.Applicative
+import cats.syntax.functor._
 
-import retry.{PolicyDecision, RetryPolicy}
+import retry.{PolicyDecision, RetryDetails, RetryPolicy}
 
 // Snowplow
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
 
 trait BulkSender[A] {
+  import BulkSender._
+
+  // With previous versions of ES there were hard limits regarding the size of the payload (32768
+  // bytes) and since we don't really need the whole payload in those cases we cut it at 20k so that
+  // it can be sent to a bad sink. This way we don't have to compute the size of the byte
+  // representation of the utf-8 string.
+  val maxSizeWhenReportingFailure = 20000
+
   val tracker: Option[Tracker]
   val log: Logger
 
   val maxConnectionWaitTimeMs: Long
   val maxAttempts: Int
 
-  implicit def delayPolicy[M[_]: Applicative]: RetryPolicy[M] =
+  def send(records: List[A]): List[A]
+  def close(): Unit
+  def logHealth(): Unit
+
+  /**
+   * Terminate the application in a way the KCL cannot stop, prevents shutdown hooks from running
+   */
+  protected def forceShutdown(): Unit = {
+    tracker.foreach { t =>
+      // TODO: Instead of waiting a fixed time, use synchronous tracking or futures (when the tracker supports futures)
+      SnowplowTracking.trackApplicationShutdown(t)
+      sleep(5000)
+    }
+
+    Runtime.getRuntime.halt(1)
+  }
+}
+
+object BulkSender {
+  def delayPolicy[M[_]: Applicative](
+    maxAttempts: Int,
+    maxConnectionWaitTimeMs: Long): RetryPolicy[M] =
     RetryPolicy.lift { status =>
       if (status.retriesSoFar >= maxAttempts) PolicyDecision.GiveUp
       else {
@@ -59,39 +89,33 @@ trait BulkSender[A] {
       }
     }
 
-  // With previous versions of ES there were hard limits regarding the size of the payload (32768
-  // bytes) and since we don't really need the whole payload in those cases we cut it at 20k so that
-  // it can be sent to a bad sink. This way we don't have to compute the size of the byte
-  // representation of the utf-8 string.
-  val maxSizeWhenReportingFailure = 20000
-
-  def send(records: List[A]): List[A]
-  def close(): Unit
-  def logHealth(): Unit
-
-  /**
-   * Terminate the application in a way the KCL cannot stop, prevents shutdown hooks from running
-   */
-  protected def forceShutdown(): Unit = {
-    tracker foreach { t =>
-      // TODO: Instead of waiting a fixed time, use synchronous tracking or futures (when the tracker supports futures)
-      SnowplowTracking.trackApplicationShutdown(t)
-      sleep(5000)
+  def onError(log: Logger, tracker: Option[Tracker], connectionAttemptStartTime: Long)(
+    error: Throwable,
+    details: RetryDetails): IO[Unit] = {
+    val duration = (error, details) match {
+      case (error, RetryDetails.GivingUp(_, totalDelay)) =>
+        IO(log.error("Storage threw an unexpected exception. Giving up ", error)).as(totalDelay)
+      case (error, RetryDetails.WillDelayAndRetry(nextDelay, retriesSoFar, cumulativeDelay)) =>
+        IO(
+          log.error(
+            s"Storage threw an unexpected exception, after $retriesSoFar retries. Next attempt in $nextDelay ",
+            error)).as(cumulativeDelay)
     }
 
-    Runtime.getRuntime.halt(1)
+    duration.flatMap { delay =>
+      IO {
+        tracker.foreach { t =>
+          SnowplowTracking.sendFailureEvent(
+            t,
+            delay.toMillis,
+            0L,
+            connectionAttemptStartTime,
+            "elasticsearch",
+            error.getMessage)
+        }
+      }
+    }
   }
-
-  /**
-   * Period between retrying sending events to Storage
-   * @param sleepTime Length of time between tries
-   */
-  protected def sleep(sleepTime: Long): Unit =
-    try {
-      Thread.sleep(sleepTime)
-    } catch {
-      case _: InterruptedException => ()
-    }
 
   /** Predicate about whether or not we should retry sending stuff to ES */
   def exPredicate: Throwable => Boolean = {
@@ -101,4 +125,15 @@ trait BulkSender[A] {
 
   def futureToTask[T](f: => Future[T]): IO[T] =
     IO.fromFuture(IO.delay(f))
+
+  /**
+   * Period between retrying sending events to Storage
+   * @param sleepTime Length of time between tries
+   */
+  def sleep(sleepTime: Long): Unit =
+    try {
+      Thread.sleep(sleepTime)
+    } catch {
+      case _: InterruptedException => ()
+    }
 }

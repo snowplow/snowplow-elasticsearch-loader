@@ -40,7 +40,7 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
 import com.amazonaws.services.kinesis.metrics.interfaces.IMetricsFactory
 
 // This project
-import model._
+import com.snowplowanalytics.stream.loader.Config._
 
 /**
  * Boilerplate class for Kinesis Conenector
@@ -51,7 +51,7 @@ import model._
  */
 class KinesisSourceExecutor[A, B](
   streamLoaderConfig: StreamLoaderConfig,
-  kinesis: Kinesis,
+  kinesis: Queue.Kinesis,
   kinesisConnectorPipeline: IKinesisConnectorPipeline[A, B]
 ) extends KinesisConnectorExecutorBase[A, B] {
 
@@ -85,7 +85,7 @@ class KinesisSourceExecutor[A, B](
 
     timestamp
       .filter(_ => initialPosition == "AT_TIMESTAMP")
-      .map(cfg.withTimestampAtInitialPositionInStream(_))
+      .map(cfg.withTimestampAtInitialPositionInStream)
       .getOrElse(cfg.withInitialPositionInStream(kcc.INITIAL_POSITION_IN_STREAM))
   }
 
@@ -96,7 +96,9 @@ class KinesisSourceExecutor[A, B](
    * @param queue queue configuration
    * @return A KinesisConnectorConfiguration
    */
-  def convertConfig(config: StreamLoaderConfig, queue: Kinesis): KinesisConnectorConfiguration = {
+  def convertConfig(
+    config: StreamLoaderConfig,
+    queue: Queue.Kinesis): KinesisConnectorConfiguration = {
     val props = new Properties
     props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT, queue.endpoint)
     props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME, queue.appName.trim)
@@ -114,13 +116,13 @@ class KinesisSourceExecutor[A, B](
 
     props.setProperty(
       KinesisConnectorConfiguration.PROP_ELASTICSEARCH_ENDPOINT,
-      config.elasticsearch.get.client.endpoint)
+      config.elasticsearch.client.endpoint)
     props.setProperty(
       KinesisConnectorConfiguration.PROP_ELASTICSEARCH_CLUSTER_NAME,
-      config.elasticsearch.get.cluster.name)
+      config.elasticsearch.cluster.name)
     props.setProperty(
       KinesisConnectorConfiguration.PROP_ELASTICSEARCH_PORT,
-      config.elasticsearch.get.client.port.toString)
+      config.elasticsearch.client.port.toString)
 
     props.setProperty(
       KinesisConnectorConfiguration.PROP_BUFFER_BYTE_SIZE_LIMIT,
@@ -173,7 +175,7 @@ class KinesisSourceExecutor[A, B](
 
     worker = workerBuilder.build()
 
-    LOG.info(getClass().getSimpleName() + " worker created")
+    LOG.info(getClass.getSimpleName + " worker created")
   }
 
   def getKinesisConnectorRecordProcessorFactory =

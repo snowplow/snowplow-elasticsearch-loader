@@ -20,18 +20,23 @@ package com.snowplowanalytics
 package stream.loader
 
 // AWS Kinesis Connector libs
-import com.amazonaws.services.kinesis.connectors.interfaces.{IEmitter, IKinesisConnectorPipeline}
+import com.amazonaws.services.kinesis.connectors.interfaces.{
+  IEmitter,
+  IKinesisConnectorPipeline,
+  ITransformer
+}
 import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
 import com.amazonaws.services.kinesis.connectors.impl.{AllPassFilter, BasicMemoryBuffer}
 
 // This project
-import sinks._
-import model._
-import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, PlainJsonTransformer}
-import clients.BulkSender
-
-// Tracker
-import snowplow.scalatracker.Tracker
+import com.snowplowanalytics.stream.loader.sinks._
+import com.snowplowanalytics.stream.loader.Config._
+import com.snowplowanalytics.stream.loader.transformers.{
+  BadEventTransformer,
+  EnrichedEventJsonTransformer,
+  PlainJsonTransformer
+}
+import com.snowplowanalytics.stream.loader.clients.BulkSender
 
 /**
  * KinesisElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter
@@ -40,7 +45,6 @@ import snowplow.scalatracker.Tracker
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
  * @param bulkSender The Client to use
- * @param tracker a Tracker instance
  */
 class KinesisPipeline(
   streamType: StreamType,
@@ -51,23 +55,22 @@ class KinesisPipeline(
   shardDateFormat: Option[String],
   bufferRecordLimit: Long,
   bufferByteLimit: Long,
-  tracker: Option[Tracker] = None
 ) extends IKinesisConnectorPipeline[ValidatedJsonRecord, EmitterJsonInput] {
 
-  override def getEmitter(
-    configuration: KinesisConnectorConfiguration): IEmitter[EmitterJsonInput] =
+  def getEmitter(configuration: KinesisConnectorConfiguration): IEmitter[EmitterJsonInput] =
     new Emitter(bulkSender, goodSink, badSink, bufferRecordLimit, bufferByteLimit)
 
-  override def getBuffer(configuration: KinesisConnectorConfiguration) =
+  def getBuffer(configuration: KinesisConnectorConfiguration) =
     new BasicMemoryBuffer[ValidatedJsonRecord](configuration)
 
-  override def getTransformer(c: KinesisConnectorConfiguration) = streamType match {
-    case Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
-    case PlainJson => new PlainJsonTransformer
-    case Bad       => new BadEventTransformer
+  def getTransformer(
+    c: KinesisConnectorConfiguration): ITransformer[ValidatedJsonRecord, EmitterJsonInput] =
+    streamType match {
+      case StreamType.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
+      case StreamType.PlainJson => new PlainJsonTransformer
+      case StreamType.Bad       => new BadEventTransformer
+    }
 
-  }
-
-  override def getFilter(c: KinesisConnectorConfiguration) =
+  def getFilter(c: KinesisConnectorConfiguration) =
     new AllPassFilter[ValidatedJsonRecord]()
 }

@@ -33,7 +33,7 @@ object Dependencies {
     val cats             = "1.6.1"
     val catsEffect       = "1.3.1"
     val catsRetry        = "0.2.5"
-    val scopt            = "3.7.0"
+    val decline          = "0.6.2"
     val snowplowTracker  = "0.5.0"
     val analyticsSDK     = "0.3.0"
     val awsSigner        = "0.5.0"
@@ -62,11 +62,12 @@ object Dependencies {
     val cats             = "org.typelevel"                    %% "cats-core"                    % V.cats
     val catsEffect       = "org.typelevel"                    %% "cats-effect"                  % V.catsEffect
     val catsRetry        = "com.github.cb372"                 %% "cats-retry-cats-effect"       % V.catsRetry
-    val scopt            = "com.github.scopt"                 %% "scopt"                        % V.scopt
+    val decline          = "com.monovore"                     %% "decline"                      % V.decline
     val snowplowTracker  = "com.snowplowanalytics"            %% "snowplow-scala-tracker"       % V.snowplowTracker
     val analyticsSDK     = "com.snowplowanalytics"            %% "snowplow-scala-analytics-sdk" % V.analyticsSDK
     val awsSigner        = "io.ticofab"                       %% "aws-request-signer"           % V.awsSigner
     val pureconfig       = "com.github.pureconfig"            %% "pureconfig"                   % V.pureconfig
+    val pureconfigEnum   = "com.github.pureconfig"            %% "pureconfig-enumeratum"        % V.pureconfig
     val elastic4sHttp    = "com.sksamuel.elastic4s"           %% "elastic4s-http"               % V.elastic4s
     // Scala (test only)
     val specs2           = "org.specs2"                       %% "specs2-core"                  % V.specs2    % Test
