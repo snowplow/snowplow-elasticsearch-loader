@@ -32,8 +32,9 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 // JSON Schema
 import com.github.fge.jsonschema.core.report.{LogLevel, ProcessingMessage}
 
-case class BadRow(line: String, errors: NonEmptyList[String]) {
-  import BadRow._
+/** ES Loader rad row that could not be transformed by StdinTransformer */
+case class EsLoaderBadRow(line: String, errors: NonEmptyList[String]) {
+  import EsLoaderBadRow._
 
   private val tstamp = System.currentTimeMillis()
   // An ISO valid timestamp formatter
@@ -50,7 +51,7 @@ case class BadRow(line: String, errors: NonEmptyList[String]) {
   )
 }
 
-object BadRow {
+object EsLoaderBadRow {
   private def toProcessingMessage(s: String): ProcessingMessage =
     new ProcessingMessage()
       .setLogLevel(LogLevel.ERROR)

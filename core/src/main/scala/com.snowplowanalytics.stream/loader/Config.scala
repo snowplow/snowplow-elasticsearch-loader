@@ -42,6 +42,7 @@ object Config {
   object StreamType extends Enum[StreamType] {
     case object Good      extends StreamType
     case object Bad       extends StreamType
+    case object BadSd     extends StreamType
     case object PlainJson extends StreamType
 
     val values = findValues

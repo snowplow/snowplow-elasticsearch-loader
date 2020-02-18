@@ -36,11 +36,8 @@ import cats.syntax.validated._
 
 /**
  * Class to convert bad events to ElasticsearchObjects
- *
  */
-class BadEventTransformer
-    extends ITransformer[ValidatedJsonRecord, EmitterJsonInput]
-    with StdinTransformer {
+class BadEventTransformer extends IJsonTransformer {
 
   /**
    * Convert an Amazon Kinesis record to a JSON string

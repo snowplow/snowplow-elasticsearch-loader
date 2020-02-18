@@ -24,7 +24,6 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.UUID
 
 // Amazon
-import com.amazonaws.services.kinesis.connectors.interfaces.ITransformer
 import com.amazonaws.services.kinesis.model.Record
 
 // Scala
@@ -39,9 +38,7 @@ import cats.syntax.validated._
  * Class to convert plain JSON to EmitterInputs
  *
  */
-class PlainJsonTransformer
-    extends ITransformer[ValidatedJsonRecord, EmitterJsonInput]
-    with StdinTransformer {
+class PlainJsonTransformer extends IJsonTransformer {
 
   /**
    * Convert an Amazon Kinesis record to a json string

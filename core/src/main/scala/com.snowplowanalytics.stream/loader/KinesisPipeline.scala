@@ -21,6 +21,7 @@ package stream.loader
 
 // AWS Kinesis Connector libs
 import com.amazonaws.services.kinesis.connectors.interfaces.{
+  IBuffer,
   IEmitter,
   IKinesisConnectorPipeline,
   ITransformer
@@ -33,13 +34,15 @@ import com.snowplowanalytics.stream.loader.sinks._
 import com.snowplowanalytics.stream.loader.Config._
 import com.snowplowanalytics.stream.loader.transformers.{
   BadEventTransformer,
+  BadSchemaedEventTransformer,
   EnrichedEventJsonTransformer,
   PlainJsonTransformer
 }
 import com.snowplowanalytics.stream.loader.clients.BulkSender
 
 /**
- * KinesisElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter
+ * KinesisElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter,
+ * orchestrating the whole records flow
  *
  * @param streamType the type of stream, good, bad or plain-json
  * @param goodSink the configured GoodSink
@@ -60,7 +63,7 @@ class KinesisPipeline(
   def getEmitter(configuration: KinesisConnectorConfiguration): IEmitter[EmitterJsonInput] =
     new Emitter(bulkSender, goodSink, badSink, bufferRecordLimit, bufferByteLimit)
 
-  def getBuffer(configuration: KinesisConnectorConfiguration) =
+  def getBuffer(configuration: KinesisConnectorConfiguration): IBuffer[ValidatedJsonRecord] =
     new BasicMemoryBuffer[ValidatedJsonRecord](configuration)
 
   def getTransformer(
@@ -69,6 +72,7 @@ class KinesisPipeline(
       case StreamType.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
       case StreamType.PlainJson => new PlainJsonTransformer
       case StreamType.Bad       => new BadEventTransformer
+      case StreamType.BadSd     => new BadSchemaedEventTransformer
     }
 
   def getFilter(c: KinesisConnectorConfiguration) =

@@ -14,12 +14,13 @@ package com.snowplowanalytics.stream.loader.executors
 
 import cats.syntax.validated._
 
-import com.snowplowanalytics.stream.loader.{BadRow, EmitterJsonInput}
+import com.snowplowanalytics.stream.loader.{EmitterJsonInput, EsLoaderBadRow}
 import com.snowplowanalytics.stream.loader.Config.{StreamLoaderConfig, StreamType}
 import com.snowplowanalytics.stream.loader.clients.BulkSender
 import com.snowplowanalytics.stream.loader.sinks.ISink
 import com.snowplowanalytics.stream.loader.transformers.{
   BadEventTransformer,
+  BadSchemaedEventTransformer,
   EnrichedEventJsonTransformer,
   PlainJsonTransformer
 }
@@ -38,12 +39,13 @@ class StdinExecutor(
         config.elasticsearch.client.shardDateFormat)
     case StreamType.PlainJson => new PlainJsonTransformer
     case StreamType.Bad       => new BadEventTransformer
+    case StreamType.BadSd     => new BadSchemaedEventTransformer
   }
 
   def run = for (ln <- scala.io.Source.stdin.getLines) {
     val (line, result) = transformer.consumeLine(ln)
     result.bimap(
-      f => badSink.store(BadRow(line, f).toCompactJson, None, false),
+      f => badSink.store(EsLoaderBadRow(line, f).toCompactJson, None, false),
       s =>
         goodSink match {
           case Some(gs) => gs.store(s.json.toString, None, true)

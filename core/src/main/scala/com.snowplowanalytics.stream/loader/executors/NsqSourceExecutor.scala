@@ -42,7 +42,12 @@ import org.slf4j.LoggerFactory
 import sinks._
 import clients._
 import com.snowplowanalytics.stream.loader.Config._
-import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, PlainJsonTransformer}
+import transformers.{
+  BadEventTransformer,
+  BadSchemaedEventTransformer,
+  EnrichedEventJsonTransformer,
+  PlainJsonTransformer
+}
 
 /**
  * NSQSource executor
@@ -81,6 +86,7 @@ class NsqSourceExecutor(
     case StreamType.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
     case StreamType.PlainJson => new PlainJsonTransformer
     case StreamType.Bad       => new BadEventTransformer
+    case StreamType.BadSd     => new BadSchemaedEventTransformer
   }
 
   /**
