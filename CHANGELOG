@@ -1,3 +1,18 @@
+Version 0.12.0 (2020-02-25)
+---------------------------
+Add DockerHub credentials to .travis.yml (#145)
+Add Bintray Docker registry credentials to .travis.yml (#146)
+Build Docker image (#144)
+Add support for self-describing bad rows (#136)
+Add badges to README (#73)
+Bump snowplow-scala-analytics-sdk to 1.0.0 (#142)
+Fix documentType key in config.hocon.example (#141)
+Replace scopt by decline (#140)
+Bump Scala to 2.12.10 (#135)
+Bump sbt to 1.3.8 (#134)
+Extend copyright notice to 2020 (#139)
+Replace scalaz with cats (#130)
+
 Version 0.11.0 (2020-02-12)
 ---------------------------
 Sharded indices by date (#82)
