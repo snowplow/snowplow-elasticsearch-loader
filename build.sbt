@@ -21,21 +21,23 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.kinesisConnector,
   Dependencies.Libraries.validator,
   Dependencies.Libraries.nsqClient,
-  Dependencies.Libraries.paranamer,
   Dependencies.Libraries.jacksonDatabind,
   Dependencies.Libraries.jacksonCbor,
   // Scala
   Dependencies.Libraries.cats,
   Dependencies.Libraries.catsEffect,
   Dependencies.Libraries.catsRetry,
+  Dependencies.Libraries.circeOptics,
   Dependencies.Libraries.decline,
+  Dependencies.Libraries.snowplowBadrows,
   Dependencies.Libraries.snowplowTracker,
   Dependencies.Libraries.analyticsSDK,
   Dependencies.Libraries.awsSigner,
   Dependencies.Libraries.pureconfig,
   Dependencies.Libraries.pureconfigEnum,
   // Scala (test only)
-  Dependencies.Libraries.specs2
+  Dependencies.Libraries.specs2,
+  Dependencies.Libraries.circeLiteral
 )
 
 lazy val buildSettings = Seq(

@@ -20,27 +20,30 @@ package com.snowplowanalytics.stream.loader
 package transformers
 
 // Amazon
-import com.amazonaws.services.kinesis.connectors.interfaces.ITransformer
 import com.amazonaws.services.kinesis.model.Record
 
 // Java
 import java.nio.charset.StandardCharsets.UTF_8
 
-// Scala
-import org.json4s.JsonAST.JObject
 import org.json4s._
+import org.json4s.JsonAST.JObject
+import org.json4s.jackson.parseJson
+
+import io.circe.{Json, JsonObject}
+import io.circe.parser.parse
+import io.circe.syntax._
+import io.circe.optics.JsonPath.root
 
 import cats.syntax.validated._
 
-// TODO consider giving BadEventTransformer its own types
+import com.snowplowanalytics.iglu.core.SelfDescribingData
+import com.snowplowanalytics.iglu.core.circe.instances._
 
 /**
  * Class to convert bad events to ElasticsearchObjects
- *
  */
-class BadEventTransformer
-    extends ITransformer[ValidatedJsonRecord, EmitterJsonInput]
-    with StdinTransformer {
+class BadEventTransformer extends IJsonTransformer {
+  import BadEventTransformer._
 
   /**
    * Convert an Amazon Kinesis record to a JSON string
@@ -50,7 +53,8 @@ class BadEventTransformer
    */
   override def toClass(record: Record): ValidatedJsonRecord = {
     val recordString = new String(record.getData.array, UTF_8)
-    (recordString, JsonRecord(JObject(JField("source", JString(recordString))), None).valid)
+    val badRowJson   = handleIgluJson(recordString)
+    (recordString, JsonRecord(badRowJson, None).valid)
   }
 
   /**
@@ -60,5 +64,62 @@ class BadEventTransformer
    * @return Line as an EmitterJsonInput
    */
   def consumeLine(line: String): EmitterJsonInput =
-    fromClass(line -> JsonRecord(JObject(JField("source", JString(line))), None).valid)
+    fromClass(line -> JsonRecord(handleIgluJson(line), None).valid)
+
+}
+
+object BadEventTransformer {
+
+  /** All transformations to avoid union types within `iglu:com.snowplowanalytics.snowplow.badrows` */
+  val fixes: List[Json => Json] = List(
+    root.obj.modify(renameField("failure")),
+    root.obj.modify(renameField("payload")),
+    root.payload.raw.obj.modify(serializeField("parameters")),
+    root.failure.obj.modify(renameField("error")),
+    root.failure.obj.modify(renameField("message")),
+    root.failure.messages.each.obj.modify(renameField("error")),
+    root.failure.messages.each.obj.modify(serializeField("expectedMapping")),
+    root.failure.messages.each.obj.modify(serializeField("json")),
+    root.failure.messages.each.message.obj.modify(renameField("error")),
+    root.failure_list.each.obj.modify(renameField("error")),
+    root.failure_list.each.obj.modify(serializeField("value"))
+  )
+
+  /** Attempt to handle self-describing JSON and fix bad rows union types */
+  def handleIgluJson(row: String): JValue =
+    parse(row).flatMap(_.as[SelfDescribingData[Json]]) match {
+      case Right(SelfDescribingData(schema, data)) =>
+        val transformed = SelfDescribingData(schema, transform(data)).asJson
+        parseJson(transformed.noSpaces)
+      case Left(_) =>
+        JObject(JField("source", JString(row)))
+    }
+
+  /**
+   * Apply every known `BadRow` fix to a resulting JSON
+   * @param badRow BadRow payload *without* self-describing meta
+   * @return fixed JSON without union types
+   */
+  def transform(badRow: Json): Json =
+    fixes.foldLeft(badRow) { (data, fix) =>
+      fix.apply(data)
+    }
+
+  /** Append a type suffix to a key */
+  def renameField(field: String)(jsonObject: JsonObject): JsonObject =
+    jsonObject(field) match {
+      case Some(value) if value.isString =>
+        jsonObject.remove(field).add(field ++ "_str", value)
+      case Some(value) if value.isArray =>
+        jsonObject.remove(field).add(field ++ "_list", value)
+      case _ => jsonObject
+    }
+
+  /** Stringify JSON value to avoid potential index explosion */
+  def serializeField(field: String)(jsonObject: JsonObject): JsonObject =
+    jsonObject(field) match {
+      case Some(value) if !value.isString =>
+        jsonObject.add(field, Json.fromString(value.noSpaces))
+      case _ => jsonObject
+    }
 }
