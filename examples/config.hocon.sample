@@ -157,7 +157,7 @@ elasticsearch {
   cluster {
     name = "{{elasticsearchClusterName}}"
     index = "{{elasticsearchIndex}}"
-    clusterType = "{{elasticsearchType}}"
+    documentType = "{{elasticsearchType}}"
   }
 }
 
