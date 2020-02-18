@@ -26,23 +26,23 @@ import com.amazonaws.services.kinesis.model.Record
 // Java
 import java.nio.charset.StandardCharsets.UTF_8
 import java.text.SimpleDateFormat
+
 import org.joda.time.{DateTime, DateTimeZone}
 
-// Scala
 import org.json4s.JsonAST.JString
+import org.json4s.jackson.parseJson
 
 // cats
-import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.{Validated, ValidatedNel}
 import cats.syntax.validated._
 import cats.syntax.option._
 
-// Snowplow
-import com.snowplowanalytics.snowplow.analytics.scalasdk.json.EventTransformer._
+import io.circe.syntax._
 
-/**
- * Class to convert successfully enriched events to EmitterInputs
- *
- */
+// Snowplow
+import com.snowplowanalytics.snowplow.analytics.scalasdk.Event
+
+/** Class to convert successfully enriched events to EmitterInputs */
 class EnrichedEventJsonTransformer(shardDateField: Option[String], shardDateFormat: Option[String])
     extends ITransformer[ValidatedJsonRecord, EmitterJsonInput]
     with StdinTransformer {
@@ -73,10 +73,10 @@ class EnrichedEventJsonTransformer(shardDateField: Option[String], shardDateForm
    * @return the parsed JsonRecord or a list of failures
    */
   private def toJsonRecord(record: String): ValidatedNel[String, JsonRecord] =
-    jsonifyGoodEvent(record.split("\t", -1)) match {
-      case Left(h :: t) => NonEmptyList.of(h, t: _*).invalid
-      case Left(Nil)    => "Empty list of failures but reported failure, should not happen".invalidNel
-      case Right((_, json)) =>
+    Event.parse(record) match {
+      case Validated.Invalid(error) => error.asJson.noSpaces.invalidNel
+      case Validated.Valid(event) =>
+        val json = parseJson(event.toJson(true).noSpaces)
         dateFormatter match {
           case Some(formatter) =>
             val shard = json \ shardingField match {
