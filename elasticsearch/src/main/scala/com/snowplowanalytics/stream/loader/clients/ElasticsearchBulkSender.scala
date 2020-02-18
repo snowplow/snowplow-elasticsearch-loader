@@ -50,6 +50,9 @@ import com.snowplowanalytics.snowplow.scalatracker.Tracker
 
 import com.snowplowanalytics.stream.loader.Config.StreamLoaderConfig
 
+/**
+ * Main ES component responsible for inserting data into a specific index,
+ * data is passed here by [[Emitter]] */
 class ElasticsearchBulkSender(
   endpoint: String,
   port: Int,

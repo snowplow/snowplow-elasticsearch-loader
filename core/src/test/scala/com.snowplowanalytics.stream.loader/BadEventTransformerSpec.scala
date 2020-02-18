@@ -18,6 +18,8 @@ import org.json4s.jackson.JsonMethods._
 // cats
 import cats.syntax.validated._
 
+import io.circe.literal._
+
 // Specs2
 import org.specs2.mutable.Specification
 
@@ -32,7 +34,9 @@ class BadEventTransformerSpec extends Specification {
   val documentIndex = "snowplow"
   val documentType  = "enriched"
 
-  "The from method" should {
+  val processor = json"""{"artifact": "snowplow-rdb-shredder", "version": "0.11.0"}"""
+
+  "fromClass" should {
     "successfully convert a bad event JSON to an ElasticsearchObject" in {
       val input =
         """{"line":"failed","errors":["Record does not match Thrift SnowplowRawEvent schema"]}"""
@@ -43,6 +47,15 @@ class BadEventTransformerSpec extends Specification {
           render(
             result._2.getOrElse(throw new RuntimeException("Json failed transformation")).json))
       json.toString must_== input
+    }
+  }
+
+  "transform" should {
+    "fix payload string" >> {
+      val input    = json"""{"processor": $processor, "failure": {}, "payload": "foo"}"""
+      val expected = json"""{"processor": $processor, "failure": {}, "payload_str": "foo"}"""
+      val result   = transformers.BadEventTransformer.transform(input)
+      result must beEqualTo(expected)
     }
   }
 

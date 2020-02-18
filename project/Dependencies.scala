@@ -25,14 +25,13 @@ object Dependencies {
     val elasticsearch    = "6.3.2"
     val nsqClient        = "1.1.0-rc1"
     val jackson          = "2.9.6"
-    // TODO: consider removing paranamer version override when upgrading other libaries
-    val paranamer        = "2.8"   // Jackson 2.9.6 uses version 2.8 of paranamer internally
-                                   // but there is json4s-core_2.12 3.2.11 that overrides it back to 2.6
 
     // Scala
     val cats             = "1.6.1"
     val catsEffect       = "1.3.1"
     val catsRetry        = "0.2.5"
+    val circe            = "0.11.2"
+    val circeOptics      = "0.11.0"
     val decline          = "0.6.2"
     val snowplowTracker  = "0.5.0"
     val analyticsSDK     = "1.0.0"
@@ -55,13 +54,13 @@ object Dependencies {
     val validator        = "com.github.fge"                   %  "json-schema-validator"        % V.validator
     val elasticsearch    = "org.elasticsearch"                %  "elasticsearch"                % V.elasticsearch
     val nsqClient        = "com.snowplowanalytics"            %  "nsq-java-client_2.10"         % V.nsqClient
-    val paranamer        = "com.thoughtworks.paranamer"       %  "paranamer"                    % V.paranamer
     val jacksonCbor      = "com.fasterxml.jackson.dataformat" %  "jackson-dataformat-cbor"      % V.jackson
     val jacksonDatabind  = "com.fasterxml.jackson.core"       %  "jackson-databind"             % V.jackson
     // Scala
     val cats             = "org.typelevel"                    %% "cats-core"                    % V.cats
     val catsEffect       = "org.typelevel"                    %% "cats-effect"                  % V.catsEffect
     val catsRetry        = "com.github.cb372"                 %% "cats-retry-cats-effect"       % V.catsRetry
+    val circeOptics      = "io.circe"                         %% "circe-optics"                 % V.circeOptics
     val decline          = "com.monovore"                     %% "decline"                      % V.decline
     val snowplowTracker  = "com.snowplowanalytics"            %% "snowplow-scala-tracker"       % V.snowplowTracker
     val analyticsSDK     = "com.snowplowanalytics"            %% "snowplow-scala-analytics-sdk" % V.analyticsSDK
@@ -70,6 +69,7 @@ object Dependencies {
     val pureconfigEnum   = "com.github.pureconfig"            %% "pureconfig-enumeratum"        % V.pureconfig
     val elastic4sHttp    = "com.sksamuel.elastic4s"           %% "elastic4s-http"               % V.elastic4s
     // Scala (test only)
+    val circeLiteral     = "io.circe"                         %% "circe-literal"                % V.circe     % Test
     val specs2           = "org.specs2"                       %% "specs2-core"                  % V.specs2    % Test
     val elastic4sTest    = "com.sksamuel.elastic4s"           %% "elastic4s-embedded"           % V.elastic4s % Test
   }
