@@ -15,6 +15,10 @@
 import sbt._
 import Keys._
 
+import com.typesafe.sbt.packager.Keys.{daemonUser, maintainer, packageName}
+import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport._
+import com.typesafe.sbt.packager.universal.UniversalPlugin.autoImport._
+
 object BuildSettings {
 
   lazy val compilerOptions = Seq(
@@ -36,6 +40,17 @@ object BuildSettings {
   lazy val javaCompilerOptions = Seq(
     "-source", "1.8",
     "-target", "1.8"
+  )
+
+  lazy val dockerSettings = Seq(
+    Universal / sourceDirectory := new java.io.File((baseDirectory in LocalRootProject).value, "docker"),
+    Docker / packageName := "elasticsearch-loader",
+    dockerRepository := Some("snowplow-docker-registry.bintray.io"),
+    dockerUsername := Some("snowplow"),
+    dockerBaseImage := "snowplow-docker-registry.bintray.io/snowplow/base-debian:0.2.0",
+    Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>",
+    Docker / daemonUser := "snowplow",
+    dockerCmd := Seq("--help")
   )
 
   // Makes our SBT app settings available from within the app

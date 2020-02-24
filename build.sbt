@@ -71,6 +71,8 @@ lazy val core = project
 lazy val elasticsearch = project
   .settings(moduleName := "snowplow-elasticsearch-loader")
   .settings(allSettings)
+  .enablePlugins(JavaAppPackaging)
+  .settings(BuildSettings.dockerSettings)
   .settings(
     libraryDependencies ++= Seq(
       Dependencies.Libraries.elastic4sHttp,
