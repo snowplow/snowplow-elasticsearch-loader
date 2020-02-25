@@ -7,7 +7,7 @@ jdk:
 services:
 - docker
 before_deploy:
-- pip install --user release-manager==0.2.0
+- pip install --user release-manager==0.4.1
 - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
 deploy:
 - provider: script
