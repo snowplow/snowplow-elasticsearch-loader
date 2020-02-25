@@ -11,7 +11,7 @@ before_deploy:
 - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
 deploy:
 - provider: script
-  script: release-manager --config .release.yml --make-artifact --upload-artifact --check-version && sbt "project elasticsearch" docker:publish
+  script: sbt "project elasticsearch" docker:publish
   skip_cleanup: true
   on:
     tags: true
