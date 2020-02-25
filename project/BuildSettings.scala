@@ -45,6 +45,7 @@ object BuildSettings {
 
   lazy val dockerSettings = Seq(
     Universal / sourceDirectory := new java.io.File((baseDirectory in LocalRootProject).value, "docker"),
+    dockerRepository := Some("snowplow-docker-registry.bintray.io"),
     dockerUsername := Some("snowplow"),
     dockerBaseImage := "snowplow-docker-registry.bintray.io/snowplow/base-debian:0.2.0",
     Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>",

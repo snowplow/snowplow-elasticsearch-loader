@@ -8,7 +8,7 @@ services:
 - docker
 before_deploy:
 - pip install --user release-manager==0.4.1
-- docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+- ./.travis/docker_auth.sh
 deploy:
 - provider: script
   script: sbt "project elasticsearch" docker:publish
