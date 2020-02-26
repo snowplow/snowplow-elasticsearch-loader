@@ -1,5 +1,9 @@
 # Snowplow Elasticsearch Loader
 
+[![Build Status][travis-image]][travis]
+[![Release][release-image]][releases]
+[![License][license-image]][license]
+
 ## Introduction
 
 The Snowplow Elasticsearch Loader consumes Snowplow enriched events or failed events from an
@@ -70,6 +74,16 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+
+[travis-image]: https://travis-ci.org/snowplow/snowplow-elasticsearch-loader.png?branch=master
+[travis]: http://travis-ci.org/snowplow/snowplow-elasticsearch-loader
+
+[release-image]: https://api.bintray.com/packages/snowplow/registry/snowplow%3Aelasticsearch-loader/images/download.svg
+[releases]: https://bintray.com/snowplow/registry/snowplow%3Aelasticsearch-loader/_latestVersion
+
+[license-image]: http://img.shields.io/badge/license-Apache--2-blue.svg?style=flat
+[license]: http://www.apache.org/licenses/LICENSE
 
 [kinesis]: http://aws.amazon.com/kinesis/
 [nsq]: http://nsq.io
