@@ -36,8 +36,8 @@ import com.sksamuel.elastic4s.http.bulk.BulkResponse
 
 import org.apache.http.{Header, HttpHost}
 import org.apache.http.message.BasicHeader
-import org.json4s.jackson.JsonMethods._
 
+import cats.Id
 import cats.effect.{IO, Timer}
 import cats.data.Validated
 import cats.syntax.validated._
@@ -65,7 +65,7 @@ class ElasticsearchBulkSender(
   documentType: String,
   val maxConnectionWaitTimeMs: Long,
   credentialsProvider: AWSCredentialsProvider,
-  val tracker: Option[Tracker],
+  val tracker: Option[Tracker[Id]],
   val maxAttempts: Int = 6
 ) extends BulkSender[EmitterJsonInput] {
   require(maxAttempts > 0)
@@ -162,9 +162,9 @@ class ElasticsearchBulkSender(
     }
     utils.extractEventId(jsonRecord.json) match {
       case Some(id) =>
-        new ElasticsearchObject(index, documentType, id, compact(render(jsonRecord.json)))
+        new ElasticsearchObject(index, documentType, id, jsonRecord.json.noSpaces)
       case None =>
-        new ElasticsearchObject(index, documentType, compact(render(jsonRecord.json)))
+        new ElasticsearchObject(index, documentType, jsonRecord.json.noSpaces)
     }
   }
 
@@ -214,7 +214,7 @@ object ElasticsearchBulkSender {
   def composeRequest(obj: ElasticsearchObject): IndexRequest =
     indexInto(IndexAndType(obj.getIndex, obj.getType)).id(obj.getId).doc(obj.getSource)
 
-  def apply(config: StreamLoaderConfig, tracker: Option[Tracker]): ElasticsearchBulkSender = {
+  def apply(config: StreamLoaderConfig, tracker: Option[Tracker[Id]]): ElasticsearchBulkSender = {
     new ElasticsearchBulkSender(
       config.elasticsearch.client.endpoint,
       config.elasticsearch.client.port,

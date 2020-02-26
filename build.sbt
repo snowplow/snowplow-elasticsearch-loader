@@ -19,10 +19,7 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.log4jCore,
   Dependencies.Libraries.kinesisClient,
   Dependencies.Libraries.kinesisConnector,
-  Dependencies.Libraries.validator,
   Dependencies.Libraries.nsqClient,
-  Dependencies.Libraries.jacksonDatabind,
-  Dependencies.Libraries.jacksonCbor,
   // Scala
   Dependencies.Libraries.cats,
   Dependencies.Libraries.catsEffect,
@@ -30,6 +27,7 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.circeOptics,
   Dependencies.Libraries.decline,
   Dependencies.Libraries.snowplowTracker,
+  Dependencies.Libraries.snowplowTrackerId,
   Dependencies.Libraries.analyticsSDK,
   Dependencies.Libraries.awsSigner,
   Dependencies.Libraries.pureconfig,

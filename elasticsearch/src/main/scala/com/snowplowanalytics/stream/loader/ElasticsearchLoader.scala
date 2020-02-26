@@ -18,6 +18,8 @@
  */
 package com.snowplowanalytics.stream.loader
 
+import cats.Id
+
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
 import com.snowplowanalytics.stream.loader.sinks.ISink
 import com.snowplowanalytics.stream.loader.clients.{BulkSender, ElasticsearchBulkSender}
@@ -63,7 +65,7 @@ object ElasticsearchLoader {
     sender: BulkSender[EmitterJsonInput],
     goodSink: Option[ISink],
     badSink: ISink,
-    tracker: Option[Tracker]): Runnable = {
+    tracker: Option[Tracker[Id]]): Runnable = {
     (config.source, config.queue) match {
       // Read records from Kinesis
       case (Source.Kinesis, queue: Queue.Kinesis) =>

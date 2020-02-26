@@ -16,17 +16,24 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-package com.snowplowanalytics
-package stream.loader
+package com.snowplowanalytics.stream.loader
 
-// json4s
-import org.json4s._
-import org.json4s.JsonDSL._
+import java.util.UUID
+
+import cats.Id
+import cats.data.NonEmptyList
+import cats.effect.Clock
+
+import scala.concurrent.duration.{MILLISECONDS, NANOSECONDS, TimeUnit}
 
 // Snowplow
-import iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
-import snowplow.scalatracker.Tracker
-import snowplow.scalatracker.emitters.AsyncEmitter
+import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
+
+import com.snowplowanalytics.snowplow.scalatracker.{Tracker, UUIDProvider}
+import com.snowplowanalytics.snowplow.scalatracker.emitters.id.AsyncEmitter
+
+import io.circe.Json
+import io.circe.syntax._
 
 // This project
 import Config._
@@ -41,19 +48,34 @@ object SnowplowTracking {
 
   private val HeartbeatInterval = 300000L
 
+  implicit val uuidProviderId: UUIDProvider[Id] = new UUIDProvider[Id] {
+    override def generateUUID: Id[UUID] = UUID.randomUUID()
+  }
+
+  implicit val clockId: Clock[Id] = new Clock[Id] {
+    override def realTime(unit: TimeUnit): Id[Long] =
+      unit.convert(System.currentTimeMillis(), MILLISECONDS)
+
+    override def monotonic(unit: TimeUnit): Id[Long] =
+      unit.convert(System.nanoTime(), NANOSECONDS)
+  }
+
   /**
    * Configure a Tracker based on the configuration HOCON
    *
    * @param config The "monitoring" section of the HOCON
    * @return a new tracker instance
    */
-  def initializeTracker(config: SnowplowMonitoringConfig): Tracker = {
+  def initializeTracker(config: SnowplowMonitoringConfig): Tracker[Id] = {
     val endpoint = config.collectorUri
     val port     = config.collectorPort
     val appName  = config.appId
     val emitter =
       AsyncEmitter.createAndStart(endpoint, Some(port), config.ssl.getOrElse(false), None)
-    new Tracker(List(emitter), com.snowplowanalytics.stream.loader.generated.Settings.name, appName)
+    new Tracker[Id](
+      NonEmptyList.of(emitter),
+      com.snowplowanalytics.stream.loader.generated.Settings.name,
+      appName)
   }
 
   /**
@@ -66,7 +88,7 @@ object SnowplowTracking {
    * @param message What went wrong
    */
   def sendFailureEvent(
-    tracker: Tracker,
+    tracker: Tracker[Id],
     lastRetryPeriod: Long,
     failureCount: Long,
     initialFailureTime: Long,
@@ -80,11 +102,13 @@ object SnowplowTracking {
           "storage_write_failed",
           "jsonschema",
           SchemaVer.Full(1, 0, 0)),
-        ("storage"              -> storageType) ~
-          ("failureCount"       -> failureCount) ~
-          ("initialFailureTime" -> initialFailureTime) ~
-          ("lastRetryPeriod"    -> lastRetryPeriod) ~
-          ("message"            -> message)
+        Json.obj(
+          "storage"            -> storageType.asJson,
+          "failureCount"       -> failureCount.asJson,
+          "initialFailureTime" -> initialFailureTime.asJson,
+          "lastRetryPeriod"    -> lastRetryPeriod.asJson,
+          "message"            -> message.asJson
+        )
       ))
   }
 
@@ -93,10 +117,10 @@ object SnowplowTracking {
    *
    * @param tracker a Tracker instance
    */
-  def initializeSnowplowTracking(tracker: Option[Tracker]): Unit = {
+  def initializeSnowplowTracking(tracker: Option[Tracker[Id]]): Unit = {
     tracker match {
       case Some(t) =>
-        trackApplicationInitialization(t)
+        trackApplicationInitialization[Id](t)
 
         Runtime.getRuntime.addShutdownHook(new Thread() {
           override def run(): Unit =
@@ -122,7 +146,7 @@ object SnowplowTracking {
    *
    * @param tracker a Tracker instance
    */
-  private def trackApplicationInitialization(tracker: Tracker): Unit = {
+  private def trackApplicationInitialization[F[_]](tracker: Tracker[F]): Unit = {
     tracker.trackSelfDescribingEvent(
       SelfDescribingData(
         SchemaKey(
@@ -130,7 +154,7 @@ object SnowplowTracking {
           "app_initialized",
           "jsonschema",
           SchemaVer.Full(1, 0, 0)),
-        generated.Settings.name
+        generated.Settings.name.asJson
       ))
   }
 
@@ -139,7 +163,7 @@ object SnowplowTracking {
    *
    * @param tracker a Tracker instance
    */
-  def trackApplicationShutdown(tracker: Tracker): Unit = {
+  def trackApplicationShutdown[F[_]](tracker: Tracker[F]): Unit = {
     tracker.trackSelfDescribingEvent(
       SelfDescribingData(
         SchemaKey(
@@ -147,7 +171,7 @@ object SnowplowTracking {
           "app_shutdown",
           "jsonschema",
           SchemaVer.Full(1, 0, 0)),
-        JObject(Nil)
+        Json.obj()
       ))
   }
 
@@ -157,7 +181,9 @@ object SnowplowTracking {
    * @param tracker a Tracker instance
    * @param heartbeatInterval Time between heartbeats in milliseconds
    */
-  private def trackApplicationHeartbeat(tracker: Tracker, heartbeatInterval: Long): Unit = {
+  private def trackApplicationHeartbeat[F[_]](
+    tracker: Tracker[F],
+    heartbeatInterval: Long): Unit = {
     tracker.trackSelfDescribingEvent(
       SelfDescribingData(
         SchemaKey(
@@ -165,7 +191,7 @@ object SnowplowTracking {
           "app_heartbeat",
           "jsonschema",
           SchemaVer.Full(1, 0, 0)),
-        "interval" -> heartbeatInterval
+        Json.obj("interval" -> heartbeatInterval.asJson)
       ))
   }
 }

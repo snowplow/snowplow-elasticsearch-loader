@@ -12,11 +12,10 @@
  */
 package com.snowplowanalytics.stream.loader
 
-// Scala
-import org.json4s.jackson.JsonMethods.{compact, parse, render}
-
-// Scalaz
+// cats
 import cats.syntax.validated._
+
+import io.circe.literal._
 
 // Specs2
 import org.specs2.mutable.Specification
@@ -34,14 +33,13 @@ class PlainJsonTransformerSpec extends Specification {
 
   "The from method" should {
     "successfully convert a  plain JSON to an JsonRecord" in {
-      val input = """{"key1":"value1","key2":"value2","key3":"value3"}"""
+      val input = json"""{"key1":"value1","key2":"value2","key3":"value3"}"""
 
       val result =
-        new PlainJsonTransformer().fromClass(input -> JsonRecord(parse(input), None).valid)
-      val json: String =
-        compact(render(
-          result._2.getOrElse(throw new RuntimeException("Plain Json failed transformation")).json))
-      json.toString must_== input
+        new PlainJsonTransformer().fromClass(input.noSpaces -> JsonRecord(input, None).valid)
+      val json =
+        result._2.getOrElse(throw new RuntimeException("Plain Json failed transformation")).json
+      json must_== input
     }
   }
 

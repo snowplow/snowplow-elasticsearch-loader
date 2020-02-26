@@ -22,15 +22,12 @@ package com.snowplowanalytics.stream.loader
 import cats.data.NonEmptyList
 
 // json4s
-import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
+import io.circe.JsonObject
+import io.circe.syntax._
 
 // Joda-Time
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
-
-// JSON Schema
-import com.github.fge.jsonschema.core.report.{LogLevel, ProcessingMessage}
 
 /** ES Loader rad row that could not be transformed by StdinTransformer */
 case class EsLoaderBadRow(line: String, errors: NonEmptyList[String]) {
@@ -42,21 +39,19 @@ case class EsLoaderBadRow(line: String, errors: NonEmptyList[String]) {
     .forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     .withZone(DateTimeZone.UTC)
 
-  private val errs = errors.map(toProcessingMessage)
-
-  def toCompactJson: String = compact(
-    ("line"             -> line) ~
-      ("errors"         -> errs.toList.map(e => fromJsonNode(e.asJson))) ~
-      ("failure_tstamp" -> getTstamp(tstamp, tstampFormat))
-  )
+  def toCompactJson =
+    JsonObject
+      .fromIterable(
+        List(
+          "line"           -> line.asJson,
+          "errors"         -> errors.asJson,
+          "failure_tstamp" -> getTstamp(tstamp, tstampFormat).asJson
+        ))
+      .asJson
+      .noSpaces
 }
 
 object EsLoaderBadRow {
-  private def toProcessingMessage(s: String): ProcessingMessage =
-    new ProcessingMessage()
-      .setLogLevel(LogLevel.ERROR)
-      .setMessage(s)
-
   private def getTstamp(tstamp: Long, format: DateTimeFormatter): String = {
     val dt = new DateTime(tstamp)
     format.print(dt)

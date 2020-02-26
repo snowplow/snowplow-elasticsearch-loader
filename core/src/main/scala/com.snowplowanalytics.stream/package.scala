@@ -21,9 +21,6 @@ package com.snowplowanalytics.stream
 // cats
 import cats.data.ValidatedNel
 
-// json4s
-import org.json4s._
-
 package object loader {
 
   /**
@@ -37,9 +34,4 @@ package object loader {
    * The input type for the ElasticsearchSender objects
    */
   type EmitterJsonInput = (String, ValidatedNel[String, JsonRecord])
-
-  /**
-   * Functions used to change a TSV pair to a JObject
-   */
-  type TsvToJsonConverter = (String, String) => ValidatedNel[String, JObject]
 }

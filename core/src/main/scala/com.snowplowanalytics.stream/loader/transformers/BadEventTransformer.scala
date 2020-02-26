@@ -25,10 +25,6 @@ import com.amazonaws.services.kinesis.model.Record
 // Java
 import java.nio.charset.StandardCharsets.UTF_8
 
-import org.json4s._
-import org.json4s.JsonAST.JObject
-import org.json4s.jackson.parseJson
-
 import io.circe.{Json, JsonObject}
 import io.circe.parser.parse
 import io.circe.syntax._
@@ -86,13 +82,12 @@ object BadEventTransformer {
   )
 
   /** Attempt to handle self-describing JSON and fix bad rows union types */
-  def handleIgluJson(row: String): JValue =
+  def handleIgluJson(row: String): Json =
     parse(row).flatMap(_.as[SelfDescribingData[Json]]) match {
       case Right(SelfDescribingData(schema, data)) =>
-        val transformed = SelfDescribingData(schema, transform(data)).asJson
-        parseJson(transformed.noSpaces)
+        SelfDescribingData(schema, transform(data)).asJson
       case Left(_) =>
-        JObject(JField("source", JString(row)))
+        Json.obj("source" -> row.asJson)
     }
 
   /**

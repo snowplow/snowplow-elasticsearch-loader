@@ -31,7 +31,7 @@ import scala.util.Random
 
 // cats
 import cats.effect.IO
-import cats.Applicative
+import cats.{Applicative, Id}
 import cats.syntax.functor._
 
 import retry.{PolicyDecision, RetryDetails, RetryPolicy}
@@ -48,7 +48,7 @@ trait BulkSender[A] {
   // representation of the utf-8 string.
   val maxSizeWhenReportingFailure = 20000
 
-  val tracker: Option[Tracker]
+  val tracker: Option[Tracker[Id]]
   val log: Logger
 
   val maxConnectionWaitTimeMs: Long
@@ -89,7 +89,7 @@ object BulkSender {
       }
     }
 
-  def onError(log: Logger, tracker: Option[Tracker], connectionAttemptStartTime: Long)(
+  def onError(log: Logger, tracker: Option[Tracker[Id]], connectionAttemptStartTime: Long)(
     error: Throwable,
     details: RetryDetails): IO[Unit] = {
     val duration = (error, details) match {
