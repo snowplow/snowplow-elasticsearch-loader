@@ -21,7 +21,6 @@ object Dependencies {
     val log4j            = "2.11.1"
     val kinesisClient    = "1.9.1"
     val kinesisConnector = "1.3.0"
-    val validator        = "2.2.6"
     val elasticsearch    = "6.3.2"
     val nsqClient        = "1.1.0-rc1"
     val jackson          = "2.9.6"
@@ -33,7 +32,7 @@ object Dependencies {
     val circe            = "0.11.2"
     val circeOptics      = "0.11.0"
     val decline          = "0.6.2"
-    val snowplowTracker  = "0.5.0"
+    val snowplowTracker  = "0.6.1"
     val analyticsSDK     = "1.0.0"
     val awsSigner        = "0.5.0"
     val elastic4s        = "6.3.6"
@@ -51,18 +50,16 @@ object Dependencies {
     val log4jApi         = "org.apache.logging.log4j"         %  "log4j-api"                    % V.log4j
     val kinesisClient    = "com.amazonaws"                    %  "amazon-kinesis-client"        % V.kinesisClient
     val kinesisConnector = "com.amazonaws"                    %  "amazon-kinesis-connectors"    % V.kinesisConnector
-    val validator        = "com.github.fge"                   %  "json-schema-validator"        % V.validator
     val elasticsearch    = "org.elasticsearch"                %  "elasticsearch"                % V.elasticsearch
     val nsqClient        = "com.snowplowanalytics"            %  "nsq-java-client_2.10"         % V.nsqClient
-    val jacksonCbor      = "com.fasterxml.jackson.dataformat" %  "jackson-dataformat-cbor"      % V.jackson
-    val jacksonDatabind  = "com.fasterxml.jackson.core"       %  "jackson-databind"             % V.jackson
     // Scala
     val cats             = "org.typelevel"                    %% "cats-core"                    % V.cats
     val catsEffect       = "org.typelevel"                    %% "cats-effect"                  % V.catsEffect
     val catsRetry        = "com.github.cb372"                 %% "cats-retry-cats-effect"       % V.catsRetry
     val circeOptics      = "io.circe"                         %% "circe-optics"                 % V.circeOptics
     val decline          = "com.monovore"                     %% "decline"                      % V.decline
-    val snowplowTracker  = "com.snowplowanalytics"            %% "snowplow-scala-tracker"       % V.snowplowTracker
+    val snowplowTracker  = "com.snowplowanalytics"            %% "snowplow-scala-tracker-core"  % V.snowplowTracker
+    val snowplowTrackerId = "com.snowplowanalytics"           %% "snowplow-scala-tracker-emitter-id" % V.snowplowTracker
     val analyticsSDK     = "com.snowplowanalytics"            %% "snowplow-scala-analytics-sdk" % V.analyticsSDK
     val awsSigner        = "io.ticofab"                       %% "aws-request-signer"           % V.awsSigner
     val pureconfig       = "com.github.pureconfig"            %% "pureconfig"                   % V.pureconfig

@@ -26,13 +26,13 @@ import java.util.UUID
 // Amazon
 import com.amazonaws.services.kinesis.model.Record
 
-// Scala
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
-import org.json4s.JsonDSL._
-
 import cats.data.ValidatedNel
+import cats.syntax.show._
 import cats.syntax.validated._
+
+import io.circe.JsonObject
+import io.circe.syntax._
+import io.circe.parser.parse
 
 /**
  * Class to convert plain JSON to EmitterInputs
@@ -57,13 +57,12 @@ class PlainJsonTransformer extends IJsonTransformer {
    * @param jsonString the JSON string to be parsed
    * @return the parsed JsonRecord
    */
-  private def toJsonRecord(jsonString: String): ValidatedNel[String, JsonRecord] = {
-    parseOpt(jsonString) match {
-      case Some(jvalue) =>
-        JsonRecord(jvalue ++ ("id" -> UUID.randomUUID().toString), None).validNel
-      case None => "Json parsing error".invalidNel
+  private def toJsonRecord(jsonString: String): ValidatedNel[String, JsonRecord] =
+    parse(jsonString).flatMap(_.as[JsonObject]) match {
+      case Right(json) =>
+        JsonRecord(json.add("id", UUID.randomUUID().asJson).asJson, None).validNel
+      case Left(error) => s"Json parsing error, ${error.show}".invalidNel
     }
-  }
 
   /**
    * Consume data from stdin/NSQ rather than Kinesis

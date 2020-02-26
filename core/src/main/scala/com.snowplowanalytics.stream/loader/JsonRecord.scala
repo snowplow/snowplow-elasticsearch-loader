@@ -18,8 +18,7 @@
  */
 package com.snowplowanalytics.stream.loader
 
-import org.json4s.JValue
-import org.json4s.jackson.compactJson
+import io.circe.Json
 
 /**
  * Format in which Snowplow events are buffered
@@ -27,6 +26,6 @@ import org.json4s.jackson.compactJson
  * @param json The JSON string for the event
  * @param shard optional shard to send the data
  */
-case class JsonRecord(json: JValue, shard: Option[String]) {
-  override def toString: String = s"JsonRecord(${compactJson(json)}, $shard)"
+case class JsonRecord(json: Json, shard: Option[String]) {
+  override def toString: String = s"JsonRecord($json, $shard)"
 }

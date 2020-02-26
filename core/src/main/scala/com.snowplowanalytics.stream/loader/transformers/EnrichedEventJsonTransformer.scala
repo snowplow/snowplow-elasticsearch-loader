@@ -29,9 +29,6 @@ import java.text.SimpleDateFormat
 
 import org.joda.time.{DateTime, DateTimeZone}
 
-import org.json4s.JsonAST.JString
-import org.json4s.jackson.parseJson
-
 // cats
 import cats.data.{Validated, ValidatedNel}
 import cats.syntax.validated._
@@ -76,11 +73,11 @@ class EnrichedEventJsonTransformer(shardDateField: Option[String], shardDateForm
     Event.parse(record) match {
       case Validated.Invalid(error) => error.asJson.noSpaces.invalidNel
       case Validated.Valid(event) =>
-        val json = parseJson(event.toJson(true).noSpaces)
+        val json = event.toJson(true)
         dateFormatter match {
           case Some(formatter) =>
-            val shard = json \ shardingField match {
-              case JString(timestampString) =>
+            val shard = event.atomic.get(shardingField).flatMap(_.asString) match {
+              case Some(timestampString) =>
                 formatter
                   .format(
                     DateTime

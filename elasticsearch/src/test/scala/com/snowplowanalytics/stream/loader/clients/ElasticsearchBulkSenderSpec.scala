@@ -12,17 +12,17 @@
  */
 package com.snowplowanalytics.stream.loader.clients
 
-import com.snowplowanalytics.stream.loader.{CredentialsLookup, EmitterJsonInput, JsonRecord}
-import org.json4s.jackson.JsonMethods._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 // elastic4s
 import com.sksamuel.elastic4s.embedded.LocalNode
 import com.sksamuel.elastic4s.http.ElasticDsl._
 
-// cats
 import cats.syntax.validated._
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import io.circe.literal._
+
+import com.snowplowanalytics.stream.loader.{CredentialsLookup, EmitterJsonInput, JsonRecord}
 
 // specs2
 import org.specs2.mutable.Specification
@@ -53,7 +53,7 @@ class ElasticsearchBulkSenderSpec extends Specification {
   "send" should {
     "successfully send stuff" in {
 
-      val validInput: EmitterJsonInput = "good" -> JsonRecord(parse("""{"s":"json"}"""), None).valid
+      val validInput: EmitterJsonInput = "good" -> JsonRecord(json"""{"s":"json"}""", None).valid
       val input                        = List(validInput)
 
       sender.send(input) must_== List.empty

@@ -20,11 +20,8 @@ package com.snowplowanalytics.stream.loader
 
 // Scala
 import scala.util.{Failure, Success, Try}
-import org.json4s.JValue
-import org.json4s.JsonAST.JString
 
-// cats
-import cats.syntax.option._
+import io.circe.Json
 
 object utils {
   // to rm once 2.12 as well as the right projections
@@ -38,7 +35,7 @@ object utils {
    * @param json object produced by the Snowplow Analytics SDK
    * @return Option boxing event_id
    */
-  def extractEventId(json: JValue): Option[String] =
+  def extractEventId(json: Json): Option[String] =
     extractField(json, "event_id")
 
   /**
@@ -46,10 +43,10 @@ object utils {
    * @param json object produced by the Snowplow Analytics SDK
    * @return Option boxing event_id
    */
-  def extractField(json: JValue, filedName: String): Option[String] = {
-    json \ filedName match {
-      case JString(eid) => eid.some
-      case _            => None
-    }
-  }
+  def extractField(json: Json, filedName: String): Option[String] =
+    for {
+      obj    <- json.asObject
+      value  <- obj.apply(filedName)
+      string <- value.asString
+    } yield string
 }
