@@ -30,6 +30,7 @@ import io.circe.parser.parse
 import io.circe.syntax._
 import io.circe.optics.JsonPath.root
 
+import cats.data.ValidatedNel
 import cats.syntax.validated._
 
 import com.snowplowanalytics.iglu.core.SelfDescribingData
@@ -50,7 +51,7 @@ class BadEventTransformer extends IJsonTransformer {
   override def toClass(record: Record): ValidatedJsonRecord = {
     val recordString = new String(record.getData.array, UTF_8)
     val badRowJson   = handleIgluJson(recordString)
-    (recordString, JsonRecord(badRowJson, None).valid)
+    (recordString, badRowJson.map(json => JsonRecord(json, None)))
   }
 
   /**
@@ -60,7 +61,7 @@ class BadEventTransformer extends IJsonTransformer {
    * @return Line as an EmitterJsonInput
    */
   def consumeLine(line: String): EmitterJsonInput =
-    fromClass(line -> JsonRecord(handleIgluJson(line), None).valid)
+    fromClass(line -> handleIgluJson(line).map(json => JsonRecord(json, None)))
 
 }
 
@@ -82,12 +83,17 @@ object BadEventTransformer {
   )
 
   /** Attempt to handle self-describing JSON and fix bad rows union types */
-  def handleIgluJson(row: String): Json =
-    parse(row).flatMap(_.as[SelfDescribingData[Json]]) match {
-      case Right(SelfDescribingData(schema, data)) =>
-        SelfDescribingData(schema, transform(data)).asJson
-      case Left(_) =>
-        Json.obj("source" -> row.asJson)
+  def handleIgluJson(row: String): ValidatedNel[String, Json] =
+    parse(row) match {
+      case Right(json) =>
+        json.as[SelfDescribingData[Json]] match {
+          case Right(SelfDescribingData(schema, data)) if schema.vendor.contains("badrows") =>
+            SelfDescribingData(schema, transform(data)).asJson.validNel
+          case Right(_) =>
+            json.validNel
+          case Left(_) => json.validNel
+        }
+      case Left(_) => s"BadEventTransformer cannot parse $row as JSON".invalidNel
     }
 
   /**
