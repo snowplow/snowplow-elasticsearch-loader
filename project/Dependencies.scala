@@ -19,7 +19,7 @@ object Dependencies {
     val config           = "1.3.3"
     val slf4j            = "1.7.5"
     val log4j            = "2.11.1"
-    val kinesisClient    = "1.9.1"
+    val kinesisClient    = "1.7.5"
     val kinesisConnector = "1.3.0"
     val elasticsearch    = "6.3.2"
     val nsqClient        = "1.1.0-rc1"
