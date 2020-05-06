@@ -19,6 +19,7 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.log4jCore,
   Dependencies.Libraries.kinesisClient,
   Dependencies.Libraries.kinesisConnector,
+  //Dependencies.Libraries.awsSdkCore,
   Dependencies.Libraries.nsqClient,
   // Scala
   Dependencies.Libraries.cats,
