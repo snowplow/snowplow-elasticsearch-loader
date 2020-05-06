@@ -19,7 +19,7 @@ object Dependencies {
     val config           = "1.3.3"
     val slf4j            = "1.7.5"
     val log4j            = "2.11.1"
-    val kinesisClient    = "1.9.1"
+    val kinesisClient    = "1.7.5"
     val kinesisConnector = "1.3.0"
     val elasticsearch    = "6.3.2"
     val nsqClient        = "1.1.0-rc1"
@@ -60,7 +60,8 @@ object Dependencies {
     val decline          = "com.monovore"                     %% "decline"                      % V.decline
     val snowplowTracker  = "com.snowplowanalytics"            %% "snowplow-scala-tracker-core"  % V.snowplowTracker
     val snowplowTrackerId = "com.snowplowanalytics"           %% "snowplow-scala-tracker-emitter-id" % V.snowplowTracker
-    val analyticsSDK     = "com.snowplowanalytics"            %% "snowplow-scala-analytics-sdk" % V.analyticsSDK
+    val analyticsSDK     = ("com.snowplowanalytics"            %% "snowplow-scala-analytics-sdk" % V.analyticsSDK)
+      .excludeAll(ExclusionRule(organization = "com.amazonaws"))
     val awsSigner        = "io.ticofab"                       %% "aws-request-signer"           % V.awsSigner
     val pureconfig       = "com.github.pureconfig"            %% "pureconfig"                   % V.pureconfig
     val pureconfigEnum   = "com.github.pureconfig"            %% "pureconfig-enumeratum"        % V.pureconfig
