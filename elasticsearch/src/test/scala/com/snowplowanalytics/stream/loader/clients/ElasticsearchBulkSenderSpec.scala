@@ -12,11 +12,9 @@
  */
 package com.snowplowanalytics.stream.loader.clients
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 // elastic4s
+import com.sksamuel.elastic4s.ElasticDsl._
 import com.sksamuel.elastic4s.embedded.LocalNode
-import com.sksamuel.elastic4s.http.ElasticDsl._
 
 import cats.syntax.validated._
 
@@ -28,27 +26,33 @@ import com.snowplowanalytics.stream.loader.{CredentialsLookup, EmitterJsonInput,
 import org.specs2.mutable.Specification
 
 class ElasticsearchBulkSenderSpec extends Specification {
-  val node = LocalNode("es", System.getProperty("java.io.tmpdir"))
-  node.start()
-  val client       = node.client(true)
-  val creds        = CredentialsLookup.getCredentialsProvider("a", "s")
-  val documentType = "enriched"
-  val index        = "idx"
-  val sender = new ElasticsearchBulkSender(
-    node.ip,
-    node.port,
-    false,
-    "region",
-    false,
-    None,
-    None,
-    index,
-    documentType,
-    10000L,
-    creds,
-    None)
+  def init() = {
+    val node = LocalNode("es", System.getProperty("java.io.tmpdir"))
+    node.start()
+    val client       = node.elastic4sclient()
+    val creds        = CredentialsLookup.getCredentialsProvider("a", "s")
+    val documentType = "enriched"
+    val index        = "idx"
+    val sender = new ElasticsearchBulkSender(
+      node.ip,
+      node.port,
+      false,
+      "region",
+      false,
+      None,
+      None,
+      index,
+      documentType,
+      10000L,
+      creds,
+      None)
 
-  client.execute(createIndex(index)).await
+//    client.execute(createIndex(index)).await
+
+    (sender, index, client)
+  }
+
+  val (sender, index, client) = init()
 
   "send" should {
     "successfully send stuff" in {
@@ -62,8 +66,6 @@ class ElasticsearchBulkSenderSpec extends Specification {
       client
         .execute(search(index))
         .await
-        .result
-        .hits
         .hits
         .head
         .sourceAsString must_== """{"s":"json"}"""
