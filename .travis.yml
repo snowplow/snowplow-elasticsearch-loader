@@ -11,7 +11,7 @@ before_deploy:
 - "./.travis/docker_auth.sh"
 deploy:
 - provider: script
-  script: release-manager --config .release.yml --make-artifact --upload-artifact --check-version && sbt "project elasticsearch" docker:publish
+  script: travis_wait 30 release-manager --config .release.yml --make-artifact --upload-artifact --check-version && sbt "project elasticsearch" docker:publish
   skip_cleanup: true
   on:
     tags: true
