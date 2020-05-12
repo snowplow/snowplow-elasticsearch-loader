@@ -95,7 +95,8 @@ class ElasticsearchBulkSender(
   }
 
   // do not close the es client, otherwise it will fail when resharding
-  override def close(): Unit = ()
+  override def close(): Unit =
+    log.info("Closing BulkSender")
 
   override def send(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
     val connectionAttemptStartTime = System.currentTimeMillis()
@@ -170,7 +171,7 @@ class ElasticsearchBulkSender(
 
   /** Logs the cluster health */
   override def logHealth(): Unit =
-    client.execute(clusterHealth) onComplete {
+    client.execute(clusterHealth).onComplete {
       case SSuccess(health) =>
         health match {
           case response =>

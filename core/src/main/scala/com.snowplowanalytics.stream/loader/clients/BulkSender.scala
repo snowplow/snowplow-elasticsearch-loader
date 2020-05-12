@@ -62,6 +62,7 @@ trait BulkSender[A] {
    * Terminate the application in a way the KCL cannot stop, prevents shutdown hooks from running
    */
   protected def forceShutdown(): Unit = {
+    log.info("forceShutdown called")
     tracker.foreach { t =>
       // TODO: Instead of waiting a fixed time, use synchronous tracking or futures (when the tracker supports futures)
       SnowplowTracking.trackApplicationShutdown(t)
