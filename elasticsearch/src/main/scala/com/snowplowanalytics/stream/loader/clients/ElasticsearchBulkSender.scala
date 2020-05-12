@@ -16,7 +16,6 @@ package clients
 // AWS
 import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
 import com.amazonaws.auth.AWSCredentialsProvider
-import com.sksamuel.elastic4s.http.HttpClient
 
 // Java
 import com.google.common.base.Charsets
@@ -30,7 +29,8 @@ import scala.util.{Failure => SFailure, Success => SSuccess}
 import org.elasticsearch.client.RestClient
 
 import com.sksamuel.elastic4s.IndexAndType
-import com.sksamuel.elastic4s.http.NoOpHttpClientConfigCallback
+import com.sksamuel.elastic4s.indexes.IndexRequest
+import com.sksamuel.elastic4s.http.{ElasticClient, NoOpHttpClientConfigCallback, Response}
 import com.sksamuel.elastic4s.http.ElasticDsl._
 import com.sksamuel.elastic4s.http.bulk.BulkResponse
 
@@ -91,7 +91,7 @@ class ElasticsearchBulkSender(
       .builder(formedHost)
       .setHttpClientConfigCallback(httpClientConfigCallback)
       .setDefaultHeaders(headers)
-    HttpClient.fromRestClient(restClientBuilder.build())
+    ElasticClient.fromRestClient(restClientBuilder.build())
   }
 
   // do not close the es client, otherwise it will fail when resharding
@@ -146,8 +146,8 @@ class ElasticsearchBulkSender(
    * @param response response with successful and failed results
    */
   def extractResult(records: List[EmitterJsonInput])(
-    response: BulkResponse): List[EmitterJsonInput] =
-    response.items
+    response: Response[BulkResponse]): List[EmitterJsonInput] =
+    response.result.items
       .zip(records)
       .flatMap {
         case (bulkResponseItem, record) =>
@@ -172,10 +172,13 @@ class ElasticsearchBulkSender(
   override def logHealth(): Unit =
     client.execute(clusterHealth) onComplete {
       case SSuccess(health) =>
-        health.status match {
-          case "green"  => log.info("Cluster health is green")
-          case "yellow" => log.warn("Cluster health is yellow")
-          case "red"    => log.error("Cluster health is red")
+        health match {
+          case response =>
+            response.result.status match {
+              case "green"  => log.info("Cluster health is green")
+              case "yellow" => log.warn("Cluster health is yellow")
+              case "red"    => log.error("Cluster health is red")
+            }
         }
       case SFailure(e) => log.error("Couldn't retrieve cluster health", e)
     }
@@ -208,7 +211,7 @@ object ElasticsearchBulkSender {
   implicit val ioTimer: Timer[IO] =
     IO.timer(concurrent.ExecutionContext.global)
 
-  def composeRequest(obj: ElasticsearchObject) =
+  def composeRequest(obj: ElasticsearchObject): IndexRequest =
     indexInto(IndexAndType(obj.getIndex, obj.getType)).id(obj.getId).doc(obj.getSource)
 
   def apply(config: StreamLoaderConfig, tracker: Option[Tracker[Id]]): ElasticsearchBulkSender = {

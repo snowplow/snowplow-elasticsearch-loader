@@ -19,10 +19,10 @@ object Dependencies {
     val config           = "1.3.3"
     val slf4j            = "1.7.5"
     val log4j            = "2.11.1"
-    val kinesisClient    = "1.7.5"
+    val kinesisClient    = "1.10.0"
     val kinesisConnector = "1.3.0"
     val awsSdk           = "1.11.566"
-    val elasticsearch    = "2.4.5"
+    val elasticsearch    = "6.3.2"
     val nsqClient        = "1.1.0-rc1"
     val jackson          = "2.9.6"
 
@@ -36,7 +36,7 @@ object Dependencies {
     val snowplowTracker  = "0.6.1"
     val analyticsSDK     = "1.0.0"
     val awsSigner        = "0.5.0"
-    val elastic4s        = "5.4.6"
+    val elastic4s        = "6.3.6"
     val pureconfig       = "0.9.1"
     // Scala (test only)
     val specs2           = "4.1.0"
@@ -47,6 +47,8 @@ object Dependencies {
     val config           = "com.typesafe"                     %  "config"                       % V.config
     val slf4j            = "org.slf4j"                        %  "slf4j-simple"                 % V.slf4j
     val log4jOverSlf4j   = "org.slf4j"                        %  "log4j-over-slf4j"             % V.slf4j
+    val log4jCore        = "org.apache.logging.log4j"         %  "log4j-core"                   % V.log4j
+    val log4jApi         = "org.apache.logging.log4j"         %  "log4j-api"                    % V.log4j
     val kinesisClient    = "com.amazonaws"                    %  "amazon-kinesis-client"        % V.kinesisClient
     val kinesisConnector = "com.amazonaws"                    %  "amazon-kinesis-connectors"    % V.kinesisConnector
     val awsSdkCore       = "com.amazonaws"                    %  "aws-java-sdk-core"            % V.awsSdk
@@ -65,9 +67,7 @@ object Dependencies {
     val awsSigner        = "io.ticofab"                       %% "aws-request-signer"           % V.awsSigner
     val pureconfig       = "com.github.pureconfig"            %% "pureconfig"                   % V.pureconfig
     val pureconfigEnum   = "com.github.pureconfig"            %% "pureconfig-enumeratum"        % V.pureconfig
-    val netty = "io.netty" % "netty-all" % "4.1.49.Final"
-    val elastic4sHttp    = ("com.sksamuel.elastic4s"           %% "elastic4s-http"               % V.elastic4s)
-      .exclude("io.netty", "netty-common")
+    val elastic4sHttp    = "com.sksamuel.elastic4s"           %% "elastic4s-http"               % V.elastic4s
     // Scala (test only)
     val circeLiteral     = "io.circe"                         %% "circe-literal"                % V.circe     % Test
     val specs2           = "org.specs2"                       %% "specs2-core"                  % V.specs2    % Test
