@@ -69,7 +69,7 @@ class Emitter(
   @throws[IOException]
   private def attemptEmit(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
     if (records.isEmpty) {
-      null
+      Nil
     } else {
       val (validRecords: List[EmitterJsonInput], invalidRecords: List[EmitterJsonInput]) =
         records.partition(_._2.isValid)
@@ -77,7 +77,8 @@ class Emitter(
       val rejects = goodSink match {
         case Some(s) =>
           validRecords.foreach {
-            case (_, record) => record.map(r => s.store(r.json.toString, None, true))
+            case (_, Validated.Valid(r)) => s.store(r.json.toString, None, true)
+            case _                       => ()
           }
           Nil
         case None if validRecords.isEmpty => Nil
@@ -153,7 +154,10 @@ class Emitter(
   /**
    * Closes the Sink client when the KinesisConnectorRecordProcessor is shut down
    */
-  override def shutdown(): Unit = bulkSender.close()
+  override def shutdown(): Unit = {
+    println("Shutting down emitter")
+    bulkSender.close()
+  }
 
   /**
    * Handles records rejected by the JsonTransformer or by Sink
