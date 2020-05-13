@@ -84,8 +84,10 @@ object Config {
       initialTimestamp: Option[String],
       maxRecords: Long,
       region: String,
-      appName: String)
-        extends Queue {
+      appName: String,
+      customEndpoint: Option[String],
+      dynamodbCustomEndpoint: Option[String]
+    ) extends Queue {
       val timestampEither = initialTimestamp
         .toRight("An initial timestamp needs to be provided when choosing AT_TIMESTAMP")
         .right
@@ -99,10 +101,15 @@ object Config {
 
       val timestamp = timestampEither.right.toOption
 
-      val endpoint = region match {
+      val endpoint = customEndpoint.getOrElse(region match {
         case cn @ "cn-north-1" => s"https://kinesis.$cn.amazonaws.com.cn"
-        case _                 => s"https://kinesis.$region.amazonaws.com"
-      }
+        case _ => s"https://kinesis.$region.amazonaws.com"
+      })
+
+      val dynamodbEndpoint = dynamodbCustomEndpoint.getOrElse(region match {
+        case cn @ "cn-north-1" => s"https://dynamodb.$cn.amazonaws.com.cn"
+        case _ => s"https://dynamodb.$region.amazonaws.com"
+      })
     }
   }
 

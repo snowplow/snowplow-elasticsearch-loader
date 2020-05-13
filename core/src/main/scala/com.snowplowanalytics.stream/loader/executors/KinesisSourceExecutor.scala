@@ -101,6 +101,7 @@ class KinesisSourceExecutor[A, B](
     queue: Queue.Kinesis): KinesisConnectorConfiguration = {
     val props = new Properties
     props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT, queue.endpoint)
+    props.setProperty(KinesisConnectorConfiguration.PROP_DYNAMODB_ENDPOINT, queue.dynamodbEndpoint)
     props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME, queue.appName.trim)
     props.setProperty(
       KinesisConnectorConfiguration.PROP_INITIAL_POSITION_IN_STREAM,
