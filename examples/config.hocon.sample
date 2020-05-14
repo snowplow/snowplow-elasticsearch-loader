@@ -88,6 +88,10 @@ queue {
   # dynamodbCustomEndpoint = "http://localhost:4569"
   # dynamodbCustomEndpoint = ${?ENRICH_DYNAMODB_CUSTOM_ENDPOINT}
 
+  # Optional override to disable cloudwatch
+  # disableCloudWatch = true
+  # disableCloudWatch = ${?ENRICH_DISABLE_CLOUDWATCH}
+
   # "appName" is used for a DynamoDB table to maintain stream state.
   # You can set it automatically using: "SnowplowElasticsearchSink-${sink.kinesis.in.stream-name}"
   appName = "{{kinesisAppName}}"

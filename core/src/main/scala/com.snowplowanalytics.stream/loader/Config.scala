@@ -86,7 +86,8 @@ object Config {
       region: String,
       appName: String,
       customEndpoint: Option[String],
-      dynamodbCustomEndpoint: Option[String]
+      dynamodbCustomEndpoint: Option[String],
+      disableCloudWatch: Option[Boolean]
     ) extends Queue {
       val timestampEither = initialTimestamp
         .toRight("An initial timestamp needs to be provided when choosing AT_TIMESTAMP")

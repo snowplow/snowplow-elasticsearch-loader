@@ -38,6 +38,7 @@ import com.amazonaws.services.kinesis.connectors.interfaces.IKinesisConnectorPip
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
 import com.amazonaws.services.kinesis.metrics.interfaces.IMetricsFactory
+import com.amazonaws.services.kinesis.metrics.impl.NullMetricsFactory
 
 // This project
 import com.snowplowanalytics.stream.loader.Config._
@@ -166,16 +167,19 @@ class KinesisSourceExecutor[A, B](
         "idleTimeBetweenReads is greater than bufferTimeMillisecondsLimit. For best results, ensure that bufferTimeMillisecondsLimit is more than or equal to idleTimeBetweenReads ")
     }
 
-    val workerBuilder = new Worker.Builder()
-      .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
-      .config(kinesisClientLibConfiguration)
-
-    // If a metrics factory was specified, use it.
-    if (metricFactory != null) {
-      workerBuilder.metricsFactory(metricFactory)
+    worker = kinesis.disableCloudWatch match {
+      case Some(true) =>
+        new Worker.Builder()
+          .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
+          .config(kinesisClientLibConfiguration)
+          .metricsFactory(new NullMetricsFactory())
+          .build()
+      case _ =>
+        new Worker.Builder()
+          .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
+          .config(kinesisClientLibConfiguration)
+          .build()
     }
-
-    worker = workerBuilder.build()
 
     LOG.info(getClass.getSimpleName + " worker created")
   }
