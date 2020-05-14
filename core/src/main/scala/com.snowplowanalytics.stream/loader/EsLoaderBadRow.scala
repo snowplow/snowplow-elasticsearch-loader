@@ -40,11 +40,13 @@ case class EsLoaderBadRow(line: String, errors: NonEmptyList[String]) {
     .withZone(DateTimeZone.UTC)
 
   def toCompactJson =
-    Json.obj(
-      "line"           -> line.asJson,
-      "errors"         -> errors.asJson,
-      "failure_tstamp" -> getTstamp(tstamp, tstampFormat).asJson
-    ).noSpaces
+    Json
+      .obj(
+        "line"           -> line.asJson,
+        "errors"         -> errors.asJson,
+        "failure_tstamp" -> getTstamp(tstamp, tstampFormat).asJson
+      )
+      .noSpaces
 }
 
 object EsLoaderBadRow {
