@@ -67,6 +67,7 @@ class KinesisSourceExecutor[A, B](
       kcc.AWS_CREDENTIALS_PROVIDER,
       kcc.WORKER_ID)
       .withKinesisEndpoint(kcc.KINESIS_ENDPOINT)
+      .withDynamoDBEndpoint(kcc.DYNAMODB_ENDPOINT)
       .withFailoverTimeMillis(kcc.FAILOVER_TIME)
       .withMaxRecords(kcc.MAX_RECORDS)
       .withIdleTimeBetweenReadsInMillis(kcc.IDLE_TIME_BETWEEN_READS)
