@@ -78,6 +78,16 @@ queue {
   # Region where the Kinesis stream is located
   region = "{{kinesisRegion}}"
 
+  # Optional endpoint url configuration to override aws kinesis endpoints,
+  # this can be used to specify local endpoints when using localstack
+  # customEndpoint = {{kinesisEndpoint}}
+  # customEndpoint = ${?ENRICH_STREAMS_SOURCE_SINK_CUSTOM_ENDPOINT}
+
+  # Optional endpoint url configuration to override aws dyanomdb endpoints for Kinesis checkpoints lease table,
+  # this can be used to specify local endpoints when using Localstack
+  # dynamodbCustomEndpoint = "http://localhost:4569"
+  # dynamodbCustomEndpoint = ${?ENRICH_DYNAMODB_CUSTOM_ENDPOINT}
+
   # "appName" is used for a DynamoDB table to maintain stream state.
   # You can set it automatically using: "SnowplowElasticsearchSink-${sink.kinesis.in.stream-name}"
   appName = "{{kinesisAppName}}"
