@@ -16,6 +16,7 @@ package clients
 // AWS
 import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
 import com.amazonaws.auth.AWSCredentialsProvider
+import emitters.Emitter
 
 // Java
 import com.google.common.base.Charsets

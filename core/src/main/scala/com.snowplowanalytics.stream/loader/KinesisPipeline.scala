@@ -28,6 +28,7 @@ import com.amazonaws.services.kinesis.connectors.interfaces.{
 }
 import com.amazonaws.services.kinesis.connectors.KinesisConnectorConfiguration
 import com.amazonaws.services.kinesis.connectors.impl.{AllPassFilter, BasicMemoryBuffer}
+import emitters.Emitter
 
 // This project
 import com.snowplowanalytics.stream.loader.sinks._
@@ -60,7 +61,7 @@ class KinesisPipeline(
 ) extends IKinesisConnectorPipeline[ValidatedJsonRecord, EmitterJsonInput] {
 
   def getEmitter(configuration: KinesisConnectorConfiguration): IEmitter[EmitterJsonInput] =
-    new Emitter(bulkSender, goodSink, badSink, bufferRecordLimit, bufferByteLimit)
+    new Emitter(bulkSender, badSink, bufferRecordLimit, bufferByteLimit)
 
   def getBuffer(configuration: KinesisConnectorConfiguration): IBuffer[ValidatedJsonRecord] =
     new BasicMemoryBuffer[ValidatedJsonRecord](configuration)
