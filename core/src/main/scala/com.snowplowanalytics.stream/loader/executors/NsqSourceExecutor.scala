@@ -27,6 +27,7 @@ import com.snowplowanalytics.client.nsq.NSQConfig
 import com.snowplowanalytics.client.nsq.callbacks.NSQMessageCallback
 import com.snowplowanalytics.client.nsq.callbacks.NSQErrorCallback
 import com.snowplowanalytics.client.nsq.exceptions.NSQException
+import emitters.Emitter
 
 //Java
 import java.nio.charset.StandardCharsets.UTF_8
@@ -71,9 +72,8 @@ class NsqSourceExecutor(
   private val msgBuffer = new ListBuffer[EmitterJsonInput]()
   // ElasticsearchEmitter instance
   private val emitter =
-    new Emitter(
+    new Emitter[EmitterJsonInput](
       bulkSender,
-      goodSink,
       badSink,
       config.streams.buffer.recordLimit,
       config.streams.buffer.byteLimit)
@@ -98,7 +98,7 @@ class NsqSourceExecutor(
           msg.finished()
 
           if (msgBuffer.size == nsqBufferSize) {
-            val rejectedRecords = emitter.emit(msgBuffer.toList)
+            val rejectedRecords = emitter.emitList(msgBuffer.toList)
             emitter.fail(rejectedRecords.asJava)
             msgBuffer.clear()
           }

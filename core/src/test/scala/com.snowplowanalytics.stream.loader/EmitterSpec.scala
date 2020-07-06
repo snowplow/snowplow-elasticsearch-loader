@@ -14,6 +14,8 @@ package com.snowplowanalytics.stream.loader
 
 // Java
 import java.util.Properties
+
+import emitters.Emitter
 import org.slf4j.Logger
 
 // Scala
@@ -75,7 +77,7 @@ class EmitterSpec extends Specification {
 
       val kcc =
         new KinesisConnectorConfiguration(new Properties, new DefaultAWSCredentialsProviderChain)
-      val eem = new Emitter(fakeSender, None, new StdouterrSink, 1, 1L)
+      val eem = new Emitter(fakeSender, new StdouterrSink, 1, 1L)
 
       val validInput: EmitterJsonInput   = "good" -> JsonRecord(Json.obj(), None).valid
       val invalidInput: EmitterJsonInput = "bad"  -> "malformed event".invalidNel
@@ -96,7 +98,7 @@ class EmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new Emitter(ess, None, new StdouterrSink, 1, 1000L)
+      val eem = new Emitter(ess, new StdouterrSink, 1, 1000L)
 
       val validInput: EmitterJsonInput = "good" -> JsonRecord(Json.obj(), None).valid
 
@@ -120,7 +122,7 @@ class EmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new Emitter(ess, None, new StdouterrSink, 1, 1000L)
+      val eem = new Emitter(ess, new StdouterrSink, 1, 1000L)
 
       val validInput: EmitterJsonInput = "good" -> JsonRecord(Json.obj(), None).valid
 
@@ -144,7 +146,7 @@ class EmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new Emitter(ess, None, new StdouterrSink, 100, 1048576L)
+      val eem = new Emitter(ess, new StdouterrSink, 100, 1048576L)
 
       val validInput: EmitterJsonInput = "good" -> JsonRecord(Json.obj(), None).valid
 
@@ -168,7 +170,7 @@ class EmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new Emitter(ess, None, new StdouterrSink, 1, 1048576L)
+      val eem = new Emitter(ess, new StdouterrSink, 1, 1048576L)
 
       val validInput: EmitterJsonInput = "good" -> JsonRecord(Json.obj(), None).valid
 
@@ -192,7 +194,7 @@ class EmitterSpec extends Specification {
 
       val kcc = new KinesisConnectorConfiguration(props, new DefaultAWSCredentialsProviderChain)
       val ess = new MockElasticsearchSender
-      val eem = new Emitter(ess, None, new StdouterrSink, 2, 200L)
+      val eem = new Emitter(ess, new StdouterrSink, 2, 200L)
 
       // record size is 95 bytes
       val validInput: EmitterJsonInput = "good" -> JsonRecord(Json.obj(), None).valid

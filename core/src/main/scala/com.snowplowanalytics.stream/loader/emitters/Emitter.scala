@@ -17,78 +17,66 @@
  * governing permissions and limitations there under.
  */
 package com.snowplowanalytics.stream.loader
+package emitters
 
 // Amazon
+import cats.data.NonEmptyList
 import com.amazonaws.services.kinesis.connectors.UnmodifiableBuffer
 import com.amazonaws.services.kinesis.connectors.interfaces.IEmitter
+import com.snowplowanalytics.stream.loader.clients.BulkSender
+import com.snowplowanalytics.stream.loader.sinks.ISink
+import com.snowplowanalytics.stream.loader.EsLoaderBadRow
+
+import scala.collection.mutable.ListBuffer
 
 // Java
 import java.io.IOException
-import java.util.{List => JList}
+import java.util.{List => List}
 
 // cats
 import cats.data.Validated
 
 // Scala
-import scala.collection.mutable.ListBuffer
 import scala.collection.JavaConverters._
+import scala.collection.immutable.{List => SList}
 
 // This project
-import sinks.ISink
-import clients.BulkSender
 
 /**
  * Emitter class for any sort of BulkSender Extension
  *
  * @param bulkSender        The bulkSender Client to use for the sink
- * @param goodSink          the configured GoodSink
  * @param badSink           the configured BadSink
  * @param bufferRecordLimit record limit for buffer
  * @param bufferByteLimit   byte limit for buffer
  */
-class Emitter(
-  bulkSender: BulkSender[EmitterJsonInput],
-  goodSink: Option[ISink],
+class Emitter[T](
+  bulkSender: BulkSender[T],
   badSink: ISink,
   bufferRecordLimit: Long,
   bufferByteLimit: Long
-) extends IEmitter[EmitterJsonInput] {
-
-  @throws[IOException]
-  override def emit(buffer: UnmodifiableBuffer[EmitterJsonInput]): JList[EmitterJsonInput] =
-    attemptEmit(buffer.getRecords.asScala.toList).asJava
+) extends IEmitter[T] {
 
   /**
-   * Emits good records to stdout or sink.
-   * All records which sink rejects and all records which failed transformation
+   * This function is called from AWS library.
+   * Emits good records to Kinesis, Postgres, S3 or Elasticsearch.
+   * All records which Elasticsearch rejects and all records which failed transformation
    * get sent to to stderr or Kinesis.
    *
-   * @param records list containing EmitterJsonInputs
-   * @return list of inputs which failed transformation or which the sink rejected
+   * @param buffer list containing EmitterInputs
+   * @return list of inputs which failed transformation or which Elasticsearch rejected
    */
   @throws[IOException]
-  private def attemptEmit(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
-    if (records.isEmpty) {
-      Nil
+  def emit(buffer: UnmodifiableBuffer[T]): List[T] =
+    if (buffer.getRecords.asScala.isEmpty) {
+      null
     } else {
-      val (validRecords: List[EmitterJsonInput], invalidRecords: List[EmitterJsonInput]) =
-        records.partition(_._2.isValid)
-      // Send all valid records to stdout / Sink and return those rejected by it
-      val rejects = goodSink match {
-        case Some(s) =>
-          validRecords.foreach {
-            case (_, Validated.Valid(r)) => s.store(r.json.toString, None, true)
-            case _                       => ()
-          }
-          Nil
-        case None if validRecords.isEmpty => Nil
-        case _                            => emit(validRecords)
-      }
-      invalidRecords ++ rejects
-    }
-  }
+      // Send all valid records to bulk sender and returned rejected/unvalidated ones.
+      sliceAndSend(buffer.getRecords.asScala.toList)
+    }.asJava
 
   /**
+   * This is called from NsqSourceExecutor
    * Emits good records to Sink and bad records to Kinesis.
    * All valid records in the buffer get sent to the sink in a bulk request.
    * All invalid requests and all requests which failed transformation get sent to Kinesis.
@@ -96,11 +84,26 @@ class Emitter(
    * @param records List of records to send
    * @return List of inputs which the sink rejected
    */
-  def emit(records: List[EmitterJsonInput]): List[EmitterJsonInput] =
+  def emitList(records: SList[T]): SList[T] =
     for {
       recordSlice <- splitBuffer(records, bufferByteLimit, bufferRecordLimit)
       result      <- bulkSender.send(recordSlice)
     } yield result
+
+  /**
+   * Emits good records to Elasticsearch and bad records to Kinesis.
+   * All valid records in the buffer get sent to Elasticsearch in a bulk request.
+   * All invalid requests and all requests which failed transformation get sent to Kinesis.
+   *
+   * @param records List of records to send to Elasticsearch
+   * @return List of inputs which Elasticsearch rejected
+   */
+  def sliceAndSend(records: SList[T]): SList[T] = {
+    val failures: SList[SList[T]] = for {
+      recordSlice <- splitBuffer(records, bufferByteLimit, bufferRecordLimit)
+    } yield bulkSender.send(recordSlice)
+    failures.flatten
+  }
 
   /**
    * Splits the buffer into emittable chunks based on the
@@ -111,16 +114,16 @@ class Emitter(
    * @param recordLimit emitter record limit
    * @return a list of buffers
    */
-  private def splitBuffer(
-    records: List[EmitterJsonInput],
+  def splitBuffer(
+    records: SList[T],
     byteLimit: Long,
     recordLimit: Long
-  ): List[List[EmitterJsonInput]] = {
+  ): SList[SList[T]] = {
     // partition the records in
-    val remaining: ListBuffer[EmitterJsonInput]     = records.to[ListBuffer]
-    val buffers: ListBuffer[List[EmitterJsonInput]] = new ListBuffer
-    val curBuffer: ListBuffer[EmitterJsonInput]     = new ListBuffer
-    var runningByteCount: Long                      = 0L
+    val remaining: ListBuffer[T]      = records.to[ListBuffer]
+    val buffers: ListBuffer[SList[T]] = new ListBuffer
+    val curBuffer: ListBuffer[T]      = new ListBuffer
+    var runningByteCount: Long        = 0L
 
     while (remaining.nonEmpty) {
       val record = remaining.remove(0)
@@ -164,9 +167,9 @@ class Emitter(
    *
    * @param records List of failed records
    */
-  override def fail(records: JList[EmitterJsonInput]): Unit = {
+  override def fail(records: List[T]): Unit = {
     records.asScala.foreach {
-      case (r: String, Validated.Invalid(fs)) =>
+      case (r: String, Validated.Invalid(fs: NonEmptyList[String])) =>
         val output = EsLoaderBadRow(r, fs).toCompactJson
         badSink.store(output, None, false)
       case (_, Validated.Valid(_)) => ()
