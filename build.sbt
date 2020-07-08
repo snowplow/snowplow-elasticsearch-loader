@@ -32,6 +32,7 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.awsSigner,
   Dependencies.Libraries.pureconfig,
   Dependencies.Libraries.pureconfigEnum,
+  Dependencies.Libraries.badRows,
   // Scala (test only)
   Dependencies.Libraries.specs2,
   Dependencies.Libraries.circeLiteral

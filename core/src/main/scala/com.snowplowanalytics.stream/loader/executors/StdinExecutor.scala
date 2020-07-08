@@ -14,7 +14,7 @@ package com.snowplowanalytics.stream.loader.executors
 
 import cats.syntax.validated._
 
-import com.snowplowanalytics.stream.loader.{EmitterJsonInput, EsLoaderBadRow}
+import com.snowplowanalytics.stream.loader.EmitterJsonInput
 import com.snowplowanalytics.stream.loader.Config.{StreamLoaderConfig, StreamType}
 import com.snowplowanalytics.stream.loader.clients.BulkSender
 import com.snowplowanalytics.stream.loader.sinks.ISink
@@ -23,6 +23,7 @@ import com.snowplowanalytics.stream.loader.transformers.{
   EnrichedEventJsonTransformer,
   PlainJsonTransformer
 }
+import com.snowplowanalytics.stream.loader.createBadRow
 
 class StdinExecutor(
   config: StreamLoaderConfig,
@@ -43,7 +44,7 @@ class StdinExecutor(
   def run = for (ln <- scala.io.Source.stdin.getLines) {
     val (line, result) = transformer.consumeLine(ln)
     result.bimap(
-      f => badSink.store(EsLoaderBadRow(line, f).toCompactJson, None, false),
+      f => badSink.store(createBadRow(line, f).compact, None, false),
       s =>
         goodSink match {
           case Some(gs) => gs.store(s.json.toString, None, true)

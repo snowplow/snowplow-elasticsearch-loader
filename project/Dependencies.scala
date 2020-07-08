@@ -24,19 +24,18 @@ object Dependencies {
     val elasticsearch    = "6.3.2"
     val nsqClient        = "1.1.0-rc1"
     val jackson          = "2.9.6"
-
     // Scala
     val cats             = "1.6.1"
     val catsEffect       = "1.3.1"
     val catsRetry        = "0.2.5"
-    val circe            = "0.11.2"
-    val circeOptics      = "0.11.0"
+    val circe            = "0.13.0"
     val decline          = "0.6.2"
     val snowplowTracker  = "0.6.1"
     val analyticsSDK     = "2.0.1"
     val awsSigner        = "0.5.0"
     val elastic4s        = "6.3.6"
     val pureconfig       = "0.9.1"
+    val badRows          = "2.1.0"
     // Scala (test only)
     val specs2           = "4.1.0"
   }
@@ -56,7 +55,7 @@ object Dependencies {
     val cats             = "org.typelevel"                    %% "cats-core"                    % V.cats
     val catsEffect       = "org.typelevel"                    %% "cats-effect"                  % V.catsEffect
     val catsRetry        = "com.github.cb372"                 %% "cats-retry-cats-effect"       % V.catsRetry
-    val circeOptics      = "io.circe"                         %% "circe-optics"                 % V.circeOptics
+    val circeOptics      = "io.circe"                         %% "circe-optics"                 % V.circe
     val decline          = "com.monovore"                     %% "decline"                      % V.decline
     val snowplowTracker  = "com.snowplowanalytics"            %% "snowplow-scala-tracker-core"  % V.snowplowTracker
     val snowplowTrackerId = "com.snowplowanalytics"           %% "snowplow-scala-tracker-emitter-id" % V.snowplowTracker
@@ -65,6 +64,7 @@ object Dependencies {
     val pureconfig       = "com.github.pureconfig"            %% "pureconfig"                   % V.pureconfig
     val pureconfigEnum   = "com.github.pureconfig"            %% "pureconfig-enumeratum"        % V.pureconfig
     val elastic4sHttp    = "com.sksamuel.elastic4s"           %% "elastic4s-http"               % V.elastic4s
+    val badRows          = "com.snowplowanalytics"            %% "snowplow-badrows"             % V.badRows
     // Scala (test only)
     val circeLiteral     = "io.circe"                         %% "circe-literal"                % V.circe     % Test
     val specs2           = "org.specs2"                       %% "specs2-core"                  % V.specs2    % Test

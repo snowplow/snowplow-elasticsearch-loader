@@ -34,7 +34,7 @@ import cats.data.ValidatedNel
 import cats.syntax.validated._
 
 import com.snowplowanalytics.iglu.core.SelfDescribingData
-import com.snowplowanalytics.iglu.core.circe.instances._
+import com.snowplowanalytics.iglu.core.circe.implicits._
 
 /**
  * Class to convert bad events to ElasticsearchObjects

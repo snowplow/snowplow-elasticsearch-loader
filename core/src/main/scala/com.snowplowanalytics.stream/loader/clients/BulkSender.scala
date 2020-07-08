@@ -30,7 +30,8 @@ import scala.concurrent.duration._
 import scala.util.Random
 
 // cats
-import cats.effect.IO
+import cats.effect.{ContextShift, IO}
+import scala.concurrent.ExecutionContext
 import cats.{Applicative, Id}
 import cats.syntax.functor._
 
@@ -74,13 +75,15 @@ trait BulkSender[A] {
 }
 
 object BulkSender {
+  implicit val contextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+
   def delayPolicy[M[_]: Applicative](
     maxAttempts: Int,
     maxConnectionWaitTimeMs: Long): RetryPolicy[M] =
     RetryPolicy.lift { status =>
       if (status.retriesSoFar >= maxAttempts) PolicyDecision.GiveUp
       else {
-        val maxDelay                  = 2.milliseconds * Math.pow(2, status.retriesSoFar).toLong
+        val maxDelay                  = 2.milliseconds * Math.pow(2, status.retriesSoFar.toDouble).toLong
         val randomDelayNanos          = (maxDelay.toNanos * Random.nextDouble()).toLong
         val maxConnectionWaitTimeNano = maxConnectionWaitTimeMs * 1000
         val delayNanos =
