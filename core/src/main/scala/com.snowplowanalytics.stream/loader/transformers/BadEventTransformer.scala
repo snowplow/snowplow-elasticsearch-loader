@@ -34,7 +34,7 @@ import cats.data.ValidatedNel
 import cats.syntax.validated._
 
 import com.snowplowanalytics.iglu.core.SelfDescribingData
-import com.snowplowanalytics.iglu.core.circe.instances._
+import com.snowplowanalytics.iglu.core.circe.implicits._
 
 /**
  * Class to convert bad events to ElasticsearchObjects
@@ -73,6 +73,7 @@ object BadEventTransformer {
     root.obj.modify(renameField("payload")),
     root.payload.raw.obj.modify(serializeField("parameters")),
     root.failure.obj.modify(renameField("error")),
+    root.failure.obj.modify(renameField("errors")),
     root.failure.obj.modify(renameField("message")),
     root.failure.messages.each.obj.modify(renameField("error")),
     root.failure.messages.each.obj.modify(serializeField("expectedMapping")),

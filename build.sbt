@@ -21,8 +21,6 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.kinesisConnector,
   Dependencies.Libraries.nsqClient,
   // Scala
-  Dependencies.Libraries.cats,
-  Dependencies.Libraries.catsEffect,
   Dependencies.Libraries.catsRetry,
   Dependencies.Libraries.circeOptics,
   Dependencies.Libraries.decline,
@@ -32,6 +30,7 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.awsSigner,
   Dependencies.Libraries.pureconfig,
   Dependencies.Libraries.pureconfigEnum,
+  Dependencies.Libraries.badRows,
   // Scala (test only)
   Dependencies.Libraries.specs2,
   Dependencies.Libraries.circeLiteral
@@ -63,9 +62,8 @@ lazy val root = project
 
 lazy val core = project
   .settings(moduleName := "snowplow-elasticsearch-loader-core")
-  .settings(buildSettings)
+  .settings(allSettings)
   .settings(BuildSettings.scalifySettings)
-  .settings(libraryDependencies ++= commonDependencies)
 
 // project dealing with the ES
 lazy val elasticsearch = project

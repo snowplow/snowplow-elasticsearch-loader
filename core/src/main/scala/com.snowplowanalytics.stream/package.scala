@@ -18,8 +18,12 @@
  */
 package com.snowplowanalytics.stream
 
-// cats
+import java.time.Instant
+
 import cats.data.ValidatedNel
+import cats.data.NonEmptyList
+
+import com.snowplowanalytics.snowplow.badrows._
 
 package object loader {
 
@@ -34,4 +38,14 @@ package object loader {
    * The input type for the ElasticsearchSender objects
    */
   type EmitterJsonInput = (String, ValidatedNel[String, JsonRecord])
+
+  val processor = Processor(generated.Settings.name, generated.Settings.version)
+
+  /** Create a generic bad row. */
+  def createBadRow(line: String, errors: NonEmptyList[String]): BadRow.GenericError = {
+    val payload   = Payload.RawPayload(line)
+    val timestamp = Instant.now()
+    val failure   = Failure.GenericFailure(timestamp, errors)
+    BadRow.GenericError(processor, failure, payload)
+  }
 }
