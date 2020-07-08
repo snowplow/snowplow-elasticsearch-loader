@@ -33,7 +33,7 @@ object Dependencies {
     val circeOptics      = "0.11.0"
     val decline          = "0.6.2"
     val snowplowTracker  = "0.6.1"
-    val analyticsSDK     = "1.0.0"
+    val analyticsSDK     = "2.0.1"
     val awsSigner        = "0.5.0"
     val elastic4s        = "6.3.6"
     val pureconfig       = "0.9.1"
