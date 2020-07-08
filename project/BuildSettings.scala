@@ -76,6 +76,7 @@ object BuildSettings {
     assemblyJarName in assembly := { s"${moduleName.value}-${version.value}.jar" },
     test in assembly := {},
     assemblyMergeStrategy in assembly := {
+      case x if x.endsWith("module-info.class") => MergeStrategy.discard // not used by JDK8
       case "META-INF/io.netty.versions.properties" => MergeStrategy.first
       case PathList("org", "joda", "time", "base", "BaseDateTime.class") => MergeStrategy.first
       case x =>

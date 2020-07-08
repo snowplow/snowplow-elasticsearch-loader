@@ -166,11 +166,10 @@ class Emitter(
    */
   override def fail(records: JList[EmitterJsonInput]): Unit = {
     records.asScala.foreach {
-      case (r: String, Validated.Invalid(fs)) =>
-        val output = EsLoaderBadRow(r, fs).toCompactJson
-        badSink.store(output, None, false)
+      case (r, Validated.Invalid(fs)) =>
+        val badRow = createBadRow(r, fs)
+        badSink.store(badRow.compact, None, false)
       case (_, Validated.Valid(_)) => ()
     }
   }
-
 }
