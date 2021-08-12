@@ -23,7 +23,6 @@ object Dependencies {
     val kinesisConnector = "1.3.0"
     val elasticsearch    = "6.3.2"
     val nsqClient        = "1.1.0-rc1"
-    val jackson          = "2.9.6"
     // Scala
     val catsRetry        = "0.2.5"
     val circe            = "0.13.0"
@@ -33,7 +32,7 @@ object Dependencies {
     val awsSigner        = "0.5.0"
     val elastic4s        = "6.3.6"
     val pureconfig       = "0.9.1"
-    val badRows          = "2.1.0"
+    val badRows          = "2.1.1"
     // Scala (test only)
     val specs2           = "4.1.0"
   }
