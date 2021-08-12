@@ -26,7 +26,7 @@ object Dependencies {
     // Scala
     val catsRetry        = "0.2.5"
     val circe            = "0.13.0"
-    val decline          = "0.6.2"
+    val decline          = "2.1.0"
     val snowplowTracker  = "0.6.1"
     val analyticsSDK     = "2.0.1"
     val awsSigner        = "0.5.0"
