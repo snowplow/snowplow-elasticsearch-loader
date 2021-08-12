@@ -43,7 +43,7 @@ object BuildSettings {
   )
 
   lazy val dockerSettings = Seq(
-    Universal / sourceDirectory := new java.io.File((baseDirectory in LocalRootProject).value, "docker"),
+    Universal / sourceDirectory := new java.io.File((LocalRootProject / baseDirectory).value, "docker"),
     Docker / packageName := "elasticsearch-loader",
     dockerRepository := Some("snowplow-docker-registry.bintray.io"),
     dockerUsername := Some("snowplow"),
@@ -55,8 +55,8 @@ object BuildSettings {
 
   // Makes our SBT app settings available from within the app
   lazy val scalifySettings = Seq(
-    sourceGenerators in Compile += Def.task {
-      val dir = (sourceManaged in Compile).value
+    Compile / sourceGenerators += Def.task {
+      val dir = (Compile / sourceManaged).value
       val file = dir / "settings.scala"
       IO.write(file, """package com.snowplowanalytics.stream.loader.generated
         |object Settings {
@@ -73,14 +73,14 @@ object BuildSettings {
   // sbt-assembly settings for building an executable
   import sbtassembly.AssemblyPlugin.autoImport._
   lazy val sbtAssemblySettings = Seq(
-    assemblyJarName in assembly := { s"${moduleName.value}-${version.value}.jar" },
-    test in assembly := {},
-    assemblyMergeStrategy in assembly := {
+    assembly / assemblyJarName := { s"${moduleName.value}-${version.value}.jar" },
+    assembly / test := {},
+    assembly / assemblyMergeStrategy := {
       case x if x.endsWith("module-info.class") => MergeStrategy.discard // not used by JDK8
       case "META-INF/io.netty.versions.properties" => MergeStrategy.first
       case PathList("org", "joda", "time", "base", "BaseDateTime.class") => MergeStrategy.first
       case x =>
-        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
         oldStrategy(x)
     }
   )
