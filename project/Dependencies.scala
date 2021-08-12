@@ -24,7 +24,7 @@ object Dependencies {
     val elasticsearch    = "6.3.2"
     val nsqClient        = "1.1.0-rc1"
     // Scala
-    val catsRetry        = "0.2.5"
+    val catsRetry        = "0.3.2"
     val circe            = "0.13.0"
     val decline          = "2.1.0"
     val snowplowTracker  = "0.6.1"
