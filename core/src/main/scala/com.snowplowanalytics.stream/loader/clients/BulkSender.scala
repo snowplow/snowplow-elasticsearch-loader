@@ -33,7 +33,6 @@ import scala.util.Random
 import cats.effect.{ContextShift, IO}
 import scala.concurrent.ExecutionContext
 import cats.{Applicative, Id}
-import cats.syntax.functor._
 
 import retry.{PolicyDecision, RetryDetails, RetryPolicy}
 
