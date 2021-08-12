@@ -31,6 +31,7 @@ import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData
 
 import com.snowplowanalytics.snowplow.scalatracker.{Tracker, UUIDProvider}
 import com.snowplowanalytics.snowplow.scalatracker.emitters.id.AsyncEmitter
+import com.snowplowanalytics.snowplow.scalatracker.Emitter.EndpointParams
 
 import io.circe.Json
 import io.circe.syntax._
@@ -71,7 +72,7 @@ object SnowplowTracking {
     val port     = config.collectorPort
     val appName  = config.appId
     val emitter =
-      AsyncEmitter.createAndStart(endpoint, Some(port), config.ssl.getOrElse(false), None)
+      AsyncEmitter.createAndStart(EndpointParams(endpoint, Some(port), config.ssl.getOrElse(false)))
     new Tracker[Id](
       NonEmptyList.of(emitter),
       com.snowplowanalytics.stream.loader.generated.Settings.name,
