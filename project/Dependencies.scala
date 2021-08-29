@@ -21,7 +21,7 @@ object Dependencies {
     val log4j            = "2.14.1"
     val kinesisClient    = "1.14.4"
     val kinesisConnector = "1.3.0"
-    val elasticsearch    = "6.3.2"
+    val elasticsearch    = "6.8.18"
     val nsqClient        = "1.1.0-rc1"
     // Scala
     val catsRetry        = "0.3.2"
