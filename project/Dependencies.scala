@@ -16,7 +16,7 @@ import sbt._
 object Dependencies {
   object V {
     // Java
-    val config           = "1.3.3"
+    val config           = "1.4.1"
     val slf4j            = "1.7.5"
     val log4j            = "2.11.1"
     val kinesisClient    = "1.9.1"
