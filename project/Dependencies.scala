@@ -24,6 +24,7 @@ object Dependencies {
     val elasticsearch    = "6.8.18"
     val nsqClient        = "1.1.0-rc1"
     val netty            = "4.1.67.Final" // Override provided version to fix security vulnerability
+    val jackson          = "2.12.5"
     // Scala
     val catsRetry        = "0.3.2"
     val circe            = "0.14.1"
@@ -45,11 +46,12 @@ object Dependencies {
     val log4jOverSlf4j   = "org.slf4j"                        %  "log4j-over-slf4j"             % V.slf4j
     val log4jCore        = "org.apache.logging.log4j"         %  "log4j-core"                   % V.log4j
     val log4jApi         = "org.apache.logging.log4j"         %  "log4j-api"                    % V.log4j
-    val kinesisClient    = "com.amazonaws"                    %  "amazon-kinesis-client"        % V.kinesisClient
-    val kinesisConnector = "com.amazonaws"                    %  "amazon-kinesis-connectors"    % V.kinesisConnector
+    val kinesisClient    = "com.amazonaws"                    %  "amazon-kinesis-client"        % V.kinesisClient exclude("com.fasterxml.jackson.dataformat", "jackson-dataformat-cbor")
+    val kinesisConnector = "com.amazonaws"                    %  "amazon-kinesis-connectors"    % V.kinesisConnector exclude("com.fasterxml.jackson.dataformat", "jackson-dataformat-cbor")
     val elasticsearch    = "org.elasticsearch"                %  "elasticsearch"                % V.elasticsearch
     val nsqClient        = "com.snowplowanalytics"            %  "nsq-java-client_2.10"         % V.nsqClient
     val netty            = "io.netty"                         %  "netty-all"                    % V.netty
+    val jacksonCbor      = "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor"       % V.jacksonCbor // Override provided version to fix security vulnerability
     // Scala
     val catsRetry        = "com.github.cb372"                 %% "cats-retry-cats-effect"       % V.catsRetry
     val circeOptics      = "io.circe"                         %% "circe-optics"                 % V.circe
@@ -57,7 +59,7 @@ object Dependencies {
     val snowplowTracker  = "com.snowplowanalytics"            %% "snowplow-scala-tracker-core"  % V.snowplowTracker
     val snowplowTrackerId = "com.snowplowanalytics"           %% "snowplow-scala-tracker-emitter-id" % V.snowplowTracker
     val analyticsSDK     = "com.snowplowanalytics"            %% "snowplow-scala-analytics-sdk" % V.analyticsSDK
-    val awsSigner        = "io.ticofab"                       %% "aws-request-signer"           % V.awsSigner
+    val awsSigner        = "io.ticofab"                       %% "aws-request-signer"           % V.awsSigner exclude("com.fasterxml.jackson.dataformat", "jackson-dataformat-cbor")
     val pureconfig       = "com.github.pureconfig"            %% "pureconfig"                   % V.pureconfig
     val pureconfigEnum   = "com.github.pureconfig"            %% "pureconfig-enumeratum"        % V.pureconfig
     val elastic4sHttp    = "com.sksamuel.elastic4s"           %% "elastic4s-http"               % V.elastic4s
