@@ -23,6 +23,7 @@ object Dependencies {
     val kinesisConnector = "1.3.0"
     val elasticsearch    = "6.8.18"
     val nsqClient        = "1.1.0-rc1"
+    val netty            = "4.1.67.Final" // Override provided version to fix security vulnerability
     // Scala
     val catsRetry        = "0.3.2"
     val circe            = "0.14.1"
@@ -48,6 +49,7 @@ object Dependencies {
     val kinesisConnector = "com.amazonaws"                    %  "amazon-kinesis-connectors"    % V.kinesisConnector
     val elasticsearch    = "org.elasticsearch"                %  "elasticsearch"                % V.elasticsearch
     val nsqClient        = "com.snowplowanalytics"            %  "nsq-java-client_2.10"         % V.nsqClient
+    val netty            = "io.netty"                         %  "netty-all"                    % V.netty
     // Scala
     val catsRetry        = "com.github.cb372"                 %% "cats-retry-cats-effect"       % V.catsRetry
     val circeOptics      = "io.circe"                         %% "circe-optics"                 % V.circe
