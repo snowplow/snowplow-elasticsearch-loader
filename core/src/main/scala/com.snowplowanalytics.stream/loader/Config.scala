@@ -23,8 +23,6 @@ import java.text.SimpleDateFormat
 
 import scala.util.Try
 
-import com.typesafe.config.ConfigFactory
-
 import com.monovore.decline.{Command, Opts}
 
 import cats.syntax.either._
@@ -32,11 +30,16 @@ import cats.syntax.validated._
 
 import enumeratum.{Enum, EnumEntry}
 
-import pureconfig._
+import pureconfig.{CamelCase, ConfigFieldMapping, ConfigReader, ConfigSource}
+import pureconfig.generic.{FieldCoproductHint, ProductHint}
+import pureconfig.generic.semiauto._
 import pureconfig.error.ConfigReaderFailures
 import pureconfig.module.enumeratum._
 
 object Config {
+
+  implicit def hint[T]: ProductHint[T]              = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+  implicit val queueHint: FieldCoproductHint[Queue] = new FieldCoproductHint[Queue]("enabled")
 
   sealed trait StreamType extends EnumEntry with EnumEntry.Hyphencase
   object StreamType extends Enum[StreamType] {
@@ -63,11 +66,21 @@ object Config {
     case object Stdout        extends GoodSink
 
     val values = findValues
+
+    implicit val goodSinkReader: ConfigReader[GoodSink] = deriveEnumerationReader[GoodSink]
   }
 
   case class SinkConfig(good: GoodSink, bad: BadSink)
 
+  object SinkConfig {
+    implicit val sinkConfigReader: ConfigReader[SinkConfig] = deriveReader[SinkConfig]
+  }
+
   case class AWSConfig(accessKey: String, secretKey: String)
+
+  object AWSConfig {
+    implicit val awsConfigReader: ConfigReader[AWSConfig] = deriveReader[AWSConfig]
+  }
 
   sealed trait Queue
   object Queue {
@@ -78,6 +91,10 @@ object Config {
       nsqlookupdHost: String,
       nsqlookupdPort: Int)
         extends Queue
+
+    object Nsq {
+      implicit val nsqReader: ConfigReader[Nsq] = deriveReader[Nsq]
+    }
 
     final case class Kinesis(
       initialPosition: String,
@@ -112,15 +129,29 @@ object Config {
         case _                 => s"https://dynamodb.$region.amazonaws.com"
       })
     }
+
+    object Kinesis {
+      implicit val kinesisReader: ConfigReader[Kinesis] = deriveReader[Kinesis]
+    }
+
+    implicit val queueReader: ConfigReader[Queue] = deriveReader[Queue]
   }
 
   case class BufferConfig(byteLimit: Long, recordLimit: Long, timeLimit: Long)
+
+  object BufferConfig {
+    implicit val bufferReader: ConfigReader[BufferConfig] = deriveReader[BufferConfig]
+  }
 
   case class StreamsConfig(
     inStreamName: String,
     outStreamName: String,
     buffer: BufferConfig
   )
+
+  object StreamsConfig {
+    implicit val streamsConfigReader: ConfigReader[StreamsConfig] = deriveReader[StreamsConfig]
+  }
 
   case class ESClientConfig(
     endpoint: String,
@@ -134,15 +165,33 @@ object Config {
     ssl: Boolean
   )
 
+  object ESClientConfig {
+    implicit val esClientConfigReader: ConfigReader[ESClientConfig] = deriveReader[ESClientConfig]
+  }
+
   case class ESAWSConfig(signing: Boolean, region: String)
 
+  object ESAWSConfig {
+    implicit val esAWSConfigReader: ConfigReader[ESAWSConfig] = deriveReader[ESAWSConfig]
+  }
+
   case class ESClusterConfig(name: String, index: String, documentType: String)
+
+  object ESClusterConfig {
+    implicit val esClusterConfigReader: ConfigReader[ESClusterConfig] =
+      deriveReader[ESClusterConfig]
+  }
 
   case class ESConfig(
     client: ESClientConfig,
     aws: ESAWSConfig,
     cluster: ESClusterConfig
   )
+
+  object ESConfig {
+    implicit val esConfigReader: ConfigReader[ESConfig] = deriveReader[ESConfig]
+  }
+
   case class SnowplowMonitoringConfig(
     collectorUri: String,
     collectorPort: Int,
@@ -151,7 +200,16 @@ object Config {
     method: String
   )
 
+  object SnowplowMonitoringConfig {
+    implicit val snowplowMonitoringConfig: ConfigReader[SnowplowMonitoringConfig] =
+      deriveReader[SnowplowMonitoringConfig]
+  }
+
   case class MonitoringConfig(snowplow: SnowplowMonitoringConfig)
+  object MonitoringConfig {
+    implicit val monitoringConfigReader: ConfigReader[MonitoringConfig] =
+      deriveReader[MonitoringConfig]
+  }
 
   sealed trait Source extends EnumEntry with EnumEntry.Hyphencase
   object Source extends Enum[Source] {
@@ -160,6 +218,8 @@ object Config {
     case object Stdin   extends Source
 
     val values = findValues
+
+    implicit val sourceConfigReader: ConfigReader[Source] = deriveEnumerationReader[Source]
   }
 
   case class StreamLoaderConfig(
@@ -172,8 +232,12 @@ object Config {
     elasticsearch: ESConfig,
     monitoring: Option[MonitoringConfig])
 
-  implicit def hint[T]: ProductHint[T]              = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
-  implicit val queueHint: FieldCoproductHint[Queue] = new FieldCoproductHint[Queue]("enabled")
+  object StreamLoaderConfig {
+
+    implicit val streamLoaderConfigReader: ConfigReader[StreamLoaderConfig] =
+      deriveReader[StreamLoaderConfig]
+
+  }
 
   val config = Opts
     .option[Path]("config", "Path to a HOCON configuration file")
@@ -189,8 +253,8 @@ object Config {
   def parseConfig(arguments: Array[String]): StreamLoaderConfig = {
     val result = for {
       path <- command.parse(arguments).leftMap(_.toString)
-      config = ConfigFactory.parseFile(path.toFile).resolve()
-      parsed <- loadConfig[StreamLoaderConfig](config).leftMap(showFailures)
+      source = ConfigSource.file(path.toFile)
+      parsed <- source.load[StreamLoaderConfig].leftMap(showFailures(_))
     } yield parsed
 
     result match {
@@ -203,7 +267,7 @@ object Config {
 
   private def showFailures(failures: ConfigReaderFailures): String = {
     val failureStrings = failures.toList.map { failure =>
-      val location = failure.location.map(l => s" at ${l.lineNumber}").getOrElse("")
+      val location = failure.origin.map(o => s" at ${o.lineNumber}").getOrElse("")
       s"${failure.description}$location"
     }
     failureStrings.mkString("\n")
