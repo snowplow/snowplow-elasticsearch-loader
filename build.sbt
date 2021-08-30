@@ -41,7 +41,6 @@ lazy val commonDependencies = Seq(
 lazy val buildSettings = Seq(
   organization := "com.snowplowanalytics",
   name := "snowplow-elasticsearch-loader",
-  version := "1.0.0",
   description := "Load the contents of a Kinesis stream or NSQ topic to Elasticsearch",
   scalaVersion := "2.12.10",
   scalacOptions := BuildSettings.compilerOptions,
@@ -49,17 +48,18 @@ lazy val buildSettings = Seq(
   resolvers += Resolver.jcenterRepo,
   shellPrompt := { _ =>
     "elasticsearch-loader> "
-  },
-  scalafmtOnCompile := true
+  }
 )
 
 lazy val allSettings = buildSettings ++
-  BuildSettings.sbtAssemblySettings ++
-  Seq(libraryDependencies ++= commonDependencies)
+  BuildSettings.assemblySettings ++
+  Seq(libraryDependencies ++= commonDependencies) ++
+  BuildSettings.dynVerSettings ++
+  BuildSettings.assemblySettings
 
 lazy val root = project
   .in(file("."))
-  .settings(buildSettings)
+  .settings(allSettings)
   .aggregate(core, elasticsearch)
 
 lazy val core = project

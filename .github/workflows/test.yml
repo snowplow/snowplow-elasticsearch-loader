@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - master
+      - develop
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: coursier/cache-action@v6
+    - name: Set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        java-version: 11
+        distribution: adopt
+    - name: Run tests
+      run: sbt clean test
+
+  deploy_github:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get current version
+      id: ver
+      run: echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
+
+    - uses: actions/checkout@v2
+
+    - uses: coursier/cache-action@v6
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        java-version: 11
+        distribution: adopt
+
+
+    - name: Build artifacts
+      run: sbt 'project elasticsearch' assembly
+
+    - name: Create GitHub release and attach artifacts
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: true
+        prerelease: true
+        name: Version ${{ steps.ver.outputs.tag }}
+        tag_name: ${{ steps.ver.outputs.tag }}
+        files: |
+          elasticsearch/target/scala-2.12/snowplow-elastisearch-loader-${{ steps.ver.outputs.tag }}.jar
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy_docker:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Get current version
+      id: ver
+      run: echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
+
+    - uses: actions/checkout@v2
+
+    - uses: coursier/cache-action@v6
+
+    - name: Stage the Docker build
+      run: sbt "project elasticsearch" docker:stage
+
+    - name: Docker metadata
+      id: meta
+      uses: docker/metadata-action@v3
+      with:
+        images: snowplow/elasticsearch-loader
+        tags: |
+          type=raw,value=latest,enable=${{ !contains(steps.ver.outputs.tag, 'rc') }}
+          type=raw,value=${{ steps.ver.outputs.tag }}
+        flavor: |
+          latest=false
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Push image
+      uses: docker/build-push-action@v2
+      with:
+        context: elasticsearch/target/docker/stage
+        file: elasticsearch/target/docker/stage/Dockerfile
+        platforms: linux/amd64,linux/arm64/v8
+        tags: ${{ steps.meta.outputs.tags }}
+        push: true
