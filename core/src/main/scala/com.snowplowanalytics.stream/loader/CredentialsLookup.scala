@@ -62,7 +62,7 @@ object CredentialsLookup {
    * @param key The key to check
    * @return true if key is default, false otherwise
    */
-  private def isDefault(key: String): Boolean = (key == "default")
+  private def isDefault(key: String): Boolean = key == "default"
 
   /**
    * Is the access/secret key set to the special value "iam" i.e. use
@@ -71,7 +71,7 @@ object CredentialsLookup {
    * @param key The key to check
    * @return true if key is iam, false otherwise
    */
-  private def isIam(key: String): Boolean = (key == "iam")
+  private def isIam(key: String): Boolean = key == "iam"
 
   /**
    * Is the access/secret key set to the special value "env" i.e. get
@@ -80,11 +80,11 @@ object CredentialsLookup {
    * @param key The key to check
    * @return true if key is iam, false otherwise
    */
-  private def isEnv(key: String): Boolean = (key == "env")
+  private def isEnv(key: String): Boolean = key == "env"
 
   // Wrap BasicAWSCredential objects.
   class BasicAWSCredentialsProvider(basic: BasicAWSCredentials) extends AWSCredentialsProvider {
     @Override def getCredentials: AWSCredentials = basic
-    @Override def refresh                        = {}
+    @Override def refresh = {}
   }
 }

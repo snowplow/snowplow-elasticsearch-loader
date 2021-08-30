@@ -29,14 +29,15 @@ class StdinExecutor(
   config: StreamLoaderConfig,
   sender: BulkSender[EmitterJsonInput],
   goodSink: Option[ISink],
-  badSink: ISink)
-    extends Runnable {
+  badSink: ISink
+) extends Runnable {
 
   val transformer = config.enabled match {
     case StreamType.Good =>
       new EnrichedEventJsonTransformer(
         config.elasticsearch.client.shardDateField,
-        config.elasticsearch.client.shardDateFormat)
+        config.elasticsearch.client.shardDateFormat
+      )
     case StreamType.PlainJson => new PlainJsonTransformer
     case StreamType.Bad       => new BadEventTransformer
   }
@@ -49,7 +50,7 @@ class StdinExecutor(
         goodSink match {
           case Some(gs) => gs.store(s.json.toString, None, true)
           case None     => sender.send(List(ln -> s.valid))
-      }
+        }
     )
   }
 }

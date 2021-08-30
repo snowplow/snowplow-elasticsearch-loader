@@ -46,7 +46,8 @@ class ElasticsearchBulkSenderSpec extends Specification {
     documentType,
     10000L,
     creds,
-    None)
+    None
+  )
 
   client.execute(createIndex(index)).await
 

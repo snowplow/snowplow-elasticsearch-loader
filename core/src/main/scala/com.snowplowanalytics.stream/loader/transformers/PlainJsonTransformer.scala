@@ -36,7 +36,6 @@ import io.circe.parser.parse
 
 /**
  * Class to convert plain JSON to EmitterInputs
- *
  */
 class PlainJsonTransformer extends IJsonTransformer {
 

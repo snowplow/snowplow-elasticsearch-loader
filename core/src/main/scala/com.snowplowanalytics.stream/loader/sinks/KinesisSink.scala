@@ -66,7 +66,8 @@ class KinesisSink(
 
   require(
     streamExists(name),
-    s"Stream $name doesn't exist or is neither active nor updating (deleted or creating)")
+    s"Stream $name doesn't exist or is neither active nor updating (deleted or creating)"
+  )
 
   /**
    * Checks if a stream exists.
@@ -103,15 +104,17 @@ class KinesisSink(
    * @param good Unused parameter which exists to extend ISink
    */
   def store(output: String, key: Option[String], good: Boolean): Unit =
-    put(name, ByteBuffer.wrap(output.getBytes(UTF_8)), key.getOrElse(Random.nextInt.toString)) onComplete {
-      case Success(result) => {
+    put(
+      name,
+      ByteBuffer.wrap(output.getBytes(UTF_8)),
+      key.getOrElse(Random.nextInt.toString)
+    ) onComplete {
+      case Success(result) =>
         log.info("Writing successful")
         log.info(s"  + ShardId: ${result.getShardId}")
         log.info(s"  + SequenceNumber: ${result.getSequenceNumber}")
-      }
-      case Failure(f) => {
+      case Failure(f) =>
         log.error("Writing failed")
         log.error("  + " + f.getMessage)
-      }
     }
 }

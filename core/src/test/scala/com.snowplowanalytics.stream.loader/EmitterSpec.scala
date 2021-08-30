@@ -50,7 +50,7 @@ class MockElasticsearchSender extends BulkSender[EmitterJsonInput] {
     calls += records
     List.empty
   }
-  override def close()                       = {}
+  override def close() = {}
   override def logHealth(): Unit             = ()
   override val tracker                       = None
   override val maxConnectionWaitTimeMs: Long = 1000L
