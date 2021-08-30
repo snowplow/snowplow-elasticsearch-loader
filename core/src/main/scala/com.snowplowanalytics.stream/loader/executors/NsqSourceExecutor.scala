@@ -76,7 +76,8 @@ class NsqSourceExecutor(
       goodSink,
       badSink,
       config.streams.buffer.recordLimit,
-      config.streams.buffer.byteLimit)
+      config.streams.buffer.byteLimit
+    )
   private val transformer = streamType match {
     case StreamType.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
     case StreamType.PlainJson => new PlainJsonTransformer
@@ -121,7 +122,8 @@ class NsqSourceExecutor(
         nsq.channelName,
         nsqCallback,
         new NSQConfig(),
-        errorCallback)
+        errorCallback
+      )
     consumer.start()
   }
 }

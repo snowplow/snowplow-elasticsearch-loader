@@ -65,7 +65,8 @@ object ElasticsearchLoader {
     sender: BulkSender[EmitterJsonInput],
     goodSink: Option[ISink],
     badSink: ISink,
-    tracker: Option[Tracker[Id]]): Runnable = {
+    tracker: Option[Tracker[Id]]
+  ): Runnable = {
     (config.source, config.queue) match {
       // Read records from Kinesis
       case (Source.Kinesis, queue: Queue.Kinesis) =>
@@ -91,7 +92,8 @@ object ElasticsearchLoader {
           badSink,
           config.elasticsearch.client.shardDateField,
           config.elasticsearch.client.shardDateFormat,
-          sender)
+          sender
+        )
 
       // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
       case (Source.Stdin, _) => new StdinExecutor(config, sender, goodSink, badSink)
@@ -119,7 +121,8 @@ object ElasticsearchLoader {
               config.aws.secretKey,
               queue.endpoint,
               queue.region,
-              config.streams.outStreamName)
+              config.streams.outStreamName
+            )
           case _ =>
             System.err.println("queue config is not valid for Kinesis")
             sys.exit(1)

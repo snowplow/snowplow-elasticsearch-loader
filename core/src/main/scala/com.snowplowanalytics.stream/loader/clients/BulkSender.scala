@@ -78,7 +78,8 @@ object BulkSender {
 
   def delayPolicy[M[_]: Applicative](
     maxAttempts: Int,
-    maxConnectionWaitTimeMs: Long): RetryPolicy[M] =
+    maxConnectionWaitTimeMs: Long
+  ): RetryPolicy[M] =
     RetryPolicy.lift { status =>
       if (status.retriesSoFar >= maxAttempts) PolicyDecision.GiveUp
       else {
@@ -94,7 +95,8 @@ object BulkSender {
 
   def onError(log: Logger, tracker: Option[Tracker[Id]], connectionAttemptStartTime: Long)(
     error: Throwable,
-    details: RetryDetails): IO[Unit] = {
+    details: RetryDetails
+  ): IO[Unit] = {
     val duration = (error, details) match {
       case (error, RetryDetails.GivingUp(_, totalDelay)) =>
         IO(log.error("Storage threw an unexpected exception. Giving up ", error)).as(totalDelay)
@@ -102,7 +104,9 @@ object BulkSender {
         IO(
           log.error(
             s"Storage threw an unexpected exception, after $retriesSoFar retries. Next attempt in $nextDelay ",
-            error)).as(cumulativeDelay)
+            error
+          )
+        ).as(cumulativeDelay)
     }
 
     duration.flatMap { delay =>
@@ -114,7 +118,8 @@ object BulkSender {
             0L,
             connectionAttemptStartTime,
             "elasticsearch",
-            error.getMessage)
+            error.getMessage
+          )
         }
       }
     }
@@ -134,9 +139,8 @@ object BulkSender {
    * @param sleepTime Length of time between tries
    */
   def sleep(sleepTime: Long): Unit =
-    try {
-      Thread.sleep(sleepTime)
-    } catch {
+    try Thread.sleep(sleepTime)
+    catch {
       case _: InterruptedException => ()
     }
 }

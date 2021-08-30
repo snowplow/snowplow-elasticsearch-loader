@@ -52,7 +52,8 @@ import com.snowplowanalytics.stream.loader.Config.StreamLoaderConfig
 
 /**
  * Main ES component responsible for inserting data into a specific index,
- * data is passed here by [[Emitter]] */
+ * data is passed here by [[Emitter]]
+ */
 class ElasticsearchBulkSender(
   endpoint: String,
   port: Int,
@@ -107,8 +108,8 @@ class ElasticsearchBulkSender(
 
     // oldFailures - failed at the transformation step
     val (successes, oldFailures) = records.partition(_._2.isValid)
-    val esObjects = successes.collect {
-      case (_, Validated.Valid(jsonRecord)) => composeObject(jsonRecord)
+    val esObjects = successes.collect { case (_, Validated.Valid(jsonRecord)) =>
+      composeObject(jsonRecord)
     }
     val actions = esObjects.map(composeRequest)
 
@@ -124,7 +125,8 @@ class ElasticsearchBulkSender(
         case Left(f) =>
           log.error(
             s"Shutting down application as unable to connect to Elasticsearch for over $maxConnectionWaitTimeMs ms",
-            f)
+            f
+          )
           // if the request failed more than it should have we force shutdown
           forceShutdown()
           Nil
@@ -146,13 +148,13 @@ class ElasticsearchBulkSender(
    * @param records list of original records to send
    * @param response response with successful and failed results
    */
-  def extractResult(records: List[EmitterJsonInput])(
-    response: Response[BulkResponse]): List[EmitterJsonInput] =
+  def extractResult(
+    records: List[EmitterJsonInput]
+  )(response: Response[BulkResponse]): List[EmitterJsonInput] =
     response.result.items
       .zip(records)
-      .flatMap {
-        case (bulkResponseItem, record) =>
-          handleResponse(bulkResponseItem.error.map(_.reason), record)
+      .flatMap { case (bulkResponseItem, record) =>
+        handleResponse(bulkResponseItem.error.map(_.reason), record)
       }
       .toList
 
@@ -193,17 +195,22 @@ class ElasticsearchBulkSender(
    */
   private def handleResponse(
     error: Option[String],
-    record: EmitterJsonInput): Option[EmitterJsonInput] = {
+    record: EmitterJsonInput
+  ): Option[EmitterJsonInput] = {
     error.foreach(e => log.error(s"Record [$record] failed with message $e"))
     error
       .flatMap { e =>
-        if (e.contains("DocumentAlreadyExistsException") || e.contains(
-            "VersionConflictEngineException"))
+        if (
+          e.contains("DocumentAlreadyExistsException") || e.contains(
+            "VersionConflictEngineException"
+          )
+        )
           None
         else
           Some(
             record._1.take(maxSizeWhenReportingFailure) ->
-              s"Elasticsearch rejected record with message $e".invalidNel)
+              s"Elasticsearch rejected record with message $e".invalidNel
+          )
       }
   }
 }

@@ -48,7 +48,6 @@ import com.snowplowanalytics.stream.loader.Config._
  * @param streamLoaderConfig streamLoaderConfig
  * @param kinesis  queue settings
  * @param kinesisConnectorPipeline kinesisConnectorPipeline
-
  */
 class KinesisSourceExecutor[A, B](
   streamLoaderConfig: StreamLoaderConfig,
@@ -61,28 +60,33 @@ class KinesisSourceExecutor[A, B](
   def getKCLConfig(
     initialPosition: String,
     timestamp: Option[Date],
-    kcc: KinesisConnectorConfiguration): KinesisClientLibConfiguration = {
+    kcc: KinesisConnectorConfiguration
+  ): KinesisClientLibConfiguration = {
     val cfg = new KinesisClientLibConfiguration(
       kcc.APP_NAME,
       kcc.KINESIS_INPUT_STREAM,
       kcc.AWS_CREDENTIALS_PROVIDER,
-      kcc.WORKER_ID)
+      kcc.WORKER_ID
+    )
       .withKinesisEndpoint(kcc.KINESIS_ENDPOINT)
       .withDynamoDBEndpoint(kcc.DYNAMODB_ENDPOINT)
       .withFailoverTimeMillis(kcc.FAILOVER_TIME)
       .withMaxRecords(kcc.MAX_RECORDS)
       .withIdleTimeBetweenReadsInMillis(kcc.IDLE_TIME_BETWEEN_READS)
       .withCallProcessRecordsEvenForEmptyRecordList(
-        KinesisConnectorConfiguration.DEFAULT_CALL_PROCESS_RECORDS_EVEN_FOR_EMPTY_LIST)
+        KinesisConnectorConfiguration.DEFAULT_CALL_PROCESS_RECORDS_EVEN_FOR_EMPTY_LIST
+      )
       .withCleanupLeasesUponShardCompletion(kcc.CLEANUP_TERMINATED_SHARDS_BEFORE_EXPIRY)
       .withParentShardPollIntervalMillis(kcc.PARENT_SHARD_POLL_INTERVAL)
       .withShardSyncIntervalMillis(kcc.SHARD_SYNC_INTERVAL)
       .withTaskBackoffTimeMillis(kcc.BACKOFF_INTERVAL)
       .withMetricsBufferTimeMillis(kcc.CLOUDWATCH_BUFFER_TIME)
       .withMetricsMaxQueueSize(kcc.CLOUDWATCH_MAX_QUEUE_SIZE)
-      .withUserAgent(kcc.APP_NAME + ","
-        + kcc.CONNECTOR_DESTINATION + ","
-        + KinesisConnectorConfiguration.KINESIS_CONNECTOR_USER_AGENT)
+      .withUserAgent(
+        kcc.APP_NAME + ","
+          + kcc.CONNECTOR_DESTINATION + ","
+          + KinesisConnectorConfiguration.KINESIS_CONNECTOR_USER_AGENT
+      )
       .withRegionName(kcc.REGION_NAME)
 
     timestamp
@@ -100,14 +104,16 @@ class KinesisSourceExecutor[A, B](
    */
   def convertConfig(
     config: StreamLoaderConfig,
-    queue: Queue.Kinesis): KinesisConnectorConfiguration = {
+    queue: Queue.Kinesis
+  ): KinesisConnectorConfiguration = {
     val props = new Properties
     props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT, queue.endpoint)
     props.setProperty(KinesisConnectorConfiguration.PROP_DYNAMODB_ENDPOINT, queue.dynamodbEndpoint)
     props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME, queue.appName.trim)
     props.setProperty(
       KinesisConnectorConfiguration.PROP_INITIAL_POSITION_IN_STREAM,
-      queue.initialPosition)
+      queue.initialPosition
+    )
     props.setProperty(KinesisConnectorConfiguration.PROP_MAX_RECORDS, queue.maxRecords.toString)
 
     // So that the region of the DynamoDB table is correct
@@ -115,34 +121,42 @@ class KinesisSourceExecutor[A, B](
 
     props.setProperty(
       KinesisConnectorConfiguration.PROP_KINESIS_INPUT_STREAM,
-      config.streams.inStreamName)
+      config.streams.inStreamName
+    )
 
     props.setProperty(
       KinesisConnectorConfiguration.PROP_ELASTICSEARCH_ENDPOINT,
-      config.elasticsearch.client.endpoint)
+      config.elasticsearch.client.endpoint
+    )
     props.setProperty(
       KinesisConnectorConfiguration.PROP_ELASTICSEARCH_CLUSTER_NAME,
-      config.elasticsearch.cluster.name)
+      config.elasticsearch.cluster.name
+    )
     props.setProperty(
       KinesisConnectorConfiguration.PROP_ELASTICSEARCH_PORT,
-      config.elasticsearch.client.port.toString)
+      config.elasticsearch.client.port.toString
+    )
 
     props.setProperty(
       KinesisConnectorConfiguration.PROP_BUFFER_BYTE_SIZE_LIMIT,
-      config.streams.buffer.byteLimit.toString)
+      config.streams.buffer.byteLimit.toString
+    )
     props.setProperty(
       KinesisConnectorConfiguration.PROP_BUFFER_RECORD_COUNT_LIMIT,
-      config.streams.buffer.recordLimit.toString)
+      config.streams.buffer.recordLimit.toString
+    )
     props.setProperty(
       KinesisConnectorConfiguration.PROP_BUFFER_MILLISECONDS_LIMIT,
-      config.streams.buffer.timeLimit.toString)
+      config.streams.buffer.timeLimit.toString
+    )
 
     props.setProperty(KinesisConnectorConfiguration.PROP_CONNECTOR_DESTINATION, "elasticsearch")
     props.setProperty(KinesisConnectorConfiguration.PROP_RETRY_LIMIT, "1")
 
     new KinesisConnectorConfiguration(
       props,
-      CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey))
+      CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey)
+    )
   }
 
   /**
@@ -153,18 +167,23 @@ class KinesisSourceExecutor[A, B](
    */
   override def initialize(
     kinesisConnectorConfiguration: KinesisConnectorConfiguration,
-    metricFactory: IMetricsFactory): Unit = {
+    metricFactory: IMetricsFactory
+  ): Unit = {
     val kinesisClientLibConfiguration =
       getKCLConfig(kinesis.initialPosition, kinesis.timestamp, kinesisConnectorConfiguration)
 
     if (!kinesisConnectorConfiguration.CALL_PROCESS_RECORDS_EVEN_FOR_EMPTY_LIST) {
       LOG.warn(
-        "The false value of callProcessRecordsEvenForEmptyList will be ignored. It must be set to true for the bufferTimeMillisecondsLimit to work correctly.")
+        "The false value of callProcessRecordsEvenForEmptyList will be ignored. It must be set to true for the bufferTimeMillisecondsLimit to work correctly."
+      )
     }
 
-    if (kinesisConnectorConfiguration.IDLE_TIME_BETWEEN_READS > kinesisConnectorConfiguration.BUFFER_MILLISECONDS_LIMIT) {
+    if (
+      kinesisConnectorConfiguration.IDLE_TIME_BETWEEN_READS > kinesisConnectorConfiguration.BUFFER_MILLISECONDS_LIMIT
+    ) {
       LOG.warn(
-        "idleTimeBetweenReads is greater than bufferTimeMillisecondsLimit. For best results, ensure that bufferTimeMillisecondsLimit is more than or equal to idleTimeBetweenReads ")
+        "idleTimeBetweenReads is greater than bufferTimeMillisecondsLimit. For best results, ensure that bufferTimeMillisecondsLimit is more than or equal to idleTimeBetweenReads "
+      )
     }
 
     worker = kinesis.disableCloudWatch match {
@@ -187,7 +206,8 @@ class KinesisSourceExecutor[A, B](
   def getKinesisConnectorRecordProcessorFactory =
     new KinesisConnectorRecordProcessorFactory[A, B](
       kinesisConnectorPipeline,
-      convertConfig(streamLoaderConfig, kinesis))
+      convertConfig(streamLoaderConfig, kinesis)
+    )
 
   initialize(convertConfig(streamLoaderConfig, kinesis), null)
 
