@@ -1,3 +1,4 @@
-addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.5")
-addSbtPlugin("com.lucidchart" % "sbt-scalafmt" % "1.15")
-addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.22")
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "1.0.0")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.3")
+addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.4")
+addSbtPlugin("com.dwijnand" % "sbt-dynver" % "4.1.1")

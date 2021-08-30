@@ -15,9 +15,9 @@
 import sbt._
 import Keys._
 
-import com.typesafe.sbt.packager.Keys.{daemonUser, maintainer, packageName}
-import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport._
-import com.typesafe.sbt.packager.universal.UniversalPlugin.autoImport._
+import com.typesafe.sbt.packager.Keys._
+import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport.{Docker, dockerExposedPorts, dockerUpdateLatest}
+import sbtdynver.DynVerPlugin.autoImport._
 
 object BuildSettings {
 
@@ -38,8 +38,8 @@ object BuildSettings {
   )
 
   lazy val javaCompilerOptions = Seq(
-    "-source", "1.8",
-    "-target", "1.8"
+    "-source", "11",
+    "-target", "11"
   )
 
   lazy val dockerSettings = Seq(
@@ -72,8 +72,8 @@ object BuildSettings {
 
   // sbt-assembly settings for building an executable
   import sbtassembly.AssemblyPlugin.autoImport._
-  lazy val sbtAssemblySettings = Seq(
-    assembly / assemblyJarName := { s"${moduleName.value}-${version.value}.jar" },
+  lazy val assemblySettings = Seq(
+    assembly / assemblyJarName := { s"${name.value}-${version.value}.jar" },
     assembly / test := {},
     assembly / assemblyMergeStrategy := {
       case x if x.endsWith("module-info.class") => MergeStrategy.discard // not used by JDK8
@@ -84,4 +84,9 @@ object BuildSettings {
         oldStrategy(x)
     }
   )
+
+  lazy val dynVerSettings = Seq(
+    ThisBuild / dynverVTagPrefix := false, // Otherwise git tags required to have v-prefix
+    ThisBuild / dynverSeparator := "-" // to be compatible with docker
+    )
 }
