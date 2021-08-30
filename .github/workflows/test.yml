@@ -23,6 +23,9 @@ jobs:
         distribution: adopt
     - name: Run tests
       run: sbt clean test
+    - name: Check Scala formatting
+      if: ${{ always() }}
+      run: sbt scalafmtCheckAll
 
   deploy_github:
     needs: test

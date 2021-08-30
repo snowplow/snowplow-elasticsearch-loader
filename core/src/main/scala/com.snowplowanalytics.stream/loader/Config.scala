@@ -89,8 +89,8 @@ object Config {
       nsqdHost: String,
       nsqdPort: Int,
       nsqlookupdHost: String,
-      nsqlookupdPort: Int)
-        extends Queue
+      nsqlookupdPort: Int
+    ) extends Queue
 
     object Nsq {
       implicit val nsqReader: ConfigReader[Nsq] = deriveReader[Nsq]
@@ -115,7 +115,8 @@ object Config {
         }
       require(
         initialPosition != "AT_TIMESTAMP" || timestampEither.isRight,
-        timestampEither.left.getOrElse(""))
+        timestampEither.left.getOrElse("")
+      )
 
       val timestamp = timestampEither.right.toOption
 
@@ -230,7 +231,8 @@ object Config {
     queue: Queue,
     streams: StreamsConfig,
     elasticsearch: ESConfig,
-    monitoring: Option[MonitoringConfig])
+    monitoring: Option[MonitoringConfig]
+  )
 
   object StreamLoaderConfig {
 

@@ -56,7 +56,7 @@ class KinesisPipeline(
   shardDateField: Option[String],
   shardDateFormat: Option[String],
   bufferRecordLimit: Long,
-  bufferByteLimit: Long,
+  bufferByteLimit: Long
 ) extends IKinesisConnectorPipeline[ValidatedJsonRecord, EmitterJsonInput] {
 
   def getEmitter(configuration: KinesisConnectorConfiguration): IEmitter[EmitterJsonInput] =
@@ -66,7 +66,8 @@ class KinesisPipeline(
     new BasicMemoryBuffer[ValidatedJsonRecord](configuration)
 
   def getTransformer(
-    c: KinesisConnectorConfiguration): ITransformer[ValidatedJsonRecord, EmitterJsonInput] =
+    c: KinesisConnectorConfiguration
+  ): ITransformer[ValidatedJsonRecord, EmitterJsonInput] =
     streamType match {
       case StreamType.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
       case StreamType.PlainJson => new PlainJsonTransformer

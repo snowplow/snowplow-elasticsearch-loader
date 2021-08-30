@@ -56,11 +56,13 @@ class SignedHttpClientConfigCallback(
       credentialsProvider,
       region,
       service,
-      () => SignedHttpClientConfigCallback.this.clock())
+      () => SignedHttpClientConfigCallback.this.clock()
+    )
 
   /** Add the signed headers to outgoing requests */
   override def customizeHttpClient(
-    httpClientBuilder: HttpAsyncClientBuilder): HttpAsyncClientBuilder =
+    httpClientBuilder: HttpAsyncClientBuilder
+  ): HttpAsyncClientBuilder =
     httpClientBuilder.addInterceptorLast(new HttpRequestInterceptor {
       override def process(request: HttpRequest, context: HttpContext): Unit = {
         Try(request.asInstanceOf[HttpRequestWrapper]).foreach { rw =>

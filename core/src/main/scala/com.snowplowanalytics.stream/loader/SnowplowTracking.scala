@@ -76,7 +76,8 @@ object SnowplowTracking {
     new Tracker[Id](
       NonEmptyList.of(emitter),
       com.snowplowanalytics.stream.loader.generated.Settings.name,
-      appName)
+      appName
+    )
   }
 
   /**
@@ -94,7 +95,8 @@ object SnowplowTracking {
     failureCount: Long,
     initialFailureTime: Long,
     storageType: String,
-    message: String): Unit = {
+    message: String
+  ): Unit = {
 
     tracker.trackSelfDescribingEvent(
       SelfDescribingData(
@@ -102,7 +104,8 @@ object SnowplowTracking {
           "com.snowplowanalytics.monitoring.kinesis",
           "storage_write_failed",
           "jsonschema",
-          SchemaVer.Full(1, 0, 0)),
+          SchemaVer.Full(1, 0, 0)
+        ),
         Json.obj(
           "storage"            -> storageType.asJson,
           "failureCount"       -> failureCount.asJson,
@@ -110,7 +113,8 @@ object SnowplowTracking {
           "lastRetryPeriod"    -> lastRetryPeriod.asJson,
           "message"            -> message.asJson
         )
-      ))
+      )
+    )
   }
 
   /**
@@ -154,9 +158,11 @@ object SnowplowTracking {
           "com.snowplowanalytics.monitoring.kinesis",
           "app_initialized",
           "jsonschema",
-          SchemaVer.Full(1, 0, 0)),
+          SchemaVer.Full(1, 0, 0)
+        ),
         generated.Settings.name.asJson
-      ))
+      )
+    )
   }
 
   /**
@@ -171,9 +177,11 @@ object SnowplowTracking {
           "com.snowplowanalytics.monitoring.kinesis",
           "app_shutdown",
           "jsonschema",
-          SchemaVer.Full(1, 0, 0)),
+          SchemaVer.Full(1, 0, 0)
+        ),
         Json.obj()
-      ))
+      )
+    )
   }
 
   /**
@@ -184,15 +192,18 @@ object SnowplowTracking {
    */
   private def trackApplicationHeartbeat[F[_]](
     tracker: Tracker[F],
-    heartbeatInterval: Long): Unit = {
+    heartbeatInterval: Long
+  ): Unit = {
     tracker.trackSelfDescribingEvent(
       SelfDescribingData(
         SchemaKey(
           "com.snowplowanalytics.monitoring.kinesis",
           "app_heartbeat",
           "jsonschema",
-          SchemaVer.Full(1, 0, 0)),
+          SchemaVer.Full(1, 0, 0)
+        ),
         Json.obj("interval" -> heartbeatInterval.asJson)
-      ))
+      )
+    )
   }
 }
