@@ -76,6 +76,7 @@ lazy val elasticsearch = project
   .settings(
     libraryDependencies ++= Seq(
       Dependencies.Libraries.elastic4sHttp,
-      Dependencies.Libraries.elastic4sTest
+      Dependencies.Libraries.elastic4sTest,
+      Dependencies.Libraries.jacksonScala
     ))
   .dependsOn(core)
