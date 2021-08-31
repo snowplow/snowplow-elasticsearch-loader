@@ -51,11 +51,12 @@ object Dependencies {
     val elasticsearch    = "org.elasticsearch"                %  "elasticsearch"                % V.elasticsearch
     val nsqClient        = "com.snowplowanalytics"            %  "nsq-java-client_2.10"         % V.nsqClient
     val netty            = "io.netty"                         %  "netty-all"                    % V.netty
-    val jacksonCbor      = "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor"       % V.jacksonCbor // Override provided version to fix security vulnerability
+    val jacksonCbor      = "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor"       % V.jackson // Override provided version to fix security vulnerability
     // Scala
     val catsRetry        = "com.github.cb372"                 %% "cats-retry-cats-effect"       % V.catsRetry
     val circeOptics      = "io.circe"                         %% "circe-optics"                 % V.circe
     val decline          = "com.monovore"                     %% "decline"                      % V.decline
+    val jacksonScala     = "com.fasterxml.jackson.module"     %% "jackson-module-scala"         % V.jackson // Compatible version required for elastic4s
     val snowplowTracker  = "com.snowplowanalytics"            %% "snowplow-scala-tracker-core"  % V.snowplowTracker
     val snowplowTrackerId = "com.snowplowanalytics"           %% "snowplow-scala-tracker-emitter-id" % V.snowplowTracker
     val analyticsSDK     = "com.snowplowanalytics"            %% "snowplow-scala-analytics-sdk" % V.analyticsSDK
