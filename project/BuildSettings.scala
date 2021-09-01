@@ -42,16 +42,18 @@ object BuildSettings {
     "-target", "11"
   )
 
-  lazy val dockerSettings = Seq(
-    Universal / sourceDirectory := new java.io.File((LocalRootProject / baseDirectory).value, "docker"),
-    Docker / packageName := "elasticsearch-loader",
-    dockerRepository := Some("snowplow-docker-registry.bintray.io"),
-    dockerUsername := Some("snowplow"),
-    dockerBaseImage := "snowplow-docker-registry.bintray.io/snowplow/base-debian:0.2.0",
-    Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>",
-    Docker / daemonUser := "snowplow",
-    dockerCmd := Seq("--help")
-  )
+  lazy val dockerSettings =
+    Seq(
+      Docker / packageName := "elasticsearch-loader",
+      dockerRepository := Some("snowplow"),
+      dockerBaseImage := "adoptopenjdk:11-jre-hotspot-focal",
+      Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>",
+      Docker / daemonUser := "daemon",
+      dockerCmd := Seq("--help"),
+      dockerUpdateLatest := true,
+      Docker / daemonUserUid := None,
+      Docker / defaultLinuxInstallLocation := "/opt/snowplow"
+    )
 
   // Makes our SBT app settings available from within the app
   lazy val scalifySettings = Seq(
