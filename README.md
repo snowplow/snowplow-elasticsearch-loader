@@ -25,7 +25,7 @@ $ sbt compile
 The Snowplow Elasticsearch Loader has the following command-line interface:
 
 ```
-snowplow-elasticsearch-loader 1.0.0
+snowplow-elasticsearch-loader 1.0.1
 
 Usage: snowplow-elasticsearch-loader [options]
 
@@ -52,7 +52,7 @@ aws {
 Next, start the loader, making sure to specify your new config file:
 
 ```bash
-$ java -jar snowplow-elasticsearch-loader-http-1.0.0.jar --config my.conf
+$ java -jar snowplow-elasticsearch-loader-1.0.1.jar --config my.conf
 ```
 
 ## Find out more
@@ -64,7 +64,7 @@ $ java -jar snowplow-elasticsearch-loader-http-1.0.0.jar --config my.conf
 
 ## Copyright and license
 
-Copyright 2014-2020 Snowplow Analytics Ltd.
+Copyright 2014-2021 Snowplow Analytics Ltd.
 
 Licensed under the [Apache License, Version 2.0][license] (the "License");
 you may not use this software except in compliance with the License.
