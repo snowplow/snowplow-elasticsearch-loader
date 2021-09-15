@@ -28,11 +28,12 @@ import scala.util.{Failure => SFailure, Success => SSuccess}
 
 import org.elasticsearch.client.RestClient
 
-import com.sksamuel.elastic4s.IndexAndType
-import com.sksamuel.elastic4s.indexes.IndexRequest
-import com.sksamuel.elastic4s.http.{ElasticClient, NoOpHttpClientConfigCallback, Response}
-import com.sksamuel.elastic4s.http.ElasticDsl._
-import com.sksamuel.elastic4s.http.bulk.BulkResponse
+import com.sksamuel.elastic4s.Index
+import com.sksamuel.elastic4s.{ElasticClient, Response}
+import com.sksamuel.elastic4s.ElasticDsl._
+import com.sksamuel.elastic4s.requests.indexes.IndexRequest
+import com.sksamuel.elastic4s.http.{JavaClient, NoOpHttpClientConfigCallback}
+import com.sksamuel.elastic4s.requests.bulk.BulkResponse
 
 import org.apache.http.{Header, HttpHost}
 import org.apache.http.message.BasicHeader
@@ -92,7 +93,7 @@ class ElasticsearchBulkSender(
       .builder(formedHost)
       .setHttpClientConfigCallback(httpClientConfigCallback)
       .setDefaultHeaders(headers)
-    ElasticClient.fromRestClient(restClientBuilder.build())
+    ElasticClient(JavaClient.fromRestClient(restClientBuilder.build()))
   }
 
   // do not close the es client, otherwise it will fail when resharding
@@ -220,7 +221,7 @@ object ElasticsearchBulkSender {
     IO.timer(concurrent.ExecutionContext.global)
 
   def composeRequest(obj: ElasticsearchObject): IndexRequest =
-    indexInto(IndexAndType(obj.getIndex, obj.getType)).id(obj.getId).doc(obj.getSource)
+    indexInto(Index(obj.getIndex)).id(obj.getId).doc(obj.getSource)
 
   def apply(config: StreamLoaderConfig, tracker: Option[Tracker[Id]]): ElasticsearchBulkSender = {
     new ElasticsearchBulkSender(

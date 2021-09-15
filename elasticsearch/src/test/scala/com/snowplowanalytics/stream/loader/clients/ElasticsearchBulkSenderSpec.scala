@@ -15,8 +15,9 @@ package com.snowplowanalytics.stream.loader.clients
 import scala.concurrent.ExecutionContext.Implicits.global
 
 // elastic4s
-import com.sksamuel.elastic4s.embedded.LocalNode
-import com.sksamuel.elastic4s.http.ElasticDsl._
+import com.sksamuel.elastic4s.ElasticDsl._
+import com.sksamuel.elastic4s.{ElasticClient, ElasticProperties}
+import com.sksamuel.elastic4s.http.JavaClient
 
 import cats.syntax.validated._
 
@@ -28,15 +29,15 @@ import com.snowplowanalytics.stream.loader.{CredentialsLookup, EmitterJsonInput,
 import org.specs2.mutable.Specification
 
 class ElasticsearchBulkSenderSpec extends Specification {
-  val node = LocalNode("es", System.getProperty("java.io.tmpdir"))
-  node.start()
-  val client       = node.client(true)
+  val elasticHost  = "127.0.0.1"
+  val elasticPort  = 28875
+  val client       = ElasticClient(JavaClient(ElasticProperties(s"http://$elasticHost:$elasticPort")))
   val creds        = CredentialsLookup.getCredentialsProvider("a", "s")
   val documentType = "enriched"
   val index        = "idx"
   val sender = new ElasticsearchBulkSender(
-    node.ip,
-    node.port,
+    elasticHost,
+    elasticPort,
     false,
     "region",
     false,
