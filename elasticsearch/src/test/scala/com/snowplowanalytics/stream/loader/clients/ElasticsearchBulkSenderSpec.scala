@@ -29,12 +29,11 @@ import com.snowplowanalytics.stream.loader.{CredentialsLookup, EmitterJsonInput,
 import org.specs2.mutable.Specification
 
 class ElasticsearchBulkSenderSpec extends Specification {
-  val elasticHost  = "127.0.0.1"
-  val elasticPort  = 28875
-  val client       = ElasticClient(JavaClient(ElasticProperties(s"http://$elasticHost:$elasticPort")))
-  val creds        = CredentialsLookup.getCredentialsProvider("a", "s")
-  val documentType = "enriched"
-  val index        = "idx"
+  val elasticHost = "127.0.0.1"
+  val elasticPort = 28875
+  val client      = ElasticClient(JavaClient(ElasticProperties(s"http://$elasticHost:$elasticPort")))
+  val creds       = CredentialsLookup.getCredentialsProvider("a", "s")
+  val index       = "idx"
   val sender = new ElasticsearchBulkSender(
     elasticHost,
     elasticPort,
@@ -44,7 +43,7 @@ class ElasticsearchBulkSenderSpec extends Specification {
     None,
     None,
     index,
-    documentType,
+    None,
     10000L,
     creds,
     None

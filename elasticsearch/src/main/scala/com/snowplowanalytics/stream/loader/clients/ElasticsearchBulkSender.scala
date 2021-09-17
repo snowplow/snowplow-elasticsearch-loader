@@ -14,7 +14,6 @@ package com.snowplowanalytics.stream.loader
 package clients
 
 // AWS
-import com.amazonaws.services.kinesis.connectors.elasticsearch.ElasticsearchObject
 import com.amazonaws.auth.AWSCredentialsProvider
 
 // Java
@@ -29,11 +28,13 @@ import scala.util.{Failure => SFailure, Success => SSuccess}
 import org.elasticsearch.client.RestClient
 
 import com.sksamuel.elastic4s.Index
-import com.sksamuel.elastic4s.{ElasticClient, Response}
-import com.sksamuel.elastic4s.ElasticDsl._
+import com.sksamuel.elastic4s.{ElasticClient, ElasticRequest, Handler, Response}
+import com.sksamuel.elastic4s.ElasticDsl.{BulkHandler => _, _}
 import com.sksamuel.elastic4s.requests.indexes.IndexRequest
 import com.sksamuel.elastic4s.http.{JavaClient, NoOpHttpClientConfigCallback}
-import com.sksamuel.elastic4s.requests.bulk.BulkResponse
+import com.sksamuel.elastic4s.requests.bulk.{BulkRequest, BulkResponse}
+import com.sksamuel.elastic4s.handlers.bulk.BulkHandlers
+import com.sksamuel.exts.Logging
 
 import org.apache.http.{Header, HttpHost}
 import org.apache.http.message.BasicHeader
@@ -64,7 +65,7 @@ class ElasticsearchBulkSender(
   username: Option[String],
   password: Option[String],
   documentIndex: String,
-  documentType: String,
+  documentType: Option[String],
   val maxConnectionWaitTimeMs: Long,
   credentialsProvider: AWSCredentialsProvider,
   val tracker: Option[Tracker[Id]],
@@ -94,6 +95,18 @@ class ElasticsearchBulkSender(
       .setHttpClientConfigCallback(httpClientConfigCallback)
       .setDefaultHeaders(headers)
     ElasticClient(JavaClient.fromRestClient(restClientBuilder.build()))
+  }
+
+  /**
+   * This BulkHandler is added to change endpoints of bulk api request to add
+   * document type to them. This change is made in order to continue to support ES 6.x
+   */
+  implicit object CustomBulkHandler extends Handler[BulkRequest, BulkResponse] with Logging {
+    override def build(t: BulkRequest): ElasticRequest = {
+      val req = BulkHandlers.BulkHandler.build(t)
+      val ep  = s"${documentType.map(t => s"/$documentIndex/$t").getOrElse("")}/_bulk"
+      req.copy(endpoint = ep)
+    }
   }
 
   // do not close the es client, otherwise it will fail when resharding
@@ -164,12 +177,8 @@ class ElasticsearchBulkSender(
       case Some(shardSuffix) => documentIndex + shardSuffix
       case None              => documentIndex
     }
-    utils.extractEventId(jsonRecord.json) match {
-      case Some(id) =>
-        new ElasticsearchObject(index, documentType, id, jsonRecord.json.noSpaces)
-      case None =>
-        new ElasticsearchObject(index, documentType, jsonRecord.json.noSpaces)
-    }
+    val eventId = utils.extractEventId(jsonRecord.json)
+    ElasticsearchObject(index, eventId, jsonRecord.json.noSpaces)
   }
 
   /** Logs the cluster health */
@@ -221,7 +230,7 @@ object ElasticsearchBulkSender {
     IO.timer(concurrent.ExecutionContext.global)
 
   def composeRequest(obj: ElasticsearchObject): IndexRequest =
-    indexInto(Index(obj.getIndex)).id(obj.getId).doc(obj.getSource)
+    indexInto(Index(obj.index)).id(obj.id.orNull).doc(obj.doc)
 
   def apply(config: StreamLoaderConfig, tracker: Option[Tracker[Id]]): ElasticsearchBulkSender = {
     new ElasticsearchBulkSender(
@@ -240,4 +249,6 @@ object ElasticsearchBulkSender {
       config.elasticsearch.client.maxRetries
     )
   }
+
+  case class ElasticsearchObject(index: String, id: Option[String], doc: String)
 }

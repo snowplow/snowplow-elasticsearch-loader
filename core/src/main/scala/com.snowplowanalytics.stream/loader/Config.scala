@@ -176,7 +176,7 @@ object Config {
     implicit val esAWSConfigReader: ConfigReader[ESAWSConfig] = deriveReader[ESAWSConfig]
   }
 
-  case class ESClusterConfig(name: String, index: String, documentType: String)
+  case class ESClusterConfig(name: String, index: String, documentType: Option[String])
 
   object ESClusterConfig {
     implicit val esClusterConfigReader: ConfigReader[ESClusterConfig] =
