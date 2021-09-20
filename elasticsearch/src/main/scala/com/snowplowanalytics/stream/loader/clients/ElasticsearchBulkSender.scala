@@ -13,9 +13,6 @@
 package com.snowplowanalytics.stream.loader
 package clients
 
-// AWS
-import com.amazonaws.auth.AWSCredentialsProvider
-
 // Java
 import com.google.common.base.Charsets
 import com.google.common.io.BaseEncoding
@@ -50,7 +47,9 @@ import retry.CatsEffect._
 
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
 
-import com.snowplowanalytics.stream.loader.Config.StreamLoaderConfig
+import com.snowplowanalytics.stream.loader.Config.Region
+import com.snowplowanalytics.stream.loader.Config.Sink.GoodSink
+import com.snowplowanalytics.stream.loader.Config.Sink.GoodSink.Elasticsearch.ESChunk
 
 /**
  * Main ES component responsible for inserting data into a specific index,
@@ -60,16 +59,16 @@ class ElasticsearchBulkSender(
   endpoint: String,
   port: Int,
   ssl: Boolean,
-  region: String,
   awsSigning: Boolean,
+  awsSigningRegion: Region,
   username: Option[String],
   password: Option[String],
   documentIndex: String,
   documentType: Option[String],
   val maxConnectionWaitTimeMs: Long,
-  credentialsProvider: AWSCredentialsProvider,
   val tracker: Option[Tracker[Id]],
-  val maxAttempts: Int = 6
+  val maxAttempts: Int = 6,
+  chunkConf: ESChunk
 ) extends BulkSender[EmitterJsonInput] {
   require(maxAttempts > 0)
   require(maxConnectionWaitTimeMs > 0)
@@ -80,7 +79,7 @@ class ElasticsearchBulkSender(
 
   private val client = {
     val httpClientConfigCallback =
-      if (awsSigning) new SignedHttpClientConfigCallback(credentialsProvider, region)
+      if (awsSigning) new SignedHttpClientConfigCallback(awsSigningRegion)
       else NoOpHttpClientConfigCallback
     val formedHost = new HttpHost(endpoint, port, if (ssl) "https" else "http")
     val headers: Array[Header] = (username, password) match {
@@ -149,7 +148,7 @@ class ElasticsearchBulkSender(
       }
     } else Nil
 
-    log.info(s"Emitted ${esObjects.size - newFailures.size} records to Elasticseacrch")
+    log.info(s"Emitted ${esObjects.size - newFailures.size} records to Elasticsearch")
     if (newFailures.nonEmpty) logHealth()
 
     val allFailures = oldFailures ++ newFailures
@@ -158,6 +157,8 @@ class ElasticsearchBulkSender(
 
     allFailures
   }
+
+  override def chunkConfig(): ESChunk = chunkConf
 
   /**
    * Get sublist of records that could not be inserted
@@ -234,21 +235,24 @@ object ElasticsearchBulkSender {
   def composeRequest(obj: ElasticsearchObject): IndexRequest =
     indexInto(Index(obj.index)).id(obj.id.orNull).doc(obj.doc)
 
-  def apply(config: StreamLoaderConfig, tracker: Option[Tracker[Id]]): ElasticsearchBulkSender = {
+  def apply(
+    config: GoodSink.Elasticsearch,
+    tracker: Option[Tracker[Id]]
+  ): ElasticsearchBulkSender = {
     new ElasticsearchBulkSender(
-      config.elasticsearch.client.endpoint,
-      config.elasticsearch.client.port,
-      config.elasticsearch.client.ssl,
-      config.elasticsearch.aws.region,
-      config.elasticsearch.aws.signing,
-      config.elasticsearch.client.username,
-      config.elasticsearch.client.password,
-      config.elasticsearch.cluster.index,
-      config.elasticsearch.cluster.documentType,
-      config.elasticsearch.client.maxTimeout,
-      CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey),
+      config.client.endpoint,
+      config.client.port,
+      config.client.ssl,
+      config.aws.signing,
+      config.aws.region,
+      config.client.username,
+      config.client.password,
+      config.cluster.index,
+      config.cluster.documentType,
+      config.client.maxTimeout,
       tracker,
-      config.elasticsearch.client.maxRetries
+      config.client.maxRetries,
+      config.chunk
     )
   }
 

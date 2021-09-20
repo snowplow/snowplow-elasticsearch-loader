@@ -1,0 +1,27 @@
+# The minimum required config options for loading from nsq
+{
+  "input": {
+    "type": "nsq"
+    "streamName": "test-nsq-stream"
+    "channelName": "test-nsq-channel-name"
+    "nsqlookupdHost": "127.0.0.1"
+    "nsqlookupdPort": 34189
+  }
+  "output": {
+    "good": {
+      "client": {
+        "endpoint": "localhost"
+      }
+      "cluster": {
+        "index": "good"
+      }
+    }
+    "bad" {
+      "type": "nsq"
+      "streamName": "test-nsq-bad-stream"
+      "nsqdHost": "127.0.0.1"
+      "nsqdPort": 24509
+    }
+  }
+  "purpose": "JSON"
+}

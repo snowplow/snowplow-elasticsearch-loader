@@ -37,7 +37,7 @@ import io.circe.parser.parse
 /**
  * Class to convert plain JSON to EmitterInputs
  */
-class PlainJsonTransformer extends IJsonTransformer {
+class JsonTransformer extends IJsonTransformer {
 
   /**
    * Convert an Amazon Kinesis record to a json string

@@ -39,19 +39,20 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibC
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
 import com.amazonaws.services.kinesis.metrics.interfaces.IMetricsFactory
 import com.amazonaws.services.kinesis.metrics.impl.NullMetricsFactory
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 
 // This project
 import com.snowplowanalytics.stream.loader.Config._
 
 /**
- * Boilerplate class for Kinesis Conenector
- * @param streamLoaderConfig streamLoaderConfig
+ * Boilerplate class for Kinesis Connector
  * @param kinesis  queue settings
+ * @param metrics metrics settings
  * @param kinesisConnectorPipeline kinesisConnectorPipeline
  */
 class KinesisSourceExecutor[A, B](
-  streamLoaderConfig: StreamLoaderConfig,
-  kinesis: Queue.Kinesis,
+  kinesis: Source.Kinesis,
+  metrics: Monitoring.Metrics,
   kinesisConnectorPipeline: IKinesisConnectorPipeline[A, B]
 ) extends KinesisConnectorExecutorBase[A, B] {
 
@@ -68,8 +69,6 @@ class KinesisSourceExecutor[A, B](
       kcc.AWS_CREDENTIALS_PROVIDER,
       kcc.WORKER_ID
     )
-      .withKinesisEndpoint(kcc.KINESIS_ENDPOINT)
-      .withDynamoDBEndpoint(kcc.DYNAMODB_ENDPOINT)
       .withFailoverTimeMillis(kcc.FAILOVER_TIME)
       .withMaxRecords(kcc.MAX_RECORDS)
       .withIdleTimeBetweenReadsInMillis(kcc.IDLE_TIME_BETWEEN_READS)
@@ -88,6 +87,11 @@ class KinesisSourceExecutor[A, B](
           + KinesisConnectorConfiguration.KINESIS_CONNECTOR_USER_AGENT
       )
       .withRegionName(kcc.REGION_NAME)
+      .condWith(kinesis.customEndpoint.isDefined, _.withKinesisEndpoint(kcc.KINESIS_ENDPOINT))
+      .condWith(
+        kinesis.dynamodbCustomEndpoint.isDefined,
+        _.withDynamoDBEndpoint(kcc.DYNAMODB_ENDPOINT)
+      )
 
     timestamp
       .filter(_ => initialPosition == "AT_TIMESTAMP")
@@ -95,59 +99,50 @@ class KinesisSourceExecutor[A, B](
       .getOrElse(cfg.withInitialPositionInStream(kcc.INITIAL_POSITION_IN_STREAM))
   }
 
+  implicit class KinesisClientLibConfigurationExtension(c: KinesisClientLibConfiguration) {
+    def condWith(
+      cond: => Boolean,
+      f: KinesisClientLibConfiguration => KinesisClientLibConfiguration
+    ): KinesisClientLibConfiguration =
+      if (cond) f(c) else c
+  }
+
   /**
    * Builds a KinesisConnectorConfiguration
-   *
-   * @param config the configuration HOCON
-   * @param queue queue configuration
-   * @return A KinesisConnectorConfiguration
    */
-  def convertConfig(
-    config: StreamLoaderConfig,
-    queue: Queue.Kinesis
-  ): KinesisConnectorConfiguration = {
+  def convertConfig: KinesisConnectorConfiguration = {
     val props = new Properties
-    props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT, queue.endpoint)
-    props.setProperty(KinesisConnectorConfiguration.PROP_DYNAMODB_ENDPOINT, queue.dynamodbEndpoint)
-    props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME, queue.appName.trim)
+    kinesis.customEndpoint.foreach(
+      props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT, _)
+    )
+    kinesis.dynamodbCustomEndpoint.foreach(
+      props.setProperty(KinesisConnectorConfiguration.PROP_DYNAMODB_ENDPOINT, _)
+    )
+    // So that the region of the DynamoDB table is correct
+    props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME, kinesis.region.name)
+    props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME, kinesis.appName.trim)
     props.setProperty(
       KinesisConnectorConfiguration.PROP_INITIAL_POSITION_IN_STREAM,
-      queue.initialPosition
+      kinesis.initialPosition
     )
-    props.setProperty(KinesisConnectorConfiguration.PROP_MAX_RECORDS, queue.maxRecords.toString)
-
-    // So that the region of the DynamoDB table is correct
-    props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME, queue.region)
+    props.setProperty(KinesisConnectorConfiguration.PROP_MAX_RECORDS, kinesis.maxRecords.toString)
 
     props.setProperty(
       KinesisConnectorConfiguration.PROP_KINESIS_INPUT_STREAM,
-      config.streams.inStreamName
-    )
-
-    props.setProperty(
-      KinesisConnectorConfiguration.PROP_ELASTICSEARCH_ENDPOINT,
-      config.elasticsearch.client.endpoint
-    )
-    props.setProperty(
-      KinesisConnectorConfiguration.PROP_ELASTICSEARCH_CLUSTER_NAME,
-      config.elasticsearch.cluster.name
-    )
-    props.setProperty(
-      KinesisConnectorConfiguration.PROP_ELASTICSEARCH_PORT,
-      config.elasticsearch.client.port.toString
+      kinesis.streamName
     )
 
     props.setProperty(
       KinesisConnectorConfiguration.PROP_BUFFER_BYTE_SIZE_LIMIT,
-      config.streams.buffer.byteLimit.toString
+      kinesis.buffer.byteLimit.toString
     )
     props.setProperty(
       KinesisConnectorConfiguration.PROP_BUFFER_RECORD_COUNT_LIMIT,
-      config.streams.buffer.recordLimit.toString
+      kinesis.buffer.recordLimit.toString
     )
     props.setProperty(
       KinesisConnectorConfiguration.PROP_BUFFER_MILLISECONDS_LIMIT,
-      config.streams.buffer.timeLimit.toString
+      kinesis.buffer.timeLimit.toString
     )
 
     props.setProperty(KinesisConnectorConfiguration.PROP_CONNECTOR_DESTINATION, "elasticsearch")
@@ -155,7 +150,7 @@ class KinesisSourceExecutor[A, B](
 
     new KinesisConnectorConfiguration(
       props,
-      CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey)
+      new DefaultAWSCredentialsProviderChain()
     )
   }
 
@@ -186,18 +181,17 @@ class KinesisSourceExecutor[A, B](
       )
     }
 
-    worker = kinesis.disableCloudWatch match {
-      case Some(true) =>
-        new Worker.Builder()
-          .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
-          .config(kinesisClientLibConfiguration)
-          .metricsFactory(new NullMetricsFactory())
-          .build()
-      case _ =>
-        new Worker.Builder()
-          .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
-          .config(kinesisClientLibConfiguration)
-          .build()
+    worker = if (metrics.cloudWatch) {
+      new Worker.Builder()
+        .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
+        .config(kinesisClientLibConfiguration)
+        .build()
+    } else {
+      new Worker.Builder()
+        .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
+        .config(kinesisClientLibConfiguration)
+        .metricsFactory(new NullMetricsFactory())
+        .build()
     }
 
     LOG.info(getClass.getSimpleName + " worker created")
@@ -206,9 +200,9 @@ class KinesisSourceExecutor[A, B](
   def getKinesisConnectorRecordProcessorFactory =
     new KinesisConnectorRecordProcessorFactory[A, B](
       kinesisConnectorPipeline,
-      convertConfig(streamLoaderConfig, kinesis)
+      convertConfig
     )
 
-  initialize(convertConfig(streamLoaderConfig, kinesis), null)
+  initialize(convertConfig, null)
 
 }

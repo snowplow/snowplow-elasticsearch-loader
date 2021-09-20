@@ -1,0 +1,23 @@
+{
+  "input": {
+    "type": "kinesis"
+    "streamName": "test-kinesis-stream"
+    "region": "ca-central-1"
+    "initialPosition": "LATEST"
+  }
+  "output": {
+    "good": {
+      "client": {
+        "endpoint": "localhost"
+      }
+      "cluster": {
+        "index": "good"
+      }
+    }
+    "bad" {
+      "type": "kinesis"
+      "streamName": "test-kinesis-bad-stream"
+    }
+  }
+  "purpose": "ENRICHED_EVENTS"
+}

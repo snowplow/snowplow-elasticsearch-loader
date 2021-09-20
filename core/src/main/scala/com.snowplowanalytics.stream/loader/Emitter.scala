@@ -36,22 +36,17 @@ import scala.collection.JavaConverters._
 // This project
 import sinks.ISink
 import clients.BulkSender
+import Config.Sink.GoodSink.Elasticsearch.ESChunk
 
 /**
  * Emitter class for any sort of BulkSender Extension
  *
- * @param bulkSender        The bulkSender Client to use for the sink
- * @param goodSink          the configured GoodSink
- * @param badSink           the configured BadSink
- * @param bufferRecordLimit record limit for buffer
- * @param bufferByteLimit   byte limit for buffer
+ * @param goodSink the configured GoodSink
+ * @param badSink  the configured BadSink
  */
 class Emitter(
-  bulkSender: BulkSender[EmitterJsonInput],
-  goodSink: Option[ISink],
-  badSink: ISink,
-  bufferRecordLimit: Long,
-  bufferByteLimit: Long
+  goodSink: Either[ISink, BulkSender[EmitterJsonInput]],
+  badSink: ISink
 ) extends IEmitter[EmitterJsonInput] {
 
   @throws[IOException]
@@ -67,7 +62,7 @@ class Emitter(
    * @return list of inputs which failed transformation or which the sink rejected
    */
   @throws[IOException]
-  private def attemptEmit(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
+  def attemptEmit(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
     if (records.isEmpty) {
       Nil
     } else {
@@ -75,14 +70,14 @@ class Emitter(
         records.partition(_._2.isValid)
       // Send all valid records to stdout / Sink and return those rejected by it
       val rejects = goodSink match {
-        case Some(s) =>
+        case Left(s) =>
           validRecords.foreach {
             case (_, Validated.Valid(r)) => s.store(r.json.toString, None, true)
             case _                       => ()
           }
           Nil
-        case None if validRecords.isEmpty => Nil
-        case _                            => emit(validRecords)
+        case Right(_) if validRecords.isEmpty => Nil
+        case Right(sender)                    => emit(validRecords, sender)
       }
       invalidRecords ++ rejects
     }
@@ -94,27 +89,29 @@ class Emitter(
    * All invalid requests and all requests which failed transformation get sent to Kinesis.
    *
    * @param records List of records to send
+   * @param sender The bulkSender client to use for the sink
    * @return List of inputs which the sink rejected
    */
-  def emit(records: List[EmitterJsonInput]): List[EmitterJsonInput] =
+  def emit(
+    records: List[EmitterJsonInput],
+    sender: BulkSender[EmitterJsonInput]
+  ): List[EmitterJsonInput] =
     for {
-      recordSlice <- splitBuffer(records, bufferByteLimit, bufferRecordLimit)
-      result      <- bulkSender.send(recordSlice)
+      recordSlice <- splitBuffer(records, sender.chunkConfig())
+      result      <- sender.send(recordSlice)
     } yield result
 
   /**
    * Splits the buffer into emittable chunks based on the
    * buffer settings defined in the config
    *
-   * @param records     The records to split
-   * @param byteLimit   emitter byte limit
-   * @param recordLimit emitter record limit
+   * @param records The records to split
+   * @param chunkConfig Config object for size of the ES chunks
    * @return a list of buffers
    */
   private def splitBuffer(
     records: List[EmitterJsonInput],
-    byteLimit: Long,
-    recordLimit: Long
+    chunkConfig: ESChunk
   ): List[List[EmitterJsonInput]] = {
     // partition the records in
     val remaining: ListBuffer[EmitterJsonInput]     = records.to[ListBuffer]
@@ -130,7 +127,9 @@ class Emitter(
         case (_, Validated.Invalid(_)) => 0L // This record will be ignored in the sender
       }
 
-      if ((curBuffer.length + 1) > recordLimit || (runningByteCount + byteCount) > byteLimit) {
+      if (
+        (curBuffer.length + 1) > chunkConfig.recordLimit || (runningByteCount + byteCount) > chunkConfig.byteLimit
+      ) {
         // add this buffer to the output and start a new one with this record
         // (if the first record is larger than the byte limit the buffer will be empty)
         if (curBuffer.nonEmpty) {
@@ -156,7 +155,7 @@ class Emitter(
    */
   override def shutdown(): Unit = {
     println("Shutting down emitter")
-    bulkSender.close()
+    goodSink.foreach(_.close())
   }
 
   /**

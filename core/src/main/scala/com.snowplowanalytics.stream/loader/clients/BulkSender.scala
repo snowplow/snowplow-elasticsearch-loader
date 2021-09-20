@@ -38,6 +38,7 @@ import retry.{PolicyDecision, RetryDetails, RetryPolicy}
 
 // Snowplow
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
+import Config.Sink.GoodSink.Elasticsearch.ESChunk
 
 trait BulkSender[A] {
   import BulkSender._
@@ -57,6 +58,7 @@ trait BulkSender[A] {
   def send(records: List[A]): List[A]
   def close(): Unit
   def logHealth(): Unit
+  def chunkConfig(): ESChunk
 
   /**
    * Terminate the application in a way the KCL cannot stop, prevents shutdown hooks from running

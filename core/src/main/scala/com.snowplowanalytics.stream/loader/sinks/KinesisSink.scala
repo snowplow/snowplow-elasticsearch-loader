@@ -33,40 +33,38 @@ import scala.util.{Failure, Random, Success}
 import com.amazonaws.services.kinesis.model._
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 
 // Concurrent libraries
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import com.snowplowanalytics.stream.loader.Config.Sink.BadSink.{Kinesis => KinesisSinkConfig}
+
 /**
  * Kinesis Sink
  *
- * @param accessKey accessKey
- * @param secretKey secretKey
- * @param endpoint Kinesis stream endpoint
- * @param region Kinesis region
- * @param name Kinesis stream name
+ * @param conf Config for Kinesis sink
  */
-class KinesisSink(
-  accessKey: String,
-  secretKey: String,
-  endpoint: String,
-  region: String,
-  name: String
-) extends ISink {
+class KinesisSink(conf: KinesisSinkConfig) extends ISink {
 
   private lazy val log = LoggerFactory.getLogger(getClass)
 
   // Explicitly create a client so we can configure the end point
   val client = AmazonKinesisClientBuilder
     .standard()
-    .withCredentials(CredentialsLookup.getCredentialsProvider(accessKey, secretKey))
-    .withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
+    .withCredentials(new DefaultAWSCredentialsProviderChain())
+    // Region should be set in the EndpointConfiguration when custom endpoint is used
+    .condWith(conf.customEndpoint.isEmpty, _.withRegion(conf.region.name))
+    .optWith[String](
+      conf.customEndpoint,
+      b => e => b.withEndpointConfiguration(new EndpointConfiguration(e, conf.region.name))
+    )
     .build()
 
   require(
-    streamExists(name),
-    s"Stream $name doesn't exist or is neither active nor updating (deleted or creating)"
+    streamExists(conf.streamName),
+    s"Stream ${conf.streamName} doesn't exist or is neither active nor updating (deleted or creating)"
   )
 
   /**
@@ -105,7 +103,7 @@ class KinesisSink(
    */
   def store(output: String, key: Option[String], good: Boolean): Unit =
     put(
-      name,
+      conf.streamName,
       ByteBuffer.wrap(output.getBytes(UTF_8)),
       key.getOrElse(Random.nextInt.toString)
     ) onComplete {
@@ -117,4 +115,17 @@ class KinesisSink(
         log.error("Writing failed")
         log.error("  + " + f.getMessage)
     }
+
+  implicit class AwsKinesisClientBuilderExtensions(builder: AmazonKinesisClientBuilder) {
+    def optWith[A](
+      opt: Option[A],
+      f: AmazonKinesisClientBuilder => A => AmazonKinesisClientBuilder
+    ): AmazonKinesisClientBuilder =
+      opt.map(f(builder)).getOrElse(builder)
+    def condWith[A](
+      cond: => Boolean,
+      f: AmazonKinesisClientBuilder => AmazonKinesisClientBuilder
+    ): AmazonKinesisClientBuilder =
+      if (cond) f(builder) else builder
+  }
 }

@@ -1,0 +1,23 @@
+# The minimum required config options for loading from kinesis
+{
+  "input": {
+    "type": "kinesis"
+    "streamName": "test-kinesis-stream"
+    "initialPosition": "LATEST"
+  }
+  "output": {
+    "good": {
+      "client": {
+        "endpoint": "localhost"
+      }
+      "cluster": {
+        "index": "good"
+      }
+    }
+    "bad" {
+      "type": "kinesis"
+      "streamName": "test-kinesis-bad-stream"
+    }
+  }
+  "purpose": "ENRICHED_EVENTS"
+}

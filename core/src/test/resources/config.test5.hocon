@@ -1,0 +1,25 @@
+{
+  "input": {
+    "type": "kinesis"
+    "region": "ca-central-1"
+    "initialPosition": "LATEST"
+  }
+  "output": {
+    "good": {
+      "client": {
+      }
+      "cluster": {
+        "index": "good"
+      }
+      "aws": {
+        "signing": true
+        "region": "unknown-region-1"
+      }
+    }
+    "bad" {
+      "streamName": "test-kinesis-bad-stream"
+      "region": "unknown-region-2"
+    }
+  }
+  "purpose": "ENRICHED_EVENTS"
+}

@@ -1,0 +1,49 @@
+{
+  "input": {
+    "type": "kinesis"
+    "streamName": "test-kinesis-stream"
+    "appName": "test-app-name"
+    "initialPosition": "LATEST"
+    "region": "ca-central-1"
+    "maxRecords": 2000
+    "buffer": {
+      "byteLimit": 201
+      "recordLimit": 202
+      "timeLimit": 203
+    }
+  }
+  "output": {
+    "type": "elasticsearch"
+    "good": {
+      "client": {
+        "endpoint": "localhost"
+        "maxTimeout": 205
+        "maxRetries": 7
+        "port": 9220
+        "ssl": true
+      }
+      "chunk": {
+        "byteLimit": 206
+        "recordLimit": 207
+      }
+      "aws": {
+        "signing": true
+        "region": "ca-central-1"
+      }
+      "cluster": {
+        "index": "testindex"
+      }
+    }
+    "bad" {
+      "type": "kinesis"
+      "streamName": "test-kinesis-bad-stream"
+      "region": "ca-central-1"
+    }
+  }
+  "purpose": "BAD_ROWS"
+  "monitoring": {
+    "metrics": {
+      "cloudWatch": false
+    }
+  }
+}

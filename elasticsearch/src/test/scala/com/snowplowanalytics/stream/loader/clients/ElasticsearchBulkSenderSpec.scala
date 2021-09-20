@@ -23,7 +23,9 @@ import cats.syntax.validated._
 
 import io.circe.literal._
 
-import com.snowplowanalytics.stream.loader.{CredentialsLookup, EmitterJsonInput, JsonRecord}
+import com.snowplowanalytics.stream.loader.{EmitterJsonInput, JsonRecord}
+import com.snowplowanalytics.stream.loader.Config.Sink.GoodSink.Elasticsearch.ESChunk
+import com.snowplowanalytics.stream.loader.Config.Region
 
 // specs2
 import org.specs2.mutable.Specification
@@ -32,21 +34,21 @@ class ElasticsearchBulkSenderSpec extends Specification {
   val elasticHost = "127.0.0.1"
   val elasticPort = 28875
   val client      = ElasticClient(JavaClient(ElasticProperties(s"http://$elasticHost:$elasticPort")))
-  val creds       = CredentialsLookup.getCredentialsProvider("a", "s")
   val index       = "idx"
   val sender = new ElasticsearchBulkSender(
     elasticHost,
     elasticPort,
     false,
-    "region",
     false,
+    Region("region"),
     None,
     None,
     index,
     None,
     10000L,
-    creds,
-    None
+    None,
+    6,
+    ESChunk(1L, 1L)
   )
 
   client.execute(createIndex(index)).await
