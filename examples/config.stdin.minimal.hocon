@@ -1,0 +1,13 @@
+# The minimum required config options for loading from stdin
+"input": {
+  "type": "stdin"
+}
+"output": {
+  "good": {
+    "type": "stdout"
+  }
+  "bad" {
+    "type": "stderr"
+  }
+}
+"purpose": "bad"

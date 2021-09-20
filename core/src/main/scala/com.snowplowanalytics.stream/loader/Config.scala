@@ -38,65 +38,51 @@ import pureconfig.module.enumeratum._
 
 object Config {
 
-  implicit def hint[T]: ProductHint[T]              = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
-  implicit val queueHint: FieldCoproductHint[Queue] = new FieldCoproductHint[Queue]("enabled")
+  implicit def hint[T]: ProductHint[T]               = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+  implicit val queueHint: FieldCoproductHint[Source] = new FieldCoproductHint[Source]("type")
 
-  sealed trait StreamType extends EnumEntry with EnumEntry.Hyphencase
-  object StreamType extends Enum[StreamType] {
-    case object Good      extends StreamType
-    case object Bad       extends StreamType
-    case object PlainJson extends StreamType
+  case class Monitoring(snowplow: Monitoring.SnowplowMonitoring)
+  object Monitoring {
+    implicit val monitoringConfigReader: ConfigReader[Monitoring] =
+      deriveReader[Monitoring]
 
-    val values = findValues
+    case class SnowplowMonitoring(
+      collector: String,
+      appId: String
+    )
+
+    object SnowplowMonitoring {
+      implicit val snowplowMonitoringConfig: ConfigReader[SnowplowMonitoring] =
+        deriveReader[SnowplowMonitoring]
+    }
   }
 
-  sealed trait BadSink extends EnumEntry with EnumEntry.Hyphencase
-  object BadSink extends Enum[BadSink] {
-    case object Stderr  extends BadSink
-    case object Nsq     extends BadSink
-    case object None    extends BadSink
-    case object Kinesis extends BadSink
+  sealed trait Source extends Product with Serializable
+  object Source {
+    case class Stdin() extends Source
+    object Stdin {
+      implicit val stdinReader: ConfigReader[Stdin] = deriveReader[Stdin]
+    }
 
-    val values = findValues
-  }
-
-  sealed trait GoodSink extends EnumEntry with EnumEntry.Hyphencase
-  object GoodSink extends Enum[GoodSink] {
-    case object Elasticsearch extends GoodSink
-    case object Stdout        extends GoodSink
-
-    val values = findValues
-
-    implicit val goodSinkReader: ConfigReader[GoodSink] = deriveEnumerationReader[GoodSink]
-  }
-
-  case class SinkConfig(good: GoodSink, bad: BadSink)
-
-  object SinkConfig {
-    implicit val sinkConfigReader: ConfigReader[SinkConfig] = deriveReader[SinkConfig]
-  }
-
-  case class AWSConfig(accessKey: String, secretKey: String)
-
-  object AWSConfig {
-    implicit val awsConfigReader: ConfigReader[AWSConfig] = deriveReader[AWSConfig]
-  }
-
-  sealed trait Queue
-  object Queue {
     final case class Nsq(
+      streamName: String,
       channelName: String,
-      nsqdHost: String,
-      nsqdPort: Int,
       nsqlookupdHost: String,
-      nsqlookupdPort: Int
-    ) extends Queue
+      nsqlookupdPort: Int,
+      buffer: Nsq.Buffer
+    ) extends Source
 
     object Nsq {
       implicit val nsqReader: ConfigReader[Nsq] = deriveReader[Nsq]
+
+      case class Buffer(recordLimit: Long)
+      object Buffer {
+        implicit val nsqBufferReader: ConfigReader[Buffer] = deriveReader[Buffer]
+      }
     }
 
     final case class Kinesis(
+      streamName: String,
       initialPosition: String,
       initialTimestamp: Option[String],
       maxRecords: Long,
@@ -104,8 +90,9 @@ object Config {
       appName: String,
       customEndpoint: Option[String],
       dynamodbCustomEndpoint: Option[String],
-      disableCloudWatch: Option[Boolean]
-    ) extends Queue {
+      disableCloudWatch: Option[Boolean],
+      buffer: Kinesis.Buffer
+    ) extends Source {
       val timestampEither = initialTimestamp
         .toRight("An initial timestamp needs to be provided when choosing AT_TIMESTAMP")
         .right
@@ -120,10 +107,7 @@ object Config {
 
       val timestamp = timestampEither.right.toOption
 
-      val endpoint = customEndpoint.getOrElse(region match {
-        case cn @ "cn-north-1" => s"https://kinesis.$cn.amazonaws.com.cn"
-        case _                 => s"https://kinesis.$region.amazonaws.com"
-      })
+      val endpoint = getKinesisEndpoint(region, customEndpoint)
 
       val dynamodbEndpoint = dynamodbCustomEndpoint.getOrElse(region match {
         case cn @ "cn-north-1" => s"https://dynamodb.$cn.amazonaws.com.cn"
@@ -133,112 +117,134 @@ object Config {
 
     object Kinesis {
       implicit val kinesisReader: ConfigReader[Kinesis] = deriveReader[Kinesis]
+
+      case class Buffer(byteLimit: Long, recordLimit: Long, timeLimit: Long)
+      object Buffer {
+        implicit val kinesisBufferReader: ConfigReader[Buffer] = deriveReader[Buffer]
+      }
     }
 
-    implicit val queueReader: ConfigReader[Queue] = deriveReader[Queue]
+    implicit val sourceReader: ConfigReader[Source] = deriveReader[Source]
   }
 
-  case class BufferConfig(byteLimit: Long, recordLimit: Long, timeLimit: Long)
+  case class Sink(good: Sink.GoodSink, bad: Sink.BadSink)
+  object Sink {
+    implicit val sinkConfigReader: ConfigReader[Sink] = deriveReader[Sink]
 
-  object BufferConfig {
-    implicit val bufferReader: ConfigReader[BufferConfig] = deriveReader[BufferConfig]
+    sealed trait GoodSink extends Product with Serializable
+    object GoodSink {
+
+      case class Stdout() extends GoodSink
+      object Stdout {
+        implicit val stdoutConfigReader: ConfigReader[Stdout] = deriveReader[Stdout]
+      }
+
+      case class Elasticsearch(
+        client: Elasticsearch.ESClient,
+        aws: Elasticsearch.ESAWS,
+        cluster: Elasticsearch.ESCluster,
+        chunk: Elasticsearch.ESChunk
+      ) extends GoodSink
+
+      object Elasticsearch {
+        implicit val esConfigReader: ConfigReader[Elasticsearch] = deriveReader[Elasticsearch]
+
+        case class ESClient(
+          endpoint: String,
+          port: Int,
+          username: Option[String],
+          password: Option[String],
+          shardDateFormat: Option[String],
+          shardDateField: Option[String],
+          maxTimeout: Long,
+          maxRetries: Int,
+          ssl: Boolean
+        )
+
+        object ESClient {
+          implicit val esClientConfigReader: ConfigReader[ESClient] = deriveReader[ESClient]
+        }
+
+        case class ESAWS(signing: Boolean, region: String)
+
+        object ESAWS {
+          implicit val esAWSConfigReader: ConfigReader[ESAWS] = deriveReader[ESAWS]
+        }
+
+        case class ESCluster(index: String, documentType: Option[String])
+
+        object ESCluster {
+          implicit val esClusterConfigReader: ConfigReader[ESCluster] =
+            deriveReader[ESCluster]
+        }
+
+        case class ESChunk(byteLimit: Long, recordLimit: Long)
+
+        object ESChunk {
+          implicit val chunkConfigReader: ConfigReader[ESChunk] = deriveReader[ESChunk]
+        }
+      }
+
+      implicit val goodSinkConfigReader: ConfigReader[GoodSink] = deriveReader[GoodSink]
+    }
+
+    sealed trait BadSink extends Product with Serializable
+    object BadSink {
+      case class None() extends BadSink
+      object None {
+        implicit val badSinkNoneConfigReader: ConfigReader[None] = deriveReader[None]
+      }
+
+      case class Stderr() extends BadSink
+      object Stderr {
+        implicit val badSinkStderrConfigReader: ConfigReader[Stderr] = deriveReader[Stderr]
+      }
+
+      case class Nsq(
+        streamName: String,
+        nsqdHost: String,
+        nsqdPort: Int
+      ) extends BadSink
+      object Nsq {
+        implicit val badSinkNsqConfigReader: ConfigReader[Nsq] = deriveReader[Nsq]
+      }
+
+      case class Kinesis(
+        streamName: String,
+        region: String,
+        customEndpoint: Option[String]
+      ) extends BadSink {
+        val endpoint = getKinesisEndpoint(region, customEndpoint)
+      }
+      object Kinesis {
+        implicit val badSinkKinesisConfigReader: ConfigReader[Kinesis] = deriveReader[Kinesis]
+      }
+
+      implicit val badSinkConfigReader: ConfigReader[BadSink] = deriveReader[BadSink]
+    }
   }
 
-  case class StreamsConfig(
-    inStreamName: String,
-    outStreamName: String,
-    buffer: BufferConfig
-  )
-
-  object StreamsConfig {
-    implicit val streamsConfigReader: ConfigReader[StreamsConfig] = deriveReader[StreamsConfig]
-  }
-
-  case class ESClientConfig(
-    endpoint: String,
-    port: Int,
-    username: Option[String],
-    password: Option[String],
-    shardDateFormat: Option[String],
-    shardDateField: Option[String],
-    maxTimeout: Long,
-    maxRetries: Int,
-    ssl: Boolean
-  )
-
-  object ESClientConfig {
-    implicit val esClientConfigReader: ConfigReader[ESClientConfig] = deriveReader[ESClientConfig]
-  }
-
-  case class ESAWSConfig(signing: Boolean, region: String)
-
-  object ESAWSConfig {
-    implicit val esAWSConfigReader: ConfigReader[ESAWSConfig] = deriveReader[ESAWSConfig]
-  }
-
-  case class ESClusterConfig(name: String, index: String, documentType: Option[String])
-
-  object ESClusterConfig {
-    implicit val esClusterConfigReader: ConfigReader[ESClusterConfig] =
-      deriveReader[ESClusterConfig]
-  }
-
-  case class ESConfig(
-    client: ESClientConfig,
-    aws: ESAWSConfig,
-    cluster: ESClusterConfig
-  )
-
-  object ESConfig {
-    implicit val esConfigReader: ConfigReader[ESConfig] = deriveReader[ESConfig]
-  }
-
-  case class SnowplowMonitoringConfig(
-    collectorUri: String,
-    collectorPort: Int,
-    ssl: Option[Boolean],
-    appId: String,
-    method: String
-  )
-
-  object SnowplowMonitoringConfig {
-    implicit val snowplowMonitoringConfig: ConfigReader[SnowplowMonitoringConfig] =
-      deriveReader[SnowplowMonitoringConfig]
-  }
-
-  case class MonitoringConfig(snowplow: SnowplowMonitoringConfig)
-  object MonitoringConfig {
-    implicit val monitoringConfigReader: ConfigReader[MonitoringConfig] =
-      deriveReader[MonitoringConfig]
-  }
-
-  sealed trait Source extends EnumEntry with EnumEntry.Hyphencase
-  object Source extends Enum[Source] {
-    case object Kinesis extends Source
-    case object Nsq     extends Source
-    case object Stdin   extends Source
+  sealed trait Purpose extends EnumEntry with EnumEntry.Hyphencase
+  object Purpose extends Enum[Purpose] {
+    case object Good      extends Purpose
+    case object Bad       extends Purpose
+    case object PlainJson extends Purpose
 
     val values = findValues
 
-    implicit val sourceConfigReader: ConfigReader[Source] = deriveEnumerationReader[Source]
+    implicit val purposeReader: ConfigReader[Purpose] = deriveEnumerationReader[Purpose]
   }
 
   case class StreamLoaderConfig(
-    source: Source,
-    sink: SinkConfig,
-    enabled: StreamType,
-    aws: AWSConfig,
-    queue: Queue,
-    streams: StreamsConfig,
-    elasticsearch: ESConfig,
-    monitoring: Option[MonitoringConfig]
+    input: Source,
+    output: Sink,
+    purpose: Purpose,
+    monitoring: Option[Monitoring]
   )
 
   object StreamLoaderConfig {
-
     implicit val streamLoaderConfigReader: ConfigReader[StreamLoaderConfig] =
       deriveReader[StreamLoaderConfig]
-
   }
 
   val config = Opts
@@ -252,20 +258,12 @@ object Config {
 
   val command = Command("snowplow-stream-loader", generated.Settings.version, true)(config)
 
-  def parseConfig(arguments: Array[String]): StreamLoaderConfig = {
-    val result = for {
+  def parseConfig(arguments: Array[String]): Either[String, StreamLoaderConfig] =
+    for {
       path <- command.parse(arguments).leftMap(_.toString)
       source = ConfigSource.file(path.toFile)
       parsed <- source.load[StreamLoaderConfig].leftMap(showFailures(_))
     } yield parsed
-
-    result match {
-      case Right(c) => c
-      case Left(e) =>
-        System.err.println(s"configuration error:\n$e")
-        sys.exit(1)
-    }
-  }
 
   private def showFailures(failures: ConfigReaderFailures): String = {
     val failureStrings = failures.toList.map { failure =>
@@ -275,4 +273,9 @@ object Config {
     failureStrings.mkString("\n")
   }
 
+  private def getKinesisEndpoint(region: String, customEndpoint: Option[String]): String =
+    customEndpoint.getOrElse(region match {
+      case cn @ "cn-north-1" => s"https://kinesis.$cn.amazonaws.com.cn"
+      case _                 => s"https://kinesis.$region.amazonaws.com"
+    })
 }

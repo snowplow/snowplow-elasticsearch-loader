@@ -1,0 +1,41 @@
+# The minimum required config options for loading from nsq
+"input": {
+  "type": "nsq"
+  "streamName": "test-nsq-stream"
+  "channelName": "test-nsq-channel-name"
+  "nsqlookupdHost": "127.0.0.1"
+  "nsqlookupdPort": 34189
+  "buffer": {
+    "recordLimit": 1000
+  }
+}
+"output": {
+  "good": {
+    "type": "elasticsearch"
+    "client": {
+      "endpoint": "localhost"
+      "port": 9200
+      "maxTimeout": 10000
+      "maxRetries": 6
+      "ssl": true
+    }
+    "aws": {
+      "signing": false
+      "region": "eu-central-1"
+    }
+    "cluster": {
+      "index": "good"
+    }
+    "chunk": {
+      "byteLimit": 10000
+      "recordLimit": 1000
+    }
+  }
+  "bad" {
+    "type": "nsq"
+    "streamName": "test-nsq-bad-stream"
+    "nsqdHost": "127.0.0.1"
+    "nsqdPort": 24509
+  }
+}
+"purpose": "plain-json"

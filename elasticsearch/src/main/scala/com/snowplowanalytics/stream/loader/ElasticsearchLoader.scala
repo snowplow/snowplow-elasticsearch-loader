@@ -19,7 +19,6 @@
 package com.snowplowanalytics.stream.loader
 
 import cats.Id
-
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
 import com.snowplowanalytics.stream.loader.sinks.ISink
 import com.snowplowanalytics.stream.loader.clients.{BulkSender, ElasticsearchBulkSender}
@@ -29,21 +28,27 @@ import com.snowplowanalytics.stream.loader.executors.{
   StdinExecutor
 }
 import com.snowplowanalytics.stream.loader.Config._
+import com.snowplowanalytics.stream.loader.Config.Sink.{BadSink, GoodSink}
 
 /** Main entry point for the Elasticsearch HTTP sink */
 object ElasticsearchLoader {
 
   def main(args: Array[String]): Unit = {
-    val config: StreamLoaderConfig = Config.parseConfig(args)
-    val tracker                    = config.monitoring.map(e => SnowplowTracking.initializeTracker(e.snowplow))
-    val badSink                    = initBadSink(config)
-    val bulkSender                 = ElasticsearchBulkSender(config, tracker)
-    val goodSink = config.sink.good match {
-      case GoodSink.Stdout        => Some(new sinks.StdouterrSink)
-      case GoodSink.Elasticsearch => None
+    val configRes = Config.parseConfig(args)
+    val config = configRes match {
+      case Right(c) => c
+      case Left(e) =>
+        System.err.println(s"configuration error:\n$e")
+        sys.exit(1)
+    }
+    val tracker = config.monitoring.flatMap(e => SnowplowTracking.initializeTracker(e.snowplow))
+    val badSink = initBadSink(config)
+    val goodSink = config.output.good match {
+      case c: GoodSink.Elasticsearch => Right(ElasticsearchBulkSender(c, tracker))
+      case _: GoodSink.Stdout        => Left(new sinks.StdouterrSink)
     }
 
-    val executor = initExecutor(config, bulkSender, goodSink, badSink, tracker)
+    val executor = initExecutor(config, goodSink, badSink, tracker)
 
     SnowplowTracking.initializeSnowplowTracking(tracker)
 
@@ -53,80 +58,65 @@ object ElasticsearchLoader {
     // application from exiting naturally so we explicitly call System.exit.
     // This does not apply to NSQ because NSQ consumer is non-blocking and fall here
     // right after consumer.start()
-    config.source match {
-      case Source.Kinesis => System.exit(1)
-      case Source.Stdin   => System.exit(1)
-      case Source.Nsq     => ()
+    config.input match {
+      case _: Source.Kinesis => System.exit(1)
+      case _: Source.Stdin   => System.exit(1)
+      case _: Source.Nsq     => ()
     }
   }
 
   def initExecutor(
     config: StreamLoaderConfig,
-    sender: BulkSender[EmitterJsonInput],
-    goodSink: Option[ISink],
+    goodSink: Either[ISink, BulkSender[EmitterJsonInput]],
     badSink: ISink,
     tracker: Option[Tracker[Id]]
   ): Runnable = {
-    (config.source, config.queue) match {
+    val (shardDateField, shardDateFormat) = config.output.good match {
+      case c: GoodSink.Elasticsearch => (c.client.shardDateField, c.client.shardDateFormat)
+      case _                         => (None, None)
+    }
+    config.input match {
       // Read records from Kinesis
-      case (Source.Kinesis, queue: Queue.Kinesis) =>
+      case c: Source.Kinesis =>
         val pipeline = new KinesisPipeline(
-          config.enabled,
+          config.purpose,
           goodSink,
           badSink,
-          sender,
-          config.elasticsearch.client.shardDateField,
-          config.elasticsearch.client.shardDateFormat,
-          config.streams.buffer.recordLimit,
-          config.streams.buffer.byteLimit
+          shardDateField,
+          shardDateFormat
         )
-        new KinesisSourceExecutor[ValidatedJsonRecord, EmitterJsonInput](config, queue, pipeline)
+        new KinesisSourceExecutor[ValidatedJsonRecord, EmitterJsonInput](config, c, pipeline)
 
       // Read records from NSQ
-      case (Source.Nsq, queue: Queue.Nsq) =>
+      case c: Source.Nsq =>
         new NsqSourceExecutor(
-          config.enabled,
-          queue,
+          config.purpose,
+          c,
           config,
           goodSink,
           badSink,
-          config.elasticsearch.client.shardDateField,
-          config.elasticsearch.client.shardDateFormat,
-          sender
+          shardDateField,
+          shardDateFormat
         )
 
       // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
-      case (Source.Stdin, _) => new StdinExecutor(config, sender, goodSink, badSink)
-      case _                 => throw new RuntimeException("Source must be set to 'stdin', 'kinesis' or 'nsq'")
+      case _: Source.Stdin => new StdinExecutor(config, goodSink, badSink)
+      case _               => throw new RuntimeException("Source must be set to 'stdin', 'kinesis' or 'nsq'")
     }
   }
 
   def initBadSink(config: StreamLoaderConfig): ISink = {
-    config.sink.bad match {
-      case BadSink.Stderr => new sinks.StdouterrSink
-      case BadSink.Nsq =>
-        config.queue match {
-          case queue: Queue.Nsq =>
-            new sinks.NsqSink(queue.nsqdHost, queue.nsqdPort, config.streams.outStreamName)
-          case _ =>
-            System.err.println("queue config is not valid for Nsq")
-            sys.exit(1)
-        }
-      case BadSink.None => new sinks.NullSink
-      case BadSink.Kinesis =>
-        config.queue match {
-          case queue: Queue.Kinesis =>
-            new sinks.KinesisSink(
-              config.aws.accessKey,
-              config.aws.secretKey,
-              queue.endpoint,
-              queue.region,
-              config.streams.outStreamName
-            )
-          case _ =>
-            System.err.println("queue config is not valid for Kinesis")
-            sys.exit(1)
-        }
+    config.output.bad match {
+      case _: BadSink.None   => new sinks.NullSink
+      case _: BadSink.Stderr => new sinks.StdouterrSink
+      case c: BadSink.Nsq =>
+        new sinks.NsqSink(c.nsqdHost, c.nsqdPort, c.streamName)
+      case c: BadSink.Kinesis =>
+        new sinks.KinesisSink(
+          c.endpoint,
+          c.region,
+          c.streamName
+        )
     }
   }
 }

@@ -91,4 +91,11 @@ object BuildSettings {
     ThisBuild / dynverVTagPrefix := false, // Otherwise git tags required to have v-prefix
     ThisBuild / dynverSeparator := "-" // to be compatible with docker
     )
+
+
+  lazy val addExampleConfToTestCp = Seq(
+    Test / unmanagedClasspath += {
+      baseDirectory.value.getParentFile / "examples"
+    }
+  )
 }

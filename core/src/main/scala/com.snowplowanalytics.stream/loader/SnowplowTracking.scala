@@ -23,6 +23,7 @@ import java.util.UUID
 import cats.Id
 import cats.data.NonEmptyList
 import cats.effect.Clock
+import cats.syntax.option._
 
 import scala.concurrent.duration.{MILLISECONDS, NANOSECONDS, TimeUnit}
 
@@ -67,18 +68,18 @@ object SnowplowTracking {
    * @param config The "monitoring" section of the HOCON
    * @return a new tracker instance
    */
-  def initializeTracker(config: SnowplowMonitoringConfig): Tracker[Id] = {
-    val endpoint = config.collectorUri
-    val port     = config.collectorPort
-    val appName  = config.appId
-    val emitter =
-      AsyncEmitter.createAndStart(EndpointParams(endpoint, Some(port), config.ssl.getOrElse(false)))
-    new Tracker[Id](
-      NonEmptyList.of(emitter),
-      com.snowplowanalytics.stream.loader.generated.Settings.name,
-      appName
-    )
-  }
+  def initializeTracker(config: Monitoring.SnowplowMonitoring): Option[Tracker[Id]] =
+    config.collector match {
+      case Collector((host, port)) =>
+        val emitter =
+          AsyncEmitter.createAndStart(EndpointParams(host, Some(port), port == 443))
+        new Tracker[Id](
+          NonEmptyList.of(emitter),
+          com.snowplowanalytics.stream.loader.generated.Settings.name,
+          config.appId
+        ).some
+      case _ => None
+    }
 
   /**
    * If a tracker has been configured, send a sink_write_failed event
@@ -205,5 +206,20 @@ object SnowplowTracking {
         Json.obj("interval" -> heartbeatInterval.asJson)
       )
     )
+  }
+
+  /**
+   * Config helper functions
+   */
+  private object Collector {
+    def isInt(s: String): Boolean = try { s.toInt; true }
+    catch { case _: NumberFormatException => false }
+
+    def unapply(hostPort: String): Option[(String, Int)] =
+      hostPort.split(":").toList match {
+        case host :: port :: Nil if isInt(port) => Some((host, port.toInt))
+        case host :: Nil                        => Some((host, 80))
+        case _                                  => None
+      }
   }
 }

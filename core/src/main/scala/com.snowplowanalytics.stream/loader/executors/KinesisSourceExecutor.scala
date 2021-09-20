@@ -39,6 +39,7 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibC
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
 import com.amazonaws.services.kinesis.metrics.interfaces.IMetricsFactory
 import com.amazonaws.services.kinesis.metrics.impl.NullMetricsFactory
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 
 // This project
 import com.snowplowanalytics.stream.loader.Config._
@@ -51,7 +52,7 @@ import com.snowplowanalytics.stream.loader.Config._
  */
 class KinesisSourceExecutor[A, B](
   streamLoaderConfig: StreamLoaderConfig,
-  kinesis: Queue.Kinesis,
+  kinesis: Source.Kinesis,
   kinesisConnectorPipeline: IKinesisConnectorPipeline[A, B]
 ) extends KinesisConnectorExecutorBase[A, B] {
 
@@ -97,57 +98,40 @@ class KinesisSourceExecutor[A, B](
 
   /**
    * Builds a KinesisConnectorConfiguration
-   *
-   * @param config the configuration HOCON
-   * @param queue queue configuration
-   * @return A KinesisConnectorConfiguration
    */
-  def convertConfig(
-    config: StreamLoaderConfig,
-    queue: Queue.Kinesis
-  ): KinesisConnectorConfiguration = {
+  def convertConfig: KinesisConnectorConfiguration = {
     val props = new Properties
-    props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT, queue.endpoint)
-    props.setProperty(KinesisConnectorConfiguration.PROP_DYNAMODB_ENDPOINT, queue.dynamodbEndpoint)
-    props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME, queue.appName.trim)
+    props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT, kinesis.endpoint)
+    props.setProperty(
+      KinesisConnectorConfiguration.PROP_DYNAMODB_ENDPOINT,
+      kinesis.dynamodbEndpoint
+    )
+    props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME, kinesis.appName.trim)
     props.setProperty(
       KinesisConnectorConfiguration.PROP_INITIAL_POSITION_IN_STREAM,
-      queue.initialPosition
+      kinesis.initialPosition
     )
-    props.setProperty(KinesisConnectorConfiguration.PROP_MAX_RECORDS, queue.maxRecords.toString)
+    props.setProperty(KinesisConnectorConfiguration.PROP_MAX_RECORDS, kinesis.maxRecords.toString)
 
     // So that the region of the DynamoDB table is correct
-    props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME, queue.region)
+    props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME, kinesis.region)
 
     props.setProperty(
       KinesisConnectorConfiguration.PROP_KINESIS_INPUT_STREAM,
-      config.streams.inStreamName
-    )
-
-    props.setProperty(
-      KinesisConnectorConfiguration.PROP_ELASTICSEARCH_ENDPOINT,
-      config.elasticsearch.client.endpoint
-    )
-    props.setProperty(
-      KinesisConnectorConfiguration.PROP_ELASTICSEARCH_CLUSTER_NAME,
-      config.elasticsearch.cluster.name
-    )
-    props.setProperty(
-      KinesisConnectorConfiguration.PROP_ELASTICSEARCH_PORT,
-      config.elasticsearch.client.port.toString
+      kinesis.streamName
     )
 
     props.setProperty(
       KinesisConnectorConfiguration.PROP_BUFFER_BYTE_SIZE_LIMIT,
-      config.streams.buffer.byteLimit.toString
+      kinesis.buffer.byteLimit.toString
     )
     props.setProperty(
       KinesisConnectorConfiguration.PROP_BUFFER_RECORD_COUNT_LIMIT,
-      config.streams.buffer.recordLimit.toString
+      kinesis.buffer.recordLimit.toString
     )
     props.setProperty(
       KinesisConnectorConfiguration.PROP_BUFFER_MILLISECONDS_LIMIT,
-      config.streams.buffer.timeLimit.toString
+      kinesis.buffer.timeLimit.toString
     )
 
     props.setProperty(KinesisConnectorConfiguration.PROP_CONNECTOR_DESTINATION, "elasticsearch")
@@ -155,7 +139,7 @@ class KinesisSourceExecutor[A, B](
 
     new KinesisConnectorConfiguration(
       props,
-      CredentialsLookup.getCredentialsProvider(config.aws.accessKey, config.aws.secretKey)
+      new DefaultAWSCredentialsProviderChain()
     )
   }
 
@@ -206,9 +190,9 @@ class KinesisSourceExecutor[A, B](
   def getKinesisConnectorRecordProcessorFactory =
     new KinesisConnectorRecordProcessorFactory[A, B](
       kinesisConnectorPipeline,
-      convertConfig(streamLoaderConfig, kinesis)
+      convertConfig
     )
 
-  initialize(convertConfig(streamLoaderConfig, kinesis), null)
+  initialize(convertConfig, null)
 
 }

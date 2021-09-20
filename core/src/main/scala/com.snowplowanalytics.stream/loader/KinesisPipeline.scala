@@ -43,24 +43,20 @@ import com.snowplowanalytics.stream.loader.clients.BulkSender
  * KinesisElasticsearchPipeline class sets up the Emitter/Buffer/Transformer/Filter,
  * orchestrating the whole records flow
  *
- * @param streamType the type of stream, good, bad or plain-json
+ * @param purpose kind of data stored, good, bad or plain-json
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
- * @param bulkSender The Client to use
  */
 class KinesisPipeline(
-  streamType: StreamType,
-  goodSink: Option[ISink],
+  purpose: Purpose,
+  goodSink: Either[ISink, BulkSender[EmitterJsonInput]],
   badSink: ISink,
-  bulkSender: BulkSender[EmitterJsonInput],
   shardDateField: Option[String],
-  shardDateFormat: Option[String],
-  bufferRecordLimit: Long,
-  bufferByteLimit: Long
+  shardDateFormat: Option[String]
 ) extends IKinesisConnectorPipeline[ValidatedJsonRecord, EmitterJsonInput] {
 
   def getEmitter(configuration: KinesisConnectorConfiguration): IEmitter[EmitterJsonInput] =
-    new Emitter(bulkSender, goodSink, badSink, bufferRecordLimit, bufferByteLimit)
+    new Emitter(goodSink, badSink)
 
   def getBuffer(configuration: KinesisConnectorConfiguration): IBuffer[ValidatedJsonRecord] =
     new BasicMemoryBuffer[ValidatedJsonRecord](configuration)
@@ -68,10 +64,10 @@ class KinesisPipeline(
   def getTransformer(
     c: KinesisConnectorConfiguration
   ): ITransformer[ValidatedJsonRecord, EmitterJsonInput] =
-    streamType match {
-      case StreamType.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
-      case StreamType.PlainJson => new PlainJsonTransformer
-      case StreamType.Bad       => new BadEventTransformer
+    purpose match {
+      case Purpose.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
+      case Purpose.PlainJson => new PlainJsonTransformer
+      case Purpose.Bad       => new BadEventTransformer
     }
 
   def getFilter(c: KinesisConnectorConfiguration) =

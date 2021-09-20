@@ -66,6 +66,7 @@ lazy val core = project
   .settings(moduleName := "snowplow-elasticsearch-loader-core")
   .settings(allSettings)
   .settings(BuildSettings.scalifySettings)
+  .settings(BuildSettings.addExampleConfToTestCp)
 
 // project dealing with the ES
 lazy val elasticsearch = project

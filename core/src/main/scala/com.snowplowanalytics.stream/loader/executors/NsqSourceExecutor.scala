@@ -47,22 +47,20 @@ import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, PlainJso
 /**
  * NSQSource executor
  *
- * @param streamType the type of stream, good, bad or plain-json
+ * @param purpose kind of data stored, good, bad or plain-json
  * @param nsq Nsq NsqConfig
  * @param config ESLoader Configuration
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
- * @param bulkSender function for sending to storage
  */
 class NsqSourceExecutor(
-  streamType: StreamType,
-  nsq: Queue.Nsq,
+  purpose: Purpose,
+  nsq: Source.Nsq,
   config: StreamLoaderConfig,
-  goodSink: Option[ISink],
+  goodSink: Either[ISink, BulkSender[EmitterJsonInput]],
   badSink: ISink,
   shardDateField: Option[String],
-  shardDateFormat: Option[String],
-  bulkSender: BulkSender[EmitterJsonInput]
+  shardDateFormat: Option[String]
 ) extends Runnable {
 
   lazy val log = LoggerFactory.getLogger(getClass())
@@ -72,16 +70,13 @@ class NsqSourceExecutor(
   // ElasticsearchEmitter instance
   private val emitter =
     new Emitter(
-      bulkSender,
       goodSink,
-      badSink,
-      config.streams.buffer.recordLimit,
-      config.streams.buffer.byteLimit
+      badSink
     )
-  private val transformer = streamType match {
-    case StreamType.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
-    case StreamType.PlainJson => new PlainJsonTransformer
-    case StreamType.Bad       => new BadEventTransformer
+  private val transformer = purpose match {
+    case Purpose.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
+    case Purpose.PlainJson => new PlainJsonTransformer
+    case Purpose.Bad       => new BadEventTransformer
   }
 
   /**
@@ -89,7 +84,7 @@ class NsqSourceExecutor(
    */
   override def run(): Unit = {
     val nsqCallback: NSQMessageCallback = new NSQMessageCallback {
-      val nsqBufferSize = config.streams.buffer.recordLimit
+      val nsqBufferSize = nsq.buffer.recordLimit
 
       override def message(msg: NSQMessage): Unit = {
         val msgStr = new String(msg.getMessage(), UTF_8)
@@ -99,7 +94,7 @@ class NsqSourceExecutor(
           msg.finished()
 
           if (msgBuffer.size == nsqBufferSize) {
-            val rejectedRecords = emitter.emit(msgBuffer.toList)
+            val rejectedRecords = emitter.attemptEmit(msgBuffer.toList)
             emitter.fail(rejectedRecords.asJava)
             msgBuffer.clear()
           }
@@ -109,7 +104,7 @@ class NsqSourceExecutor(
 
     val errorCallback = new NSQErrorCallback {
       override def error(e: NSQException): Unit =
-        log.error(s"Exception while consuming topic ${config.streams.inStreamName}", e)
+        log.error(s"Exception while consuming topic ${nsq.streamName}", e)
     }
 
     // use NSQLookupd
@@ -118,7 +113,7 @@ class NsqSourceExecutor(
     val consumer =
       new NSQConsumer(
         lookup,
-        config.streams.inStreamName,
+        nsq.streamName,
         nsq.channelName,
         nsqCallback,
         new NSQConfig(),

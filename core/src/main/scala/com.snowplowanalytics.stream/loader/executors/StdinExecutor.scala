@@ -13,9 +13,9 @@
 package com.snowplowanalytics.stream.loader.executors
 
 import cats.syntax.validated._
-
 import com.snowplowanalytics.stream.loader.EmitterJsonInput
-import com.snowplowanalytics.stream.loader.Config.{StreamLoaderConfig, StreamType}
+import com.snowplowanalytics.stream.loader.Config.{Purpose, StreamLoaderConfig}
+import com.snowplowanalytics.stream.loader.Config.Sink.GoodSink
 import com.snowplowanalytics.stream.loader.clients.BulkSender
 import com.snowplowanalytics.stream.loader.sinks.ISink
 import com.snowplowanalytics.stream.loader.transformers.{
@@ -27,19 +27,22 @@ import com.snowplowanalytics.stream.loader.createBadRow
 
 class StdinExecutor(
   config: StreamLoaderConfig,
-  sender: BulkSender[EmitterJsonInput],
-  goodSink: Option[ISink],
+  goodSink: Either[ISink, BulkSender[EmitterJsonInput]],
   badSink: ISink
 ) extends Runnable {
 
-  val transformer = config.enabled match {
-    case StreamType.Good =>
-      new EnrichedEventJsonTransformer(
-        config.elasticsearch.client.shardDateField,
-        config.elasticsearch.client.shardDateFormat
-      )
-    case StreamType.PlainJson => new PlainJsonTransformer
-    case StreamType.Bad       => new BadEventTransformer
+  val transformer = config.purpose match {
+    case Purpose.Good =>
+      config.output.good match {
+        case c: GoodSink.Elasticsearch =>
+          new EnrichedEventJsonTransformer(
+            c.client.shardDateField,
+            c.client.shardDateFormat
+          )
+        case _: GoodSink.Stdout => new EnrichedEventJsonTransformer(None, None)
+      }
+    case Purpose.PlainJson => new PlainJsonTransformer
+    case Purpose.Bad       => new BadEventTransformer
   }
 
   def run = for (ln <- scala.io.Source.stdin.getLines) {
@@ -48,8 +51,8 @@ class StdinExecutor(
       f => badSink.store(createBadRow(line, f).compact, None, false),
       s =>
         goodSink match {
-          case Some(gs) => gs.store(s.json.toString, None, true)
-          case None     => sender.send(List(ln -> s.valid))
+          case Left(gs)      => gs.store(s.json.toString, None, true)
+          case Right(sender) => sender.send(List(ln -> s.valid))
         }
     )
   }

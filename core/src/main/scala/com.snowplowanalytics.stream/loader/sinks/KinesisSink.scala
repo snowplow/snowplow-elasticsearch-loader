@@ -33,6 +33,7 @@ import scala.util.{Failure, Random, Success}
 import com.amazonaws.services.kinesis.model._
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 
 // Concurrent libraries
 import scala.concurrent.Future
@@ -41,15 +42,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
  * Kinesis Sink
  *
- * @param accessKey accessKey
- * @param secretKey secretKey
  * @param endpoint Kinesis stream endpoint
  * @param region Kinesis region
  * @param name Kinesis stream name
  */
 class KinesisSink(
-  accessKey: String,
-  secretKey: String,
   endpoint: String,
   region: String,
   name: String
@@ -60,7 +57,7 @@ class KinesisSink(
   // Explicitly create a client so we can configure the end point
   val client = AmazonKinesisClientBuilder
     .standard()
-    .withCredentials(CredentialsLookup.getCredentialsProvider(accessKey, secretKey))
+    .withCredentials(new DefaultAWSCredentialsProviderChain())
     .withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
     .build()
 
