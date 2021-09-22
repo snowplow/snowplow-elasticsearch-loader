@@ -104,8 +104,10 @@ class ElasticsearchBulkSender(
   implicit object CustomBulkHandler extends Handler[BulkRequest, BulkResponse] with Logging {
     override def build(t: BulkRequest): ElasticRequest = {
       val req = BulkHandlers.BulkHandler.build(t)
-      val ep  = s"${documentType.map(t => s"/$documentIndex/$t").getOrElse("")}/_bulk"
-      req.copy(endpoint = ep)
+      documentType match {
+        case None    => req
+        case Some(t) => req.copy(endpoint = s"/$documentIndex/$t${req.endpoint}")
+      }
     }
   }
 
