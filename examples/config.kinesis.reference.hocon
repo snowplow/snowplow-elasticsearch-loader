@@ -39,8 +39,9 @@
   # Note: Time need to specified in UTC.
   "initialTimestamp": "2020-07-17T10:00:00Z"
 
-  # Maximum number of records to get from Kinesis per call to GetRecords
-  "maxRecords": 1000
+  # Optional maximum number of records to get from Kinesis per call to GetRecords
+  # Default value 10000
+  "maxRecords": 9999
 
   # Region where the Kinesis stream is located
   "region": "eu-central-1"
@@ -53,21 +54,20 @@
   # this can be used to specify local endpoints when using Localstack
   "dynamodbCustomEndpoint": "http://localhost:4569"
 
-  # Optional override to disable cloudwatch
-  "disableCloudWatch": true
-
   # "appName" is used for a DynamoDB table to maintain stream state.
+  # Default value "snowplow-elasticsearch-loader"
   "appName": "test-app-name"
 
   # Events are accumulated in a buffer before being sent to Elasticsearch.
+  # These values are optional.
   # The buffer is emptied whenever:
   # - the combined size of the stored records exceeds byteLimit or
   # - the number of stored records exceeds recordLimit or
   # - the time in milliseconds since it was last emptied exceeds timeLimit
   "buffer": {
-    "byteLimit": 10000
-    "recordLimit": 1000
-    "timeLimit": 10000
+    "byteLimit": 999999 # Default value 1000000
+    "recordLimit": 499  # Default value 500
+    "timeLimit": 499    # Default value 500
   }
 }
 
@@ -87,7 +87,8 @@
     # - password (optional, remove if not active): http basic auth password
     # - shardDateFormat (optional, remove if not needed): formatting used for sharding good stream, i.e. _yyyy-MM-dd
     # - shardDateField (optional, if not specified derived_tstamp is used): timestamp field for sharding good stream
-    # - max-timeout: the maximum attempt time before a client restart
+    # - maxTimeout (optional, default value 10000): the maximum attempt time before a client restart
+    # - maxRetries (optional, default value 6): the maximum number of request attempts before giving up
     # - ssl: if using the http client, whether to use ssl or not
     "client": {
       "endpoint": "localhost"
@@ -96,8 +97,8 @@
       "password": "es-pass"
       "shardDateFormat": "_yyyy-MM-dd"
       "shardDateField": "derived_tstamp"
-      "maxTimeout": 10000
-      "maxRetries": 6
+      "maxTimeout": 9999
+      "maxRetries": 5
       "ssl": true
     }
 
@@ -120,10 +121,11 @@
     }
 
     # Bulk request to Elasticsearch will be splitted to
-    # chunks according given limits
+    # chunks according given limits.
+    # These values are optional.
     "chunk": {
-      "byteLimit": 10000
-      "recordLimit": 1000
+      "byteLimit": 999999 # Default value is 1000000
+      "recordLimit": 499  # Default value is 500
     }
   }
   "bad" {
@@ -156,5 +158,10 @@
   "snowplow": {
     "collector": "localhost:14322"
     "appId": "test-app-id"
+  }
+
+  "metrics": {
+    # Optional, cloudwatch metrics are enabled by default.
+    "cloudWatch": false
   }
 }

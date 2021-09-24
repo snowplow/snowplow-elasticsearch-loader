@@ -52,4 +52,9 @@
     "collector": "localhost:14322"
     "appId": "test-app-id"
   }
+
+  "metrics": {
+    # Optional, cloudwatch metrics are enabled by default.
+    "cloudWatch": false
+  }
 }

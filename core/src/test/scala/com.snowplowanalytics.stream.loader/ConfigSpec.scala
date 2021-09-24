@@ -38,13 +38,12 @@ class ConfigSpec extends Specification {
           "test-kinesis-stream",
           "AT_TIMESTAMP",
           "2020-07-17T10:00:00Z".some,
-          1000,
+          9999,
           "eu-central-1",
           "test-app-name",
           "127.0.0.1".some,
           "http://localhost:4569".some,
-          true.some,
-          Source.Kinesis.Buffer(10000, 1000, 10000)
+          Source.Kinesis.Buffer(999999, 499, 499)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(
@@ -55,19 +54,20 @@ class ConfigSpec extends Specification {
               "es-pass".some,
               "_yyyy-MM-dd".some,
               "derived_tstamp".some,
-              10000,
-              6,
+              9999,
+              5,
               true
             ),
             Sink.GoodSink.Elasticsearch.ESAWS(true, "eu-central-1"),
             Sink.GoodSink.Elasticsearch.ESCluster("good", "good-doc".some),
-            Sink.GoodSink.Elasticsearch.ESChunk(10000, 1000)
+            Sink.GoodSink.Elasticsearch.ESChunk(999999, 499)
           ),
           Sink.BadSink.Kinesis("test-kinesis-bad-stream", "eu-central-1", "127.0.0.1:7846".some)
         ),
         Purpose.Good,
         Monitoring(
-          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id")
+          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id"),
+          Monitoring.Metrics(false).some
         ).some
       )
 
@@ -84,13 +84,12 @@ class ConfigSpec extends Specification {
           "test-kinesis-stream",
           "LATEST",
           None,
-          1000,
+          10000,
           "eu-central-1",
-          "test-app-name",
+          "snowplow-elasticsearch-loader",
           None,
           None,
-          None,
-          Source.Kinesis.Buffer(10000, 1000, 10000)
+          Source.Kinesis.Buffer(1000000, 500, 500)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(
@@ -107,7 +106,7 @@ class ConfigSpec extends Specification {
             ),
             Sink.GoodSink.Elasticsearch.ESAWS(false, "eu-central-1"),
             Sink.GoodSink.Elasticsearch.ESCluster("good", None),
-            Sink.GoodSink.Elasticsearch.ESChunk(10000, 1000)
+            Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
           ),
           Sink.BadSink.Kinesis("test-kinesis-bad-stream", "eu-central-1", None)
         ),
@@ -129,7 +128,7 @@ class ConfigSpec extends Specification {
           "test-nsq-channel-name",
           "127.0.0.1",
           34189,
-          Source.Nsq.Buffer(1000)
+          Source.Nsq.Buffer(499)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(
@@ -140,19 +139,20 @@ class ConfigSpec extends Specification {
               "es-pass".some,
               "_yyyy-MM-dd".some,
               "derived_tstamp".some,
-              10000,
-              6,
+              9999,
+              5,
               true
             ),
             Sink.GoodSink.Elasticsearch.ESAWS(true, "eu-central-1"),
             Sink.GoodSink.Elasticsearch.ESCluster("good", "good-doc".some),
-            Sink.GoodSink.Elasticsearch.ESChunk(10000, 1000)
+            Sink.GoodSink.Elasticsearch.ESChunk(999999, 499)
           ),
           Sink.BadSink.Nsq("test-nsq-bad-stream", "127.0.0.1", 24509)
         ),
         Purpose.Good,
         Monitoring(
-          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id")
+          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id"),
+          Monitoring.Metrics(false).some
         ).some
       )
 
@@ -170,7 +170,7 @@ class ConfigSpec extends Specification {
           "test-nsq-channel-name",
           "127.0.0.1",
           34189,
-          Source.Nsq.Buffer(1000)
+          Source.Nsq.Buffer(500)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(
@@ -187,7 +187,7 @@ class ConfigSpec extends Specification {
             ),
             Sink.GoodSink.Elasticsearch.ESAWS(false, "eu-central-1"),
             Sink.GoodSink.Elasticsearch.ESCluster("good", None),
-            Sink.GoodSink.Elasticsearch.ESChunk(10000, 1000)
+            Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
           ),
           Sink.BadSink.Nsq("test-nsq-bad-stream", "127.0.0.1", 24509)
         ),
@@ -204,14 +204,15 @@ class ConfigSpec extends Specification {
       val argv   = Array("--config", config.toString)
 
       val expected = StreamLoaderConfig(
-        Source.Stdin(),
+        Source.Stdin,
         Sink(
-          Sink.GoodSink.Stdout(),
-          Sink.BadSink.Stderr()
+          Sink.GoodSink.Stdout,
+          Sink.BadSink.Stderr
         ),
         Purpose.Good,
         Monitoring(
-          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id")
+          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id"),
+          Monitoring.Metrics(false).some
         ).some
       )
 
@@ -224,10 +225,10 @@ class ConfigSpec extends Specification {
       val argv   = Array("--config", config.toString)
 
       val expected = StreamLoaderConfig(
-        Source.Stdin(),
+        Source.Stdin,
         Sink(
-          Sink.GoodSink.Stdout(),
-          Sink.BadSink.Stderr()
+          Sink.GoodSink.Stdout,
+          Sink.BadSink.Stderr
         ),
         Purpose.Bad,
         None

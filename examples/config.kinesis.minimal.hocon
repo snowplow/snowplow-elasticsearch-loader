@@ -3,14 +3,7 @@
   "type": "kinesis"
   "streamName": "test-kinesis-stream"
   "initialPosition": "LATEST"
-  "maxRecords": 1000
   "region": "eu-central-1"
-  "appName": "test-app-name"
-  "buffer": {
-    "byteLimit": 10000
-    "recordLimit": 1000
-    "timeLimit": 10000
-  }
 }
 "output": {
   "good": {
@@ -18,8 +11,6 @@
     "client": {
       "endpoint": "localhost"
       "port": 9200
-      "maxTimeout": 10000
-      "maxRetries": 6
       "ssl": true
     }
     "aws": {
@@ -28,10 +19,6 @@
     }
     "cluster": {
       "index": "good"
-    }
-    "chunk": {
-      "byteLimit": 10000
-      "recordLimit": 1000
     }
   }
   "bad" {

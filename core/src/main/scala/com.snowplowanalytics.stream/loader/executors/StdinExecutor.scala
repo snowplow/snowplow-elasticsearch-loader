@@ -39,7 +39,7 @@ class StdinExecutor(
             c.client.shardDateField,
             c.client.shardDateFormat
           )
-        case _: GoodSink.Stdout => new EnrichedEventJsonTransformer(None, None)
+        case GoodSink.Stdout => new EnrichedEventJsonTransformer(None, None)
       }
     case Purpose.PlainJson => new PlainJsonTransformer
     case Purpose.Bad       => new BadEventTransformer

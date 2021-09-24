@@ -45,7 +45,7 @@ object ElasticsearchLoader {
     val badSink = initBadSink(config)
     val goodSink = config.output.good match {
       case c: GoodSink.Elasticsearch => Right(ElasticsearchBulkSender(c, tracker))
-      case _: GoodSink.Stdout        => Left(new sinks.StdouterrSink)
+      case GoodSink.Stdout           => Left(new sinks.StdouterrSink)
     }
 
     val executor = initExecutor(config, goodSink, badSink, tracker)
@@ -59,8 +59,8 @@ object ElasticsearchLoader {
     // This does not apply to NSQ because NSQ consumer is non-blocking and fall here
     // right after consumer.start()
     config.input match {
+      case Source.Stdin      => System.exit(1)
       case _: Source.Kinesis => System.exit(1)
-      case _: Source.Stdin   => System.exit(1)
       case _: Source.Nsq     => ()
     }
   }
@@ -85,7 +85,12 @@ object ElasticsearchLoader {
           shardDateField,
           shardDateFormat
         )
-        new KinesisSourceExecutor[ValidatedJsonRecord, EmitterJsonInput](config, c, pipeline)
+        new KinesisSourceExecutor[ValidatedJsonRecord, EmitterJsonInput](
+          config,
+          c,
+          config.monitoring.flatMap(_.metrics),
+          pipeline
+        )
 
       // Read records from NSQ
       case c: Source.Nsq =>
@@ -100,15 +105,15 @@ object ElasticsearchLoader {
         )
 
       // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
-      case _: Source.Stdin => new StdinExecutor(config, goodSink, badSink)
-      case _               => throw new RuntimeException("Source must be set to 'stdin', 'kinesis' or 'nsq'")
+      case Source.Stdin => new StdinExecutor(config, goodSink, badSink)
+      case _            => throw new RuntimeException("Source must be set to 'stdin', 'kinesis' or 'nsq'")
     }
   }
 
   def initBadSink(config: StreamLoaderConfig): ISink = {
     config.output.bad match {
-      case _: BadSink.None   => new sinks.NullSink
-      case _: BadSink.Stderr => new sinks.StdouterrSink
+      case BadSink.None   => new sinks.NullSink
+      case BadSink.Stderr => new sinks.StdouterrSink
       case c: BadSink.Nsq =>
         new sinks.NsqSink(c.nsqdHost, c.nsqdPort, c.streamName)
       case c: BadSink.Kinesis =>

@@ -39,8 +39,9 @@
 
   # Events are accumulated in a buffer before being sent to Elasticsearch.
   # The buffer is emptied whenever the number of stored records exceeds recordLimit
+  # This value is optional.
   "buffer": {
-    "recordLimit": 1000
+    "recordLimit": 499 # Default value 500
   }
 }
 
@@ -60,7 +61,8 @@
     # - password (optional, remove if not active): http basic auth password
     # - shardDateFormat (optional, remove if not needed): formatting used for sharding good stream, i.e. _yyyy-MM-dd
     # - shardDateField (optional, if not specified derived_tstamp is used): timestamp field for sharding good stream
-    # - max-timeout: the maximum attempt time before a client restart
+    # - maxTimeout: the maximum attempt time before a client restart
+    # - maxRetries (optional, default value 6): the maximum number of request attempts before giving up
     # - ssl: if using the http client, whether to use ssl or not
     "client": {
       "endpoint": "localhost"
@@ -69,8 +71,8 @@
       "password": "es-pass"
       "shardDateFormat": "_yyyy-MM-dd"
       "shardDateField": "derived_tstamp"
-      "maxTimeout": 10000
-      "maxRetries": 6
+      "maxTimeout": 9999
+      "maxRetries": 5
       "ssl": true
     }
 
@@ -93,10 +95,11 @@
     }
 
     # Bulk request to Elasticsearch will be splitted to
-    # chunks according given limits
+    # chunks according given limits.
+    # These values are optional.
     "chunk": {
-      "byteLimit": 10000
-      "recordLimit": 1000
+      "byteLimit": 999999 # Default value is 1000000
+      "recordLimit": 499  # Default value is 500
     }
   }
   "bad" {
@@ -127,5 +130,10 @@
   "snowplow": {
     "collector": "localhost:14322"
     "appId": "test-app-id"
+  }
+
+  "metrics": {
+    # Optional, cloudwatch metrics are enabled by default.
+    "cloudWatch": false
   }
 }

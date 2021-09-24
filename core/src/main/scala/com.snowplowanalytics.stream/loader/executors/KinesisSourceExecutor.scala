@@ -53,6 +53,7 @@ import com.snowplowanalytics.stream.loader.Config._
 class KinesisSourceExecutor[A, B](
   streamLoaderConfig: StreamLoaderConfig,
   kinesis: Source.Kinesis,
+  metrics: Option[Monitoring.Metrics],
   kinesisConnectorPipeline: IKinesisConnectorPipeline[A, B]
 ) extends KinesisConnectorExecutorBase[A, B] {
 
@@ -170,8 +171,8 @@ class KinesisSourceExecutor[A, B](
       )
     }
 
-    worker = kinesis.disableCloudWatch match {
-      case Some(true) =>
+    worker = metrics.map(_.cloudWatch) match {
+      case Some(false) =>
         new Worker.Builder()
           .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
           .config(kinesisClientLibConfiguration)
