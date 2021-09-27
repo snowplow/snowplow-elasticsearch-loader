@@ -1,0 +1,22 @@
+# The minimum required config options for loading from kinesis
+{
+  "input": {
+    "type": "kinesis"
+    "streamName": "test-kinesis-stream"
+    "initialPosition": "LATEST"
+    "region": "eu-central-1"
+  }
+  "output": {
+    "good": {
+      "client": {
+        "endpoint": "localhost"
+      }
+    }
+    "bad" {
+      "type": "kinesis"
+      "streamName": "test-kinesis-bad-stream"
+      "region": "eu-central-1"
+    }
+  }
+  "purpose": "BAD_ROWS"
+}

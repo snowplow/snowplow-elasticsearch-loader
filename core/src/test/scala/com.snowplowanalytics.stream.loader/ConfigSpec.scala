@@ -39,7 +39,7 @@ class ConfigSpec extends Specification {
           "AT_TIMESTAMP",
           "2020-07-17T10:00:00Z".some,
           9999,
-          "eu-central-1",
+          "eu-central-1".some,
           "test-app-name",
           "127.0.0.1".some,
           "http://localhost:4569".some,
@@ -58,17 +58,18 @@ class ConfigSpec extends Specification {
               5,
               true
             ),
-            Sink.GoodSink.Elasticsearch.ESAWS(true, "eu-central-1"),
+            Sink.GoodSink.Elasticsearch.ESAWS(true, "eu-central-1".some),
             Sink.GoodSink.Elasticsearch.ESCluster("good", "good-doc".some),
             Sink.GoodSink.Elasticsearch.ESChunk(999999, 499)
           ),
-          Sink.BadSink.Kinesis("test-kinesis-bad-stream", "eu-central-1", "127.0.0.1:7846".some)
+          Sink.BadSink
+            .Kinesis("test-kinesis-bad-stream", "eu-central-1".some, "127.0.0.1:7846".some)
         ),
-        Purpose.Good,
+        Purpose.Enriched,
         Monitoring(
-          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id"),
-          Monitoring.Metrics(false).some
-        ).some
+          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id").some,
+          Monitoring.Metrics(false)
+        )
       )
 
       val result = Config.parseConfig(argv)
@@ -85,7 +86,7 @@ class ConfigSpec extends Specification {
           "LATEST",
           None,
           10000,
-          "eu-central-1",
+          "eu-central-1".some,
           "snowplow-elasticsearch-loader",
           None,
           None,
@@ -102,16 +103,19 @@ class ConfigSpec extends Specification {
               None,
               10000,
               6,
-              true
+              false
             ),
-            Sink.GoodSink.Elasticsearch.ESAWS(false, "eu-central-1"),
+            Sink.GoodSink.Elasticsearch.ESAWS(false, None),
             Sink.GoodSink.Elasticsearch.ESCluster("good", None),
             Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
           ),
-          Sink.BadSink.Kinesis("test-kinesis-bad-stream", "eu-central-1", None)
+          Sink.BadSink.Kinesis("test-kinesis-bad-stream", "eu-central-1".some, None)
         ),
         Purpose.Bad,
-        None
+        Monitoring(
+          None,
+          Monitoring.Metrics(true)
+        )
       )
 
       val result = Config.parseConfig(argv)
@@ -143,17 +147,17 @@ class ConfigSpec extends Specification {
               5,
               true
             ),
-            Sink.GoodSink.Elasticsearch.ESAWS(true, "eu-central-1"),
+            Sink.GoodSink.Elasticsearch.ESAWS(true, "eu-central-1".some),
             Sink.GoodSink.Elasticsearch.ESCluster("good", "good-doc".some),
             Sink.GoodSink.Elasticsearch.ESChunk(999999, 499)
           ),
           Sink.BadSink.Nsq("test-nsq-bad-stream", "127.0.0.1", 24509)
         ),
-        Purpose.Good,
+        Purpose.Enriched,
         Monitoring(
-          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id"),
-          Monitoring.Metrics(false).some
-        ).some
+          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id").some,
+          Monitoring.Metrics(false)
+        )
       )
 
       val result = Config.parseConfig(argv)
@@ -183,16 +187,19 @@ class ConfigSpec extends Specification {
               None,
               10000,
               6,
-              true
+              false
             ),
-            Sink.GoodSink.Elasticsearch.ESAWS(false, "eu-central-1"),
+            Sink.GoodSink.Elasticsearch.ESAWS(false, None),
             Sink.GoodSink.Elasticsearch.ESCluster("good", None),
             Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
           ),
           Sink.BadSink.Nsq("test-nsq-bad-stream", "127.0.0.1", 24509)
         ),
-        Purpose.PlainJson,
-        None
+        Purpose.Json,
+        Monitoring(
+          None,
+          Monitoring.Metrics(true)
+        )
       )
 
       val result = Config.parseConfig(argv)
@@ -209,11 +216,11 @@ class ConfigSpec extends Specification {
           Sink.GoodSink.Stdout,
           Sink.BadSink.Stderr
         ),
-        Purpose.Good,
+        Purpose.Enriched,
         Monitoring(
-          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id"),
-          Monitoring.Metrics(false).some
-        ).some
+          Monitoring.SnowplowMonitoring("localhost:14322", "test-app-id").some,
+          Monitoring.Metrics(false)
+        )
       )
 
       val result = Config.parseConfig(argv)
@@ -231,7 +238,10 @@ class ConfigSpec extends Specification {
           Sink.BadSink.Stderr
         ),
         Purpose.Bad,
-        None
+        Monitoring(
+          None,
+          Monitoring.Metrics(true)
+        )
       )
 
       val result = Config.parseConfig(argv)

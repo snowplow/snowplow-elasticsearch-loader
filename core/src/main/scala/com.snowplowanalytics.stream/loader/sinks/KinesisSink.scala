@@ -39,18 +39,14 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import com.snowplowanalytics.stream.loader.Config.Sink.BadSink.{Kinesis => KinesisSinkConfig}
+
 /**
  * Kinesis Sink
  *
- * @param endpoint Kinesis stream endpoint
- * @param region Kinesis region
- * @param name Kinesis stream name
+ * @param conf Config for Kinesis sink
  */
-class KinesisSink(
-  endpoint: String,
-  region: String,
-  name: String
-) extends ISink {
+class KinesisSink(conf: KinesisSinkConfig) extends ISink {
 
   private lazy val log = LoggerFactory.getLogger(getClass)
 
@@ -58,12 +54,19 @@ class KinesisSink(
   val client = AmazonKinesisClientBuilder
     .standard()
     .withCredentials(new DefaultAWSCredentialsProviderChain())
-    .withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
+    .optWith[String](conf.region, _.withRegion)
+    .optWith[(String, String)](
+      for {
+        e <- conf.customEndpoint
+        r <- conf.region
+      } yield (e, r),
+      b => { case (e, r) => b.withEndpointConfiguration(new EndpointConfiguration(e, r)) }
+    )
     .build()
 
   require(
-    streamExists(name),
-    s"Stream $name doesn't exist or is neither active nor updating (deleted or creating)"
+    streamExists(conf.streamName),
+    s"Stream ${conf.streamName} doesn't exist or is neither active nor updating (deleted or creating)"
   )
 
   /**
@@ -102,7 +105,7 @@ class KinesisSink(
    */
   def store(output: String, key: Option[String], good: Boolean): Unit =
     put(
-      name,
+      conf.streamName,
       ByteBuffer.wrap(output.getBytes(UTF_8)),
       key.getOrElse(Random.nextInt.toString)
     ) onComplete {
@@ -114,4 +117,12 @@ class KinesisSink(
         log.error("Writing failed")
         log.error("  + " + f.getMessage)
     }
+
+  implicit class AwsKinesisClientBuilderExtensions(builder: AmazonKinesisClientBuilder) {
+    def optWith[A](
+      opt: Option[A],
+      f: AmazonKinesisClientBuilder => A => AmazonKinesisClientBuilder
+    ): AmazonKinesisClientBuilder =
+      opt.map(f(builder)).getOrElse(builder)
+  }
 }

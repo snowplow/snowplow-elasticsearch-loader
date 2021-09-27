@@ -95,7 +95,7 @@ object BuildSettings {
 
   lazy val addExampleConfToTestCp = Seq(
     Test / unmanagedClasspath += {
-      baseDirectory.value.getParentFile / "examples"
+      baseDirectory.value.getParentFile / "config"
     }
   )
 }

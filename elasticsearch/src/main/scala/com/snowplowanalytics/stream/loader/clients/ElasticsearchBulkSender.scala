@@ -58,8 +58,7 @@ class ElasticsearchBulkSender(
   endpoint: String,
   port: Int,
   ssl: Boolean,
-  region: String,
-  awsSigning: Boolean,
+  awsSigningRegion: Option[String],
   username: Option[String],
   password: Option[String],
   documentIndex: String,
@@ -77,9 +76,9 @@ class ElasticsearchBulkSender(
   override val log = LoggerFactory.getLogger(getClass)
 
   private val client = {
-    val httpClientConfigCallback =
-      if (awsSigning) new SignedHttpClientConfigCallback(region)
-      else NoOpHttpClientConfigCallback
+    val httpClientConfigCallback = awsSigningRegion
+      .map(new SignedHttpClientConfigCallback(_))
+      .getOrElse(NoOpHttpClientConfigCallback)
     val formedHost = new HttpHost(endpoint, port, if (ssl) "https" else "http")
     val headers: Array[Header] = (username, password) match {
       case (Some(_), Some(_)) =>
@@ -243,7 +242,6 @@ object ElasticsearchBulkSender {
       config.client.port,
       config.client.ssl,
       config.aws.region,
-      config.aws.signing,
       config.client.username,
       config.client.password,
       config.cluster.index,

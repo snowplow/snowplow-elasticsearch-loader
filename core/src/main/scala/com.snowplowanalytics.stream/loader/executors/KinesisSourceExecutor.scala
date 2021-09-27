@@ -53,7 +53,7 @@ import com.snowplowanalytics.stream.loader.Config._
 class KinesisSourceExecutor[A, B](
   streamLoaderConfig: StreamLoaderConfig,
   kinesis: Source.Kinesis,
-  metrics: Option[Monitoring.Metrics],
+  metrics: Monitoring.Metrics,
   kinesisConnectorPipeline: IKinesisConnectorPipeline[A, B]
 ) extends KinesisConnectorExecutorBase[A, B] {
 
@@ -70,8 +70,6 @@ class KinesisSourceExecutor[A, B](
       kcc.AWS_CREDENTIALS_PROVIDER,
       kcc.WORKER_ID
     )
-      .withKinesisEndpoint(kcc.KINESIS_ENDPOINT)
-      .withDynamoDBEndpoint(kcc.DYNAMODB_ENDPOINT)
       .withFailoverTimeMillis(kcc.FAILOVER_TIME)
       .withMaxRecords(kcc.MAX_RECORDS)
       .withIdleTimeBetweenReadsInMillis(kcc.IDLE_TIME_BETWEEN_READS)
@@ -89,7 +87,12 @@ class KinesisSourceExecutor[A, B](
           + kcc.CONNECTOR_DESTINATION + ","
           + KinesisConnectorConfiguration.KINESIS_CONNECTOR_USER_AGENT
       )
-      .withRegionName(kcc.REGION_NAME)
+      .condWith(kinesis.customEndpoint.isDefined, _.withKinesisEndpoint(kcc.KINESIS_ENDPOINT))
+      .condWith(
+        kinesis.dynamodbCustomEndpoint.isDefined,
+        _.withDynamoDBEndpoint(kcc.DYNAMODB_ENDPOINT)
+      )
+      .condWith(kinesis.region.isDefined, _.withRegionName(kcc.REGION_NAME))
 
     timestamp
       .filter(_ => initialPosition == "AT_TIMESTAMP")
@@ -97,25 +100,33 @@ class KinesisSourceExecutor[A, B](
       .getOrElse(cfg.withInitialPositionInStream(kcc.INITIAL_POSITION_IN_STREAM))
   }
 
+  implicit class KinesisClientLibConfigurationExtension(c: KinesisClientLibConfiguration) {
+    def condWith(
+      cond: => Boolean,
+      f: KinesisClientLibConfiguration => KinesisClientLibConfiguration
+    ): KinesisClientLibConfiguration =
+      if (cond) f(c) else c
+  }
+
   /**
    * Builds a KinesisConnectorConfiguration
    */
   def convertConfig: KinesisConnectorConfiguration = {
     val props = new Properties
-    props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT, kinesis.endpoint)
-    props.setProperty(
-      KinesisConnectorConfiguration.PROP_DYNAMODB_ENDPOINT,
-      kinesis.dynamodbEndpoint
+    kinesis.customEndpoint.foreach(
+      props.setProperty(KinesisConnectorConfiguration.PROP_KINESIS_ENDPOINT, _)
     )
+    kinesis.dynamodbCustomEndpoint.foreach(
+      props.setProperty(KinesisConnectorConfiguration.PROP_DYNAMODB_ENDPOINT, _)
+    )
+    // So that the region of the DynamoDB table is correct
+    kinesis.region.foreach(props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME, _))
     props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME, kinesis.appName.trim)
     props.setProperty(
       KinesisConnectorConfiguration.PROP_INITIAL_POSITION_IN_STREAM,
       kinesis.initialPosition
     )
     props.setProperty(KinesisConnectorConfiguration.PROP_MAX_RECORDS, kinesis.maxRecords.toString)
-
-    // So that the region of the DynamoDB table is correct
-    props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME, kinesis.region)
 
     props.setProperty(
       KinesisConnectorConfiguration.PROP_KINESIS_INPUT_STREAM,
@@ -171,18 +182,17 @@ class KinesisSourceExecutor[A, B](
       )
     }
 
-    worker = metrics.map(_.cloudWatch) match {
-      case Some(false) =>
-        new Worker.Builder()
-          .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
-          .config(kinesisClientLibConfiguration)
-          .metricsFactory(new NullMetricsFactory())
-          .build()
-      case _ =>
-        new Worker.Builder()
-          .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
-          .config(kinesisClientLibConfiguration)
-          .build()
+    worker = if (metrics.cloudWatch) {
+      new Worker.Builder()
+        .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
+        .config(kinesisClientLibConfiguration)
+        .build()
+    } else {
+      new Worker.Builder()
+        .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
+        .config(kinesisClientLibConfiguration)
+        .metricsFactory(new NullMetricsFactory())
+        .build()
     }
 
     LOG.info(getClass.getSimpleName + " worker created")

@@ -21,12 +21,12 @@ import io.circe.literal._
 import org.specs2.mutable.Specification
 
 // This project
-import transformers.PlainJsonTransformer
+import transformers.JsonTransformer
 
 /**
  * Tests PlainJsonTransformer
  */
-class PlainJsonTransformerSpec extends Specification {
+class JsonTransformerSpec extends Specification {
 
   val documentIndex = "snowplow"
   val documentType  = "enriched"
@@ -36,7 +36,7 @@ class PlainJsonTransformerSpec extends Specification {
       val input = json"""{"key1":"value1","key2":"value2","key3":"value3"}"""
 
       val result =
-        new PlainJsonTransformer().fromClass(input.noSpaces -> JsonRecord(input, None).valid)
+        new JsonTransformer().fromClass(input.noSpaces -> JsonRecord(input, None).valid)
       val json =
         result._2.getOrElse(throw new RuntimeException("Plain Json failed transformation")).json
       json must_== input

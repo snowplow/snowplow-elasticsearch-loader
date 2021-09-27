@@ -35,7 +35,7 @@ import com.snowplowanalytics.stream.loader.Config._
 import com.snowplowanalytics.stream.loader.transformers.{
   BadEventTransformer,
   EnrichedEventJsonTransformer,
-  PlainJsonTransformer
+  JsonTransformer
 }
 import com.snowplowanalytics.stream.loader.clients.BulkSender
 
@@ -65,9 +65,9 @@ class KinesisPipeline(
     c: KinesisConnectorConfiguration
   ): ITransformer[ValidatedJsonRecord, EmitterJsonInput] =
     purpose match {
-      case Purpose.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
-      case Purpose.PlainJson => new PlainJsonTransformer
-      case Purpose.Bad       => new BadEventTransformer
+      case Purpose.Enriched => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
+      case Purpose.Json     => new JsonTransformer
+      case Purpose.Bad      => new BadEventTransformer
     }
 
   def getFilter(c: KinesisConnectorConfiguration) =

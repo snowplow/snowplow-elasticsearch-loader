@@ -21,7 +21,7 @@ import com.snowplowanalytics.stream.loader.sinks.ISink
 import com.snowplowanalytics.stream.loader.transformers.{
   BadEventTransformer,
   EnrichedEventJsonTransformer,
-  PlainJsonTransformer
+  JsonTransformer
 }
 import com.snowplowanalytics.stream.loader.createBadRow
 
@@ -32,7 +32,7 @@ class StdinExecutor(
 ) extends Runnable {
 
   val transformer = config.purpose match {
-    case Purpose.Good =>
+    case Purpose.Enriched =>
       config.output.good match {
         case c: GoodSink.Elasticsearch =>
           new EnrichedEventJsonTransformer(
@@ -41,8 +41,8 @@ class StdinExecutor(
           )
         case GoodSink.Stdout => new EnrichedEventJsonTransformer(None, None)
       }
-    case Purpose.PlainJson => new PlainJsonTransformer
-    case Purpose.Bad       => new BadEventTransformer
+    case Purpose.Json => new JsonTransformer
+    case Purpose.Bad  => new BadEventTransformer
   }
 
   def run = for (ln <- scala.io.Source.stdin.getLines) {

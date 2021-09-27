@@ -41,7 +41,7 @@ object ElasticsearchLoader {
         System.err.println(s"configuration error:\n$e")
         sys.exit(1)
     }
-    val tracker = config.monitoring.flatMap(e => SnowplowTracking.initializeTracker(e.snowplow))
+    val tracker = config.monitoring.snowplow.flatMap(SnowplowTracking.initializeTracker)
     val badSink = initBadSink(config)
     val goodSink = config.output.good match {
       case c: GoodSink.Elasticsearch => Right(ElasticsearchBulkSender(c, tracker))
@@ -88,7 +88,7 @@ object ElasticsearchLoader {
         new KinesisSourceExecutor[ValidatedJsonRecord, EmitterJsonInput](
           config,
           c,
-          config.monitoring.flatMap(_.metrics),
+          config.monitoring.metrics,
           pipeline
         )
 
@@ -112,16 +112,10 @@ object ElasticsearchLoader {
 
   def initBadSink(config: StreamLoaderConfig): ISink = {
     config.output.bad match {
-      case BadSink.None   => new sinks.NullSink
-      case BadSink.Stderr => new sinks.StdouterrSink
-      case c: BadSink.Nsq =>
-        new sinks.NsqSink(c.nsqdHost, c.nsqdPort, c.streamName)
-      case c: BadSink.Kinesis =>
-        new sinks.KinesisSink(
-          c.endpoint,
-          c.region,
-          c.streamName
-        )
+      case BadSink.None       => new sinks.NullSink
+      case BadSink.Stderr     => new sinks.StdouterrSink
+      case c: BadSink.Nsq     => new sinks.NsqSink(c)
+      case c: BadSink.Kinesis => new sinks.KinesisSink(c)
     }
   }
 }

@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory
 import sinks._
 import clients._
 import com.snowplowanalytics.stream.loader.Config._
-import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, PlainJsonTransformer}
+import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, JsonTransformer}
 
 /**
  * NSQSource executor
@@ -74,9 +74,9 @@ class NsqSourceExecutor(
       badSink
     )
   private val transformer = purpose match {
-    case Purpose.Good      => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
-    case Purpose.PlainJson => new PlainJsonTransformer
-    case Purpose.Bad       => new BadEventTransformer
+    case Purpose.Enriched => new EnrichedEventJsonTransformer(shardDateField, shardDateFormat)
+    case Purpose.Json     => new JsonTransformer
+    case Purpose.Bad      => new BadEventTransformer
   }
 
   /**

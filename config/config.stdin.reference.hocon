@@ -1,0 +1,46 @@
+{
+  "input": {
+    # Sources currently supported are:
+    # "kinesis" for reading records from a Kinesis stream
+    # "stdin" for reading unencoded tab-separated events from stdin
+    # If set to "stdin", JSON documents will not be sent to Elasticsearch
+    # but will be written to stdout.
+    # "nsq" for reading unencoded tab-separated events from NSQ
+    "type": "stdin"
+  }
+
+  "output": {
+    "good": {
+      # Good sinks currently supported are:
+      # "elasticsearch" for writing good records to Elasticsearch
+      # "stdout" for writing good records to stdout
+      "type": "stdout"
+    }
+    "bad" {
+      # Bad sinks currently supported are:
+      # "kinesis" for writing bad records to Kinesis
+      # "stderr" for writing bad records to stderr
+      # "nsq" for writing bad records to NSQ
+      # "none" for ignoring bad records
+      "type": "stderr"
+    }
+  }
+
+  # "ENRICHED_EVENTS" for a stream of successfully enriched events
+  # "BAD_ROWS" for a stream of bad events
+  # "JSON" for writing plain json
+  "purpose": "ENRICHED_EVENTS"
+
+  # Optional section for tracking endpoints
+  "monitoring": {
+    "snowplow": {
+      "collector": "localhost:14322"
+      "appId": "test-app-id"
+    }
+
+    "metrics": {
+      # Optional, cloudwatch metrics are enabled by default.
+      "cloudWatch": false
+    }
+  }
+}
