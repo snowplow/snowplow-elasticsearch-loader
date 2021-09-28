@@ -39,6 +39,9 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibC
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
 import com.amazonaws.services.kinesis.metrics.interfaces.IMetricsFactory
 import com.amazonaws.services.kinesis.metrics.impl.NullMetricsFactory
+import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
+import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 
 // This project
@@ -182,15 +185,39 @@ class KinesisSourceExecutor[A, B](
       )
     }
 
+    // TODO: Configure region and custom endpoint here:
+    val kinesisClient = AmazonKinesisClientBuilder
+      .standard()
+      .withCredentials(new DefaultAWSCredentialsProviderChain)
+      .build()
+
+    // TODO: Configure region and custom endpoint here:
+    val dynamoDbClient = AmazonDynamoDBClientBuilder
+      .standard()
+      .withCredentials(new DefaultAWSCredentialsProviderChain)
+      .build()
+
+    // TODO: Configure region and custom endpoint here:
+    val cloudwatchClient = AmazonCloudWatchClientBuilder
+      .standard()
+      .withCredentials(new DefaultAWSCredentialsProviderChain)
+      .build()
+
     worker = if (metrics.cloudWatch) {
       new Worker.Builder()
         .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
         .config(kinesisClientLibConfiguration)
+        .kinesisClient(kinesisClient)
+        .dynamoDBClient(dynamoDbClient)
+        .cloudWatchClient(cloudwatchClient)
         .build()
     } else {
       new Worker.Builder()
         .recordProcessorFactory(getKinesisConnectorRecordProcessorFactory())
         .config(kinesisClientLibConfiguration)
+        .kinesisClient(kinesisClient)
+        .dynamoDBClient(dynamoDbClient)
+        .cloudWatchClient(cloudwatchClient)
         .metricsFactory(new NullMetricsFactory())
         .build()
     }
