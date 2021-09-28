@@ -47,6 +47,7 @@ import retry.CatsEffect._
 
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
 
+import com.snowplowanalytics.stream.loader.Config.Region
 import com.snowplowanalytics.stream.loader.Config.Sink.GoodSink
 import com.snowplowanalytics.stream.loader.Config.Sink.GoodSink.Elasticsearch.ESChunk
 
@@ -58,7 +59,8 @@ class ElasticsearchBulkSender(
   endpoint: String,
   port: Int,
   ssl: Boolean,
-  awsSigningRegion: Option[String],
+  awsSigning: Boolean,
+  awsSigningRegion: Region,
   username: Option[String],
   password: Option[String],
   documentIndex: String,
@@ -76,9 +78,9 @@ class ElasticsearchBulkSender(
   override val log = LoggerFactory.getLogger(getClass)
 
   private val client = {
-    val httpClientConfigCallback = awsSigningRegion
-      .map(new SignedHttpClientConfigCallback(_))
-      .getOrElse(NoOpHttpClientConfigCallback)
+    val httpClientConfigCallback =
+      if (awsSigning) new SignedHttpClientConfigCallback(awsSigningRegion)
+      else NoOpHttpClientConfigCallback
     val formedHost = new HttpHost(endpoint, port, if (ssl) "https" else "http")
     val headers: Array[Header] = (username, password) match {
       case (Some(_), Some(_)) =>
@@ -241,6 +243,7 @@ object ElasticsearchBulkSender {
       config.client.endpoint,
       config.client.port,
       config.client.ssl,
+      config.aws.signing,
       config.aws.region,
       config.client.username,
       config.client.password,

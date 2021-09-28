@@ -87,12 +87,12 @@ class KinesisSourceExecutor[A, B](
           + kcc.CONNECTOR_DESTINATION + ","
           + KinesisConnectorConfiguration.KINESIS_CONNECTOR_USER_AGENT
       )
+      .withRegionName(kcc.REGION_NAME)
       .condWith(kinesis.customEndpoint.isDefined, _.withKinesisEndpoint(kcc.KINESIS_ENDPOINT))
       .condWith(
         kinesis.dynamodbCustomEndpoint.isDefined,
         _.withDynamoDBEndpoint(kcc.DYNAMODB_ENDPOINT)
       )
-      .condWith(kinesis.region.isDefined, _.withRegionName(kcc.REGION_NAME))
 
     timestamp
       .filter(_ => initialPosition == "AT_TIMESTAMP")
@@ -120,7 +120,7 @@ class KinesisSourceExecutor[A, B](
       props.setProperty(KinesisConnectorConfiguration.PROP_DYNAMODB_ENDPOINT, _)
     )
     // So that the region of the DynamoDB table is correct
-    kinesis.region.foreach(props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME, _))
+    props.setProperty(KinesisConnectorConfiguration.PROP_REGION_NAME, kinesis.region.name)
     props.setProperty(KinesisConnectorConfiguration.PROP_APP_NAME, kinesis.appName.trim)
     props.setProperty(
       KinesisConnectorConfiguration.PROP_INITIAL_POSITION_IN_STREAM,

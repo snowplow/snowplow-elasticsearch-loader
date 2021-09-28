@@ -1,8 +1,8 @@
-# The minimum required config options for loading from kinesis
 {
   "input": {
     "type": "kinesis"
     "streamName": "test-kinesis-stream"
+    "region": "ca-central-1"
     "initialPosition": "LATEST"
   }
   "output": {

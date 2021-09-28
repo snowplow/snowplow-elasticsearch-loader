@@ -40,18 +40,20 @@ import io.ticofab.AwsSigner
 // Scala
 import scala.util.Try
 
+import com.snowplowanalytics.stream.loader.Config.Region
+
 /**
  * Signs outgoing HTTP requests to AWS Elasticsearch service
  * @param credentialsProvider AWS credentials provider
  * @param region in which to sign the requests
  */
-class SignedHttpClientConfigCallback(region: String) extends HttpClientConfigCallback {
+class SignedHttpClientConfigCallback(region: Region) extends HttpClientConfigCallback {
   private def clock(): LocalDateTime = LocalDateTime.now(ZoneId.of("UTC"))
   private val service                = "es"
   private val signer =
     AwsSigner(
       new DefaultAWSCredentialsProviderChain(),
-      region,
+      region.name,
       service,
       () => SignedHttpClientConfigCallback.this.clock()
     )

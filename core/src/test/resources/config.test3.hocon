@@ -1,8 +1,8 @@
-# The minimum required config options for loading from kinesis
 {
   "input": {
     "type": "kinesis"
     "streamName": "test-kinesis-stream"
+    "region": "ca-central-1"
     "initialPosition": "LATEST"
   }
   "output": {
@@ -13,10 +13,15 @@
       "cluster": {
         "index": "good"
       }
+      "aws": {
+        "signing": true
+        "region": "af-south-1"
+      }
     }
     "bad" {
       "type": "kinesis"
       "streamName": "test-kinesis-bad-stream"
+      "region": "eu-west-2"
     }
   }
   "purpose": "ENRICHED_EVENTS"

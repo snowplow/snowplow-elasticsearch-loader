@@ -24,9 +24,23 @@ import cats.syntax.option._
 
 import org.specs2.mutable.Specification
 
+import pureconfig._
+
 import com.snowplowanalytics.stream.loader.Config._
 
 class ConfigSpec extends Specification {
+  private val DefaultTestRegion = Region("ap-east-1")
+  private val RealConfigReader =
+    com.snowplowanalytics.stream.loader.Config.implicits().streamLoaderConfigReader
+  private val TestConfigReader = com.snowplowanalytics.stream.loader.Config
+    .implicits(
+      new ConfigReader[Region] with ReadsMissingKeys {
+        override def from(cur: ConfigCursor) =
+          if (cur.isUndefined) Right(DefaultTestRegion)
+          else cur.asString.map(Region)
+      }
+    )
+    .streamLoaderConfigReader
 
   "Config.parseConfig" should {
     "accept example extended kinesis config" >> {
@@ -39,7 +53,7 @@ class ConfigSpec extends Specification {
           "AT_TIMESTAMP",
           "2020-07-17T10:00:00Z".some,
           9999,
-          "eu-central-1".some,
+          Region("eu-central-1"),
           "test-app-name",
           "127.0.0.1".some,
           "http://localhost:4569".some,
@@ -58,12 +72,12 @@ class ConfigSpec extends Specification {
               5,
               true
             ),
-            Sink.GoodSink.Elasticsearch.ESAWS(true, "eu-central-1".some),
+            Sink.GoodSink.Elasticsearch.ESAWS(true, Region("eu-central-1")),
             Sink.GoodSink.Elasticsearch.ESCluster("good", "good-doc".some),
             Sink.GoodSink.Elasticsearch.ESChunk(999999, 499)
           ),
           Sink.BadSink
-            .Kinesis("test-kinesis-bad-stream", "eu-central-1".some, "127.0.0.1:7846".some)
+            .Kinesis("test-kinesis-bad-stream", Region("eu-central-1"), "127.0.0.1:7846".some)
         ),
         Purpose.Enriched,
         Monitoring(
@@ -72,7 +86,7 @@ class ConfigSpec extends Specification {
         )
       )
 
-      val result = Config.parseConfig(argv)
+      val result = testParseConfig(argv)
       result must beRight(expected)
     }
 
@@ -86,7 +100,7 @@ class ConfigSpec extends Specification {
           "LATEST",
           None,
           10000,
-          "eu-central-1".some,
+          DefaultTestRegion,
           "snowplow-elasticsearch-loader",
           None,
           None,
@@ -105,20 +119,20 @@ class ConfigSpec extends Specification {
               6,
               false
             ),
-            Sink.GoodSink.Elasticsearch.ESAWS(false, None),
+            Sink.GoodSink.Elasticsearch.ESAWS(false, DefaultTestRegion),
             Sink.GoodSink.Elasticsearch.ESCluster("good", None),
             Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
           ),
-          Sink.BadSink.Kinesis("test-kinesis-bad-stream", "eu-central-1".some, None)
+          Sink.BadSink.Kinesis("test-kinesis-bad-stream", DefaultTestRegion, None)
         ),
-        Purpose.Bad,
+        Purpose.Enriched,
         Monitoring(
           None,
           Monitoring.Metrics(true)
         )
       )
 
-      val result = Config.parseConfig(argv)
+      val result = testParseConfig(argv)
       result must beRight(expected)
     }
 
@@ -147,7 +161,7 @@ class ConfigSpec extends Specification {
               5,
               true
             ),
-            Sink.GoodSink.Elasticsearch.ESAWS(true, "eu-central-1".some),
+            Sink.GoodSink.Elasticsearch.ESAWS(true, Region("eu-central-1")),
             Sink.GoodSink.Elasticsearch.ESCluster("good", "good-doc".some),
             Sink.GoodSink.Elasticsearch.ESChunk(999999, 499)
           ),
@@ -160,7 +174,7 @@ class ConfigSpec extends Specification {
         )
       )
 
-      val result = Config.parseConfig(argv)
+      val result = testParseConfig(argv)
       result must beRight(expected)
     }
 
@@ -189,7 +203,7 @@ class ConfigSpec extends Specification {
               6,
               false
             ),
-            Sink.GoodSink.Elasticsearch.ESAWS(false, None),
+            Sink.GoodSink.Elasticsearch.ESAWS(false, DefaultTestRegion),
             Sink.GoodSink.Elasticsearch.ESCluster("good", None),
             Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
           ),
@@ -202,7 +216,7 @@ class ConfigSpec extends Specification {
         )
       )
 
-      val result = Config.parseConfig(argv)
+      val result = testParseConfig(argv)
       result must beRight(expected)
     }
 
@@ -223,7 +237,7 @@ class ConfigSpec extends Specification {
         )
       )
 
-      val result = Config.parseConfig(argv)
+      val result = testParseConfig(argv)
       result must beRight(expected)
     }
 
@@ -244,8 +258,177 @@ class ConfigSpec extends Specification {
         )
       )
 
-      val result = Config.parseConfig(argv)
+      val result = testParseConfig(argv)
       result must beRight(expected)
     }
+
+    "override default values" >> {
+      val config = Paths.get(getClass.getResource("/config.test1.hocon").toURI)
+      val argv   = Array("--config", config.toString)
+
+      val expected = StreamLoaderConfig(
+        Source.Kinesis(
+          "test-kinesis-stream",
+          "LATEST",
+          None,
+          2000,
+          Region("ca-central-1"),
+          "test-app-name",
+          None,
+          None,
+          Source.Kinesis.Buffer(201, 202, 203)
+        ),
+        Sink(
+          Sink.GoodSink.Elasticsearch(
+            Sink.GoodSink.Elasticsearch.ESClient(
+              "localhost",
+              9220,
+              None,
+              None,
+              None,
+              None,
+              205,
+              7,
+              true
+            ),
+            Sink.GoodSink.Elasticsearch.ESAWS(true, Region("ca-central-1")),
+            Sink.GoodSink.Elasticsearch.ESCluster("testindex", None),
+            Sink.GoodSink.Elasticsearch.ESChunk(206, 207)
+          ),
+          Sink.BadSink.Kinesis("test-kinesis-bad-stream", Region("ca-central-1"), None)
+        ),
+        Purpose.Bad,
+        Monitoring(
+          None,
+          Monitoring.Metrics(false)
+        )
+      )
+
+      val result = testParseConfig(argv)
+      result must beRight(expected)
+    }
+
+    "set region correctly with test config reader" >> {
+      val config = Paths.get(getClass.getResource("/config.test2.hocon").toURI)
+      val argv   = Array("--config", config.toString)
+
+      val expected = StreamLoaderConfig(
+        Source.Kinesis(
+          "test-kinesis-stream",
+          "LATEST",
+          None,
+          10000,
+          Region("ca-central-1"),
+          "snowplow-elasticsearch-loader",
+          None,
+          None,
+          Source.Kinesis.Buffer(1000000, 500, 500)
+        ),
+        Sink(
+          Sink.GoodSink.Elasticsearch(
+            Sink.GoodSink.Elasticsearch.ESClient(
+              "localhost",
+              9200,
+              None,
+              None,
+              None,
+              None,
+              10000,
+              6,
+              false
+            ),
+            Sink.GoodSink.Elasticsearch.ESAWS(false, DefaultTestRegion),
+            Sink.GoodSink.Elasticsearch.ESCluster("good", None),
+            Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
+          ),
+          Sink.BadSink.Kinesis("test-kinesis-bad-stream", DefaultTestRegion, None)
+        ),
+        Purpose.Enriched,
+        Monitoring(
+          None,
+          Monitoring.Metrics(true)
+        )
+      )
+
+      val result = testParseConfig(argv)
+      result must beRight(expected)
+    }
+
+    "set region correctly with real config reader" >> {
+      val config = Paths.get(getClass.getResource("/config.test3.hocon").toURI)
+      val argv   = Array("--config", config.toString)
+
+      val expected = StreamLoaderConfig(
+        Source.Kinesis(
+          "test-kinesis-stream",
+          "LATEST",
+          None,
+          10000,
+          Region("ca-central-1"),
+          "snowplow-elasticsearch-loader",
+          None,
+          None,
+          Source.Kinesis.Buffer(1000000, 500, 500)
+        ),
+        Sink(
+          Sink.GoodSink.Elasticsearch(
+            Sink.GoodSink.Elasticsearch.ESClient(
+              "localhost",
+              9200,
+              None,
+              None,
+              None,
+              None,
+              10000,
+              6,
+              false
+            ),
+            Sink.GoodSink.Elasticsearch.ESAWS(true, Region("af-south-1")),
+            Sink.GoodSink.Elasticsearch.ESCluster("good", None),
+            Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
+          ),
+          Sink.BadSink.Kinesis("test-kinesis-bad-stream", Region("eu-west-2"), None)
+        ),
+        Purpose.Enriched,
+        Monitoring(
+          None,
+          Monitoring.Metrics(true)
+        )
+      )
+
+      val result = testParseConfig(argv, RealConfigReader)
+      result must beRight(expected)
+    }
+
+    "give error when unknown region given" >> {
+      val config = Paths.get(getClass.getResource("/config.test4.hocon").toURI)
+      val argv   = Array("--config", config.toString)
+
+      val result = testParseConfig(argv, RealConfigReader)
+      result.fold(
+        err => err.contains("unknown-region-1") && err.contains("unknown-region-1"),
+        _ => false
+      ) must beTrue
+    }
+
+    "give error when required fields are missing" >> {
+      val config = Paths.get(getClass.getResource("/config.test5.hocon").toURI)
+      val argv   = Array("--config", config.toString)
+
+      val result = testParseConfig(argv)
+      result.fold(
+        err =>
+          err.contains("streamName")
+            && err.contains("endpoint")
+            && err.contains("type"),
+        _ => false
+      ) must beTrue
+    }
   }
+
+  private def testParseConfig(
+    args: Array[String],
+    configReader: ConfigReader[StreamLoaderConfig] = TestConfigReader
+  ) =
+    Config.parseConfig(args, configReader)
 }

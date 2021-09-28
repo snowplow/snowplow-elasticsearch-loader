@@ -12,6 +12,9 @@
       "client": {
         "endpoint": "localhost"
       }
+      "cluster": {
+        "index": "good"
+      }
     }
     "bad" {
       "type": "nsq"

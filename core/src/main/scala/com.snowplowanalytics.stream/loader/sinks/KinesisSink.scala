@@ -54,13 +54,10 @@ class KinesisSink(conf: KinesisSinkConfig) extends ISink {
   val client = AmazonKinesisClientBuilder
     .standard()
     .withCredentials(new DefaultAWSCredentialsProviderChain())
-    .optWith[String](conf.region, _.withRegion)
-    .optWith[(String, String)](
-      for {
-        e <- conf.customEndpoint
-        r <- conf.region
-      } yield (e, r),
-      b => { case (e, r) => b.withEndpointConfiguration(new EndpointConfiguration(e, r)) }
+    .withRegion(conf.region.name)
+    .optWith[String](
+      conf.customEndpoint,
+      b => e => b.withEndpointConfiguration(new EndpointConfiguration(e, conf.region.name))
     )
     .build()
 

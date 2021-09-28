@@ -25,6 +25,7 @@ import io.circe.literal._
 
 import com.snowplowanalytics.stream.loader.{EmitterJsonInput, JsonRecord}
 import com.snowplowanalytics.stream.loader.Config.Sink.GoodSink.Elasticsearch.ESChunk
+import com.snowplowanalytics.stream.loader.Config.Region
 
 // specs2
 import org.specs2.mutable.Specification
@@ -38,7 +39,8 @@ class ElasticsearchBulkSenderSpec extends Specification {
     elasticHost,
     elasticPort,
     false,
-    Some("region"),
+    false,
+    Region("region"),
     None,
     None,
     index,
