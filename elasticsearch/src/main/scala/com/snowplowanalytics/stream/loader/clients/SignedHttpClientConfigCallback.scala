@@ -44,7 +44,6 @@ import com.snowplowanalytics.stream.loader.Config.Region
 
 /**
  * Signs outgoing HTTP requests to AWS Elasticsearch service
- * @param credentialsProvider AWS credentials provider
  * @param region in which to sign the requests
  */
 class SignedHttpClientConfigCallback(region: Region) extends HttpClientConfigCallback {

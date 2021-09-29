@@ -29,6 +29,9 @@
     "maxRecords": 9999
 
     # Region where the Kinesis stream is located
+    # This field is optional if it can be resolved with AWS region provider chain.
+    # It checks places like env variables, system properties, AWS profile file.
+    # https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/regions/providers/DefaultAwsRegionProviderChain.html
     "region": "eu-central-1"
 
     # Optional endpoint url configuration to override aws kinesis endpoints,
@@ -128,6 +131,9 @@
       "streamName": "test-kinesis-bad-stream"
 
       # Region where the Kinesis stream is located
+      # This field is optional if it can be resolved with AWS region provider chain.
+      # It checks places like env variables, system properties, AWS profile file.
+      # https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/regions/providers/DefaultAwsRegionProviderChain.html
       "region": "eu-central-1"
 
       # Optional endpoint url configuration to override aws kinesis endpoints,

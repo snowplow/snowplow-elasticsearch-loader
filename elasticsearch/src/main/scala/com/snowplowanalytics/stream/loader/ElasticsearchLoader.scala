@@ -86,7 +86,6 @@ object ElasticsearchLoader {
           shardDateFormat
         )
         new KinesisSourceExecutor[ValidatedJsonRecord, EmitterJsonInput](
-          config,
           c,
           config.monitoring.metrics,
           pipeline
@@ -97,7 +96,6 @@ object ElasticsearchLoader {
         new NsqSourceExecutor(
           config.purpose,
           c,
-          config,
           goodSink,
           badSink,
           shardDateField,

@@ -187,6 +187,14 @@ object Config {
   final case class RawConfigReaderFailure(description: String, origin: Option[ConfigOrigin] = None)
       extends ConfigReaderFailure
 
+  /**
+   * All config implicits are put into case class because we want to make region config reader
+   * changeable to write unit tests for config parsing.
+   * Region config reader is special config reader because it allows Region types to be missing.
+   * If they are missing, it tries to retrieve region with "DefaultAwsRegionProviderChain".
+   * If it is also unsuccessful, it throws error. In the tests, it is changed with dummy config
+   * reader in order to not use "DefaultAwsRegionProviderChain" during tests.
+   */
   case class implicits(
     regionConfigReader: ConfigReader[Region] with ReadsMissingKeys = new ConfigReader[Region]
       with ReadsMissingKeys {

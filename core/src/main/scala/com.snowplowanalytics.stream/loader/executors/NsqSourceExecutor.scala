@@ -49,14 +49,12 @@ import transformers.{BadEventTransformer, EnrichedEventJsonTransformer, JsonTran
  *
  * @param purpose kind of data stored, good, bad or plain-json
  * @param nsq Nsq NsqConfig
- * @param config ESLoader Configuration
  * @param goodSink the configured GoodSink
  * @param badSink the configured BadSink
  */
 class NsqSourceExecutor(
   purpose: Purpose,
   nsq: Source.Nsq,
-  config: StreamLoaderConfig,
   goodSink: Either[ISink, BulkSender[EmitterJsonInput]],
   badSink: ISink,
   shardDateField: Option[String],

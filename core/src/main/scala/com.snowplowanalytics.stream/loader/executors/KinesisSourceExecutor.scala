@@ -45,13 +45,12 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.snowplowanalytics.stream.loader.Config._
 
 /**
- * Boilerplate class for Kinesis Conenector
- * @param streamLoaderConfig streamLoaderConfig
+ * Boilerplate class for Kinesis Connector
  * @param kinesis  queue settings
+ * @param metrics metrics settings
  * @param kinesisConnectorPipeline kinesisConnectorPipeline
  */
 class KinesisSourceExecutor[A, B](
-  streamLoaderConfig: StreamLoaderConfig,
   kinesis: Source.Kinesis,
   metrics: Monitoring.Metrics,
   kinesisConnectorPipeline: IKinesisConnectorPipeline[A, B]

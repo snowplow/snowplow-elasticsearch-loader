@@ -148,7 +148,7 @@ class ElasticsearchBulkSender(
       }
     } else Nil
 
-    log.info(s"Emitted ${esObjects.size - newFailures.size} records to Elasticseacrch")
+    log.info(s"Emitted ${esObjects.size - newFailures.size} records to Elasticsearch")
     if (newFailures.nonEmpty) logHealth()
 
     val allFailures = oldFailures ++ newFailures
