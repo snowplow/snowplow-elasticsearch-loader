@@ -1,3 +1,9 @@
+Version 2.0.0 (2021-10-08)
+--------------------------
+Bump elastic4s to 7.14.1 (close #175)
+Refactor config structure (close #206)
+Github action to scan docker image with lacework (close #205)
+
 Version 1.0.1 (2021-09-02)
 --------------------------
 Bump scala compiler to 2.12.14 (#200)

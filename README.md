@@ -25,7 +25,7 @@ $ sbt compile
 The Snowplow Elasticsearch Loader has the following command-line interface:
 
 ```
-snowplow-elasticsearch-loader 1.0.1
+snowplow-elasticsearch-loader 2.0.0
 
 Usage: snowplow-elasticsearch-loader [options]
 
@@ -37,22 +37,15 @@ Usage: snowplow-elasticsearch-loader [options]
 Create your own config file:
 
 ```bash
-$ cp examples/config.hocon.sample my.conf
+$ cp config/config.kinesis.reference.hocon my.conf
 ```
 
-Update the configuration to fit your needs like modifying the AWS credentials:
-
-```json
-aws {
-  access-key: "default"
-  secret-key: "default"
-}
-```
+Update the configuration to fit your needs.
 
 Next, start the loader, making sure to specify your new config file:
 
 ```bash
-$ java -jar snowplow-elasticsearch-loader-1.0.1.jar --config my.conf
+$ java -jar snowplow-elasticsearch-loader-2.0.0.jar --config my.conf
 ```
 
 ## Find out more
