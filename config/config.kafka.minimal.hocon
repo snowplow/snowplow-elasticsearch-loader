@@ -1,0 +1,36 @@
+# The minimum required config options for loading from kafka
+{
+  "input": {
+    "type": "kafka"
+    "brokers": "localhost:9092"
+    "topicName":"enriched-events"
+    "retries": 10
+    "groupId": "kafka-consumer"
+    "buffer": {
+      "recordLimit": 500
+    }
+  }
+  "output": {
+    "good": {
+      "client": {
+        "endpoint": "localhost"
+      }
+      "cluster": {
+        "index": "good"
+      }
+    }
+    "bad" {
+      "type": "kafka"
+      "brokers": "localhost:9092"
+      "topicName":"bad-events"
+
+      "retries": 10
+      "groupId": "kafka-consumer"
+      "buffer": {
+        "byteLimit" : 4500000
+        "timeLimit" : 500
+      }
+    }
+  }
+  "purpose": "JSON"
+}

@@ -20,13 +20,9 @@ package com.snowplowanalytics.stream.loader
 
 import cats.Id
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
-import com.snowplowanalytics.stream.loader.sinks.ISink
+import com.snowplowanalytics.stream.loader.sinks.{ISink, KafkaSink}
 import com.snowplowanalytics.stream.loader.clients.{BulkSender, ElasticsearchBulkSender}
-import com.snowplowanalytics.stream.loader.executors.{
-  KinesisSourceExecutor,
-  NsqSourceExecutor,
-  StdinExecutor
-}
+import com.snowplowanalytics.stream.loader.executors.{KafkaSourceExecutor, KinesisSourceExecutor, NsqSourceExecutor, StdinExecutor}
 import com.snowplowanalytics.stream.loader.Config._
 import com.snowplowanalytics.stream.loader.Config.Sink.{BadSink, GoodSink}
 
@@ -62,6 +58,7 @@ object ElasticsearchLoader {
       case Source.Stdin      => System.exit(1)
       case _: Source.Kinesis => System.exit(1)
       case _: Source.Nsq     => ()
+      case _: Source.Kafka     => ()
     }
   }
 
@@ -102,9 +99,20 @@ object ElasticsearchLoader {
           shardDateFormat
         )
 
+      // Read records from Kafka
+      case c: Source.Kafka =>
+        new KafkaSourceExecutor(
+          config.purpose,
+          c,
+          goodSink,
+          badSink,
+          shardDateField,
+          shardDateFormat
+        )
+
       // Run locally, reading from stdin and sending events to stdout / stderr rather than Elasticsearch / Kinesis
       case Source.Stdin => new StdinExecutor(config, goodSink, badSink)
-      case _            => throw new RuntimeException("Source must be set to 'stdin', 'kinesis' or 'nsq'")
+      case _            => throw new RuntimeException("Source must be set to 'stdin', 'kinesis' or 'nsq' or 'kafka'")
     }
   }
 
@@ -113,6 +121,7 @@ object ElasticsearchLoader {
       case BadSink.None       => new sinks.NullSink
       case BadSink.Stderr     => new sinks.StdouterrSink
       case c: BadSink.Nsq     => new sinks.NsqSink(c)
+      case c: BadSink.Kafka     => new KafkaSink(c)
       case c: BadSink.Kinesis => new sinks.KinesisSink(c)
     }
   }
