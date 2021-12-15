@@ -1,3 +1,8 @@
+Version 2.0.1 (2021-12-15)
+--------------------------
+Bump log4j-core to 2.16.0 (#211)
+Update links to docs in README (#212)
+
 Version 2.0.0 (2021-10-08)
 --------------------------
 Bump elastic4s to 7.14.1 (close #175)
