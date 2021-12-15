@@ -25,7 +25,7 @@ $ sbt compile
 The Snowplow Elasticsearch Loader has the following command-line interface:
 
 ```
-snowplow-elasticsearch-loader 2.0.0
+snowplow-elasticsearch-loader 2.0.1
 
 Usage: snowplow-elasticsearch-loader [options]
 
@@ -45,15 +45,15 @@ Update the configuration to fit your needs.
 Next, start the loader, making sure to specify your new config file:
 
 ```bash
-$ java -jar snowplow-elasticsearch-loader-2.0.0.jar --config my.conf
+$ java -jar snowplow-elasticsearch-loader-2.0.1.jar --config my.conf
 ```
 
 ## Find out more
 
-| Technical Docs              | Setup Guide           | Roadmap & Contributing               |
-|-----------------------------|-----------------------|--------------------------------------|
-| ![i1][techdocs-image]       | ![i2][setup-image]    | ![i3][roadmap-image]                 |
-| [Technical Docs][techdocs]  | [Setup Guide][setup]  | _coming soon_                        |
+| Technical Docs             | Setup Guide          | Roadmap              | Contributing                 |
+|:--------------------------:|:--------------------:|:--------------------:|:----------------------------:|
+| ![i1][techdocs-image]      | ![i2][setup-image]   | ![i3][roadmap-image] | ![i4][contributing-image]    |
+| [Technical Docs][techdocs] | [Setup Guide][setup] | [Roadmap][roadmap]   | [Contributing][contributing] |
 
 ## Copyright and license
 
@@ -84,10 +84,13 @@ limitations under the License.
 [elasticsearch]: http://www.elasticsearch.org/
 [sbt]: http://www.scala-sbt.org
 
-[setup]: https://github.com/snowplow/snowplow/wiki/elasticsearch-loader-setup
-[techdocs]: https://github.com/snowplow/snowplow/wiki/elasticsearch-loader
+[setup]: https://docs.snowplowanalytics.com/docs/getting-started-on-snowplow-open-source/
+[roadmap]: https://github.com/snowplow/enrich/issues
+[techdocs]: https://docs.snowplowanalytics.com/docs/pipeline-components-and-applications/loaders-storage-targets/elasticsearch-loader/
+[contributing]: https://docs.snowplowanalytics.com/docs/contributing/
 
 [techdocs-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/techdocs.png
 [setup-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/setup.png
 [roadmap-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/roadmap.png
+[contributing-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/contributing.png
 [license]: http://www.apache.org/licenses/LICENSE-2.0
