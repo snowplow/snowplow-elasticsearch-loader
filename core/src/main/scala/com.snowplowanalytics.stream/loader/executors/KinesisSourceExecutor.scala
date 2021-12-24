@@ -75,7 +75,9 @@ class KinesisSourceExecutor[A, B](
       .withCallProcessRecordsEvenForEmptyRecordList(
         KinesisConnectorConfiguration.DEFAULT_CALL_PROCESS_RECORDS_EVEN_FOR_EMPTY_LIST
       )
-      .withCleanupLeasesUponShardCompletion(kcc.CLEANUP_TERMINATED_SHARDS_BEFORE_EXPIRY)
+      .withCleanupLeasesUponShardCompletion(
+        KinesisClientLibConfiguration.DEFAULT_CLEANUP_LEASES_UPON_SHARDS_COMPLETION
+      )
       .withParentShardPollIntervalMillis(kcc.PARENT_SHARD_POLL_INTERVAL)
       .withShardSyncIntervalMillis(kcc.SHARD_SYNC_INTERVAL)
       .withTaskBackoffTimeMillis(kcc.BACKOFF_INTERVAL)
