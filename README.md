@@ -1,7 +1,7 @@
 # Snowplow Elasticsearch Loader
 
 [![Build Status][travis-image]][travis]
-[![Release][release-image]][releases]
+[![GithubRelease][release-image]][releases]
 [![License][license-image]][license]
 
 ## Introduction
@@ -72,8 +72,8 @@ limitations under the License.
 [travis-image]: https://travis-ci.org/snowplow/snowplow-elasticsearch-loader.png?branch=master
 [travis]: http://travis-ci.org/snowplow/snowplow-elasticsearch-loader
 
-[release-image]: https://api.bintray.com/packages/snowplow/registry/snowplow%3Aelasticsearch-loader/images/download.svg
-[releases]: https://bintray.com/snowplow/registry/snowplow%3Aelasticsearch-loader/_latestVersion
+[release-image]: https://img.shields.io/github/v/release/snowplow/snowplow-elasticsearch-loader
+[releases]: https://github.com/snowplow/snowplow-elasticsearch-loader/releases
 
 [license-image]: http://img.shields.io/badge/license-Apache--2-blue.svg?style=flat
 [license]: http://www.apache.org/licenses/LICENSE
