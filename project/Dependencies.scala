@@ -23,7 +23,7 @@ object Dependencies {
     val kinesisConnector = "1.3.0"
     val nsqClient        = "1.1.0-rc1"
     val netty            = "4.1.67.Final" // Override provided version to fix security vulnerability
-    val jackson          = "2.12.5"
+    val jackson          = "2.12.6"
     // Scala
     val catsRetry        = "0.3.2"
     val circe            = "0.14.1"
