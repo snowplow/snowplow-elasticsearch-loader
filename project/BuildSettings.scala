@@ -46,7 +46,7 @@ object BuildSettings {
     Seq(
       Docker / packageName := "elasticsearch-loader",
       dockerRepository := Some("snowplow"),
-      dockerBaseImage := "adoptopenjdk:11-jre-hotspot-focal",
+      dockerBaseImage := "eclipse-temurin:11-jre-focal",
       Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>",
       Docker / daemonUser := "daemon",
       dockerCmd := Seq("--help"),
