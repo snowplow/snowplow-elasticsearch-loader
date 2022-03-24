@@ -64,7 +64,7 @@ $ java -jar snowplow-elasticsearch-loader-1.0.5.jar --config my.conf
 
 ## Copyright and license
 
-Copyright 2014-2021 Snowplow Analytics Ltd.
+Copyright 2014-2022 Snowplow Analytics Ltd.
 
 Licensed under the [Apache License, Version 2.0][license] (the "License");
 you may not use this software except in compliance with the License.
