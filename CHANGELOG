@@ -1,3 +1,12 @@
+Version 1.0.6 (2022-03-24)
+--------------------------
+Update license header to 2022 (#232)
+Change docker base image to eclipse-temurin:11-jre-focal (#230)
+Bump jackson-databind to 2.12.6 (#229)
+Bump log4j-core to 2.17.1 (#228)
+Bump amazon-kinesis-client to 1.14.8 (#227)
+Remove logging of user-sent record (#226)
+
 Version 1.0.5 (2021-12-24)
 --------------------------
 Clean up terminated shards before expiry (#222)
