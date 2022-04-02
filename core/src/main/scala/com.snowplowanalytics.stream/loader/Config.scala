@@ -20,18 +20,12 @@ package com.snowplowanalytics.stream.loader
 
 import java.nio.file.{Files, Path}
 import java.text.SimpleDateFormat
-
 import scala.util.Try
-
 import com.monovore.decline.{Command, Opts}
-
 import cats.syntax.either._
 import cats.syntax.validated._
-
 import com.amazonaws.regions.{DefaultAwsRegionProviderChain, Regions}
-
 import com.typesafe.config.ConfigOrigin
-
 import pureconfig._
 import pureconfig.generic.{FieldCoproductHint, ProductHint}
 import pureconfig.generic.semiauto._
@@ -52,6 +46,18 @@ object Config {
   sealed trait Source extends Product with Serializable
   object Source {
     final case object Stdin extends Source
+
+    final case class Kafka(
+      brokers: String,
+      topicName: String,
+      groupId: String,
+      sourceConf: Option[Map[String, String]],
+      buffer: Kafka.Buffer
+    ) extends Source
+
+    object Kafka {
+      final case class Buffer(recordLimit: Long)
+    }
 
     final case class Nsq(
       streamName: String,
@@ -137,6 +143,19 @@ object Config {
       final case object None extends BadSink
 
       final case object Stderr extends BadSink
+
+      final case class Kafka(
+       brokers: String,
+       retries: Int,
+       topicName: String,
+       groupId: String,
+       producerConf: Option[Map[String, String]],
+       buffer: Kafka.Buffer
+      ) extends BadSink
+
+      object Kafka {
+        final case class Buffer(byteLimit: Long, timeLimit: Long)
+      }
 
       final case class Nsq(
         streamName: String,
@@ -225,6 +244,10 @@ object Config {
       deriveReader[Source.Nsq]
     implicit val sourceNsqBufferConfigReader: ConfigReader[Source.Nsq.Buffer] =
       deriveReader[Source.Nsq.Buffer]
+    implicit val sourceKafkaConfigReader: ConfigReader[Source.Kafka] =
+      deriveReader[Source.Kafka]
+    implicit val sourceKafkaBufferConfigReader: ConfigReader[Source.Kafka.Buffer] =
+      deriveReader[Source.Kafka.Buffer]
     implicit val sourceKinesisConfigReader: ConfigReader[Source.Kinesis] =
       deriveReader[Source.Kinesis]
     implicit val sourceKinesisConfigBufferReader: ConfigReader[Source.Kinesis.Buffer] =
@@ -257,6 +280,10 @@ object Config {
       deriveReader[Sink.BadSink.Stderr.type]
     implicit val sinkBadNsqConfigReader: ConfigReader[Sink.BadSink.Nsq] =
       deriveReader[Sink.BadSink.Nsq]
+    implicit val sinkBadKafkaConfigReader: ConfigReader[Sink.BadSink.Kafka] =
+      deriveReader[Sink.BadSink.Kafka]
+    implicit val sinkBadKafkaBufferConfigReader: ConfigReader[Sink.BadSink.Kafka.Buffer] =
+      deriveReader[Sink.BadSink.Kafka.Buffer]
     implicit val monitoringConfigReader: ConfigReader[Monitoring] =
       deriveReader[Monitoring]
     implicit val snowplowMonitoringConfig: ConfigReader[Monitoring.SnowplowMonitoring] =

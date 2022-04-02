@@ -22,6 +22,7 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.nsqClient,
   Dependencies.Libraries.netty,
   Dependencies.Libraries.jacksonCbor,
+  Dependencies.Libraries.kafkaConnectApi,
   // Scala
   Dependencies.Libraries.catsRetry,
   Dependencies.Libraries.circeOptics,

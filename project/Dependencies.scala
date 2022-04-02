@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2022 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2014-2021 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -24,6 +24,7 @@ object Dependencies {
     val nsqClient        = "1.1.0-rc1"
     val netty            = "4.1.67.Final" // Override provided version to fix security vulnerability
     val jackson          = "2.12.6"
+    val kafkaConnectApi  = "3.0.0"
     // Scala
     val catsRetry        = "0.3.2"
     val circe            = "0.14.1"
@@ -50,6 +51,7 @@ object Dependencies {
     val nsqClient        = "com.snowplowanalytics"            %  "nsq-java-client_2.10"         % V.nsqClient
     val netty            = "io.netty"                         %  "netty-all"                    % V.netty
     val jacksonCbor      = "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor"       % V.jackson // Override provided version to fix security vulnerability
+    val kafkaConnectApi  = "org.apache.kafka"                 % "connect-api"                   % V.kafkaConnectApi
     // Scala
     val catsRetry        = "com.github.cb372"                 %% "cats-retry-cats-effect"       % V.catsRetry
     val circeOptics      = "io.circe"                         %% "circe-optics"                 % V.circe
