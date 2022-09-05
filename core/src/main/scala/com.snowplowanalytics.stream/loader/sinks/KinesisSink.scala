@@ -27,17 +27,13 @@ import java.nio.charset.StandardCharsets.UTF_8
 import org.slf4j.LoggerFactory
 
 // Scala
-import scala.util.{Failure, Random, Success}
+import scala.util.{Failure, Random, Success, Try}
 
 // Amazon
 import com.amazonaws.services.kinesis.model._
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-
-// Concurrent libraries
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 
 import com.snowplowanalytics.stream.loader.Config.Sink.BadSink.{Kinesis => KinesisSinkConfig}
 
@@ -82,7 +78,7 @@ class KinesisSink(conf: KinesisSinkConfig) extends ISink {
       case rnfe: ResourceNotFoundException => false
     }
 
-  private def put(name: String, data: ByteBuffer, key: String): Future[PutRecordResult] = Future {
+  private def put(name: String, data: ByteBuffer, key: String): PutRecordResult = {
     val putRecordRequest = {
       val p = new PutRecordRequest()
       p.setStreamName(name)
@@ -102,11 +98,13 @@ class KinesisSink(conf: KinesisSinkConfig) extends ISink {
    * @param good Unused parameter which exists to extend ISink
    */
   def store(output: String, key: Option[String], good: Boolean): Unit =
-    put(
-      conf.streamName,
-      ByteBuffer.wrap(output.getBytes(UTF_8)),
-      key.getOrElse(Random.nextInt.toString)
-    ) onComplete {
+    Try {
+      put(
+        conf.streamName,
+        ByteBuffer.wrap(output.getBytes(UTF_8)),
+        key.getOrElse(Random.nextInt.toString)
+      )
+    } match {
       case Success(result) =>
         log.info("Writing successful")
         log.info(s"  + ShardId: ${result.getShardId}")

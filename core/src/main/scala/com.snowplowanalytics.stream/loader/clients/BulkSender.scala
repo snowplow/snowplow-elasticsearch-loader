@@ -56,7 +56,6 @@ trait BulkSender[A] {
 
   def send(records: List[A]): List[A]
   def close(): Unit
-  def logHealth(): Unit
   def chunkConfig(): ESChunk
 
   /**
