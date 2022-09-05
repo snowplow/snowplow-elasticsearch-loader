@@ -71,10 +71,10 @@ class Emitter(
       // Send all valid records to stdout / Sink and return those rejected by it
       val rejects = goodSink match {
         case Left(s) =>
-          validRecords.foreach {
-            case (_, Validated.Valid(r)) => s.store(r.json.toString, None, true)
-            case _                       => ()
+          val validStrings = validRecords.collect { case (_, Validated.Valid(r)) =>
+            r.json.toString
           }
+          s.store(validStrings, true)
           Nil
         case Right(_) if validRecords.isEmpty => Nil
         case Right(sender)                    => emit(validRecords, sender)
@@ -164,11 +164,9 @@ class Emitter(
    * @param records List of failed records
    */
   override def fail(records: JList[EmitterJsonInput]): Unit = {
-    records.asScala.foreach {
-      case (r, Validated.Invalid(fs)) =>
-        val badRow = createBadRow(r, fs)
-        badSink.store(badRow.compact, None, false)
-      case (_, Validated.Valid(_)) => ()
+    val badRows = records.asScala.toList.collect { case (r, Validated.Invalid(fs)) =>
+      createBadRow(r, fs).compact
     }
+    badSink.store(badRows, false)
   }
 }

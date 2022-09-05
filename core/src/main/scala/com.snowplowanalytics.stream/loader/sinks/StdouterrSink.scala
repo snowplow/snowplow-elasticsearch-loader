@@ -27,14 +27,12 @@ class StdouterrSink extends ISink {
   /**
    * Writes a string to stdout or stderr
    *
-   * @param output The string to write
-   * @param key Unused parameter which exists to implement ISink
+   * @param outputs The strings to write
    * @param good Whether to write to stdout or stderr
    */
-  def store(output: String, key: Option[String], good: Boolean) =
-    if (good) {
-      println(output) // To stdout
-    } else {
-      Console.err.println(output) // To stderr
-    }
+  def store(outputs: List[String], good: Boolean): Unit =
+    if (good)
+      outputs.foreach(println(_)) // To stdout
+    else
+      outputs.foreach(Console.err.println(_)) // To stderr
 }

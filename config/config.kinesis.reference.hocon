@@ -139,6 +139,15 @@
       # Optional endpoint url configuration to override aws kinesis endpoints,
       # this can be used to specify local endpoints when using localstack
       "customEndpoint": "127.0.0.1:7846"
+
+      # Optional. Limits the number of events in a single PutRecords request.
+      # Maximum allowed: 500
+      "recordLimit": 500
+
+      # Optional. Limits the number of bytes in a single PutRecords request,
+      # including records and partition keys.
+      # Maximum allowed: 5 MB
+      "byteLimit": 5242880
     }
   }
 
