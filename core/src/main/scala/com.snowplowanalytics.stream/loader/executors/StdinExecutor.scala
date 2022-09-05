@@ -48,10 +48,10 @@ class StdinExecutor(
   def run = for (ln <- scala.io.Source.stdin.getLines) {
     val (line, result) = transformer.consumeLine(ln)
     result.bimap(
-      f => badSink.store(createBadRow(line, f).compact, None, false),
+      f => badSink.store(List(createBadRow(line, f).compact), false),
       s =>
         goodSink match {
-          case Left(gs)      => gs.store(s.json.toString, None, true)
+          case Left(gs)      => gs.store(List(s.json.toString), true)
           case Right(sender) => sender.send(List(ln -> s.valid))
         }
     )

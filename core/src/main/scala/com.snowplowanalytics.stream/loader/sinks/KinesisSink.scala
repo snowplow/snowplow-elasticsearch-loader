@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory
 
 // Scala
 import scala.util.{Failure, Random, Success, Try}
+import scala.collection.JavaConverters._
 
 // Amazon
 import com.amazonaws.services.kinesis.model._
@@ -43,6 +44,7 @@ import com.snowplowanalytics.stream.loader.Config.Sink.BadSink.{Kinesis => Kines
  * @param conf Config for Kinesis sink
  */
 class KinesisSink(conf: KinesisSinkConfig) extends ISink {
+  import KinesisSink._
 
   private lazy val log = LoggerFactory.getLogger(getClass)
 
@@ -78,40 +80,45 @@ class KinesisSink(conf: KinesisSinkConfig) extends ISink {
       case rnfe: ResourceNotFoundException => false
     }
 
-  private def put(name: String, data: ByteBuffer, key: String): PutRecordResult = {
-    val putRecordRequest = {
-      val p = new PutRecordRequest()
-      p.setStreamName(name)
-      p.setData(data)
-      p.setPartitionKey(key)
-      p
+  private def put(name: String, keyedData: List[KeyedData]): PutRecordsResult = {
+    val prres = keyedData.map { case (key, data) =>
+      new PutRecordsRequestEntry()
+        .withPartitionKey(key)
+        .withData(ByteBuffer.wrap(data))
     }
-    client.putRecord(putRecordRequest)
+    val putRecordsRequest =
+      new PutRecordsRequest()
+        .withStreamName(name)
+        .withRecords(prres.asJava)
+    client.putRecords(putRecordsRequest)
   }
 
   /**
-   * Write a record to the Kinesis stream
+   * Write records to the Kinesis stream
    *
-   * @param output The string record to write
-   * @param key A hash of the key determines to which shard the
-   *            record is assigned. Defaults to a random string.
+   * @param outputs The string records to write
    * @param good Unused parameter which exists to extend ISink
    */
-  def store(output: String, key: Option[String], good: Boolean): Unit =
-    Try {
-      put(
-        conf.streamName,
-        ByteBuffer.wrap(output.getBytes(UTF_8)),
-        key.getOrElse(Random.nextInt.toString)
-      )
-    } match {
-      case Success(result) =>
-        log.info("Writing successful")
-        log.info(s"  + ShardId: ${result.getShardId}")
-        log.info(s"  + SequenceNumber: ${result.getSequenceNumber}")
-      case Failure(f) =>
-        log.error("Writing failed")
-        log.error("  + " + f.getMessage)
+  def store(outputs: List[String], good: Boolean): Unit =
+    groupOutputs(conf) {
+      outputs.map(s => Random.nextInt.toString -> s.getBytes(UTF_8))
+    }.foreach { keyedData =>
+      Try {
+        put(
+          conf.streamName,
+          keyedData
+        )
+      } match {
+        case Success(result) =>
+          log.info("Writing successful")
+          result.getRecords.asScala.foreach { record =>
+            log.info(s"  + ShardId: ${record.getShardId}")
+            log.info(s"  + SequenceNumber: ${record.getSequenceNumber}")
+          }
+        case Failure(f) =>
+          log.error("Writing failed")
+          log.error("  + " + f.getMessage)
+      }
     }
 
   implicit class AwsKinesisClientBuilderExtensions(builder: AmazonKinesisClientBuilder) {
@@ -126,4 +133,37 @@ class KinesisSink(conf: KinesisSinkConfig) extends ISink {
     ): AmazonKinesisClientBuilder =
       if (cond) f(builder) else builder
   }
+}
+
+object KinesisSink {
+
+  // Represents a partition key and the serialized record content
+  private type KeyedData = (String, Array[Byte])
+
+  /**
+   *  Takes a list of records and splits it into several lists, where each list is as big as
+   *  possible with respecting the record limit and the size limit.
+   */
+  def groupOutputs(conf: KinesisSinkConfig)(keyedData: List[KeyedData]): List[List[KeyedData]] = {
+    case class Batch(size: Int, count: Int, keyedData: List[KeyedData])
+
+    keyedData
+      .foldLeft(List.empty[Batch]) { case (acc, (key, data)) =>
+        val recordSize = data.length + key.getBytes(UTF_8).length
+        acc match {
+          case head :: tail =>
+            if (head.count + 1 > conf.recordLimit || head.size + recordSize > conf.byteLimit)
+              List(Batch(recordSize, 1, List(key -> data))) ++ List(head) ++ tail
+            else
+              List(
+                Batch(head.size + recordSize, head.count + 1, (key -> data) :: head.keyedData)
+              ) ++ tail
+          case Nil =>
+            List(Batch(recordSize, 1, List(key -> data)))
+        }
+      }
+      .map(_.keyedData.reverse)
+      .reverse
+  }
+
 }

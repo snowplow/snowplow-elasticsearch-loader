@@ -23,12 +23,12 @@ package sinks
  * Shared interface for all sinks
  */
 trait ISink {
-  def store(output: String, key: Option[String], good: Boolean): Unit
+  def store(outputs: List[String], good: Boolean): Unit
 }
 
 /**
  * Sink which ignores all input
  */
 class NullSink extends ISink {
-  def store(output: String, key: Option[String], good: Boolean): Unit = ()
+  def store(outputs: List[String], good: Boolean): Unit = ()
 }

@@ -25,6 +25,9 @@ import java.nio.charset.StandardCharsets.UTF_8
 // NSQ
 import com.snowplowanalytics.client.nsq.NSQProducer
 
+// Scala
+import scala.collection.JavaConverters._
+
 import com.snowplowanalytics.stream.loader.Config.Sink.BadSink.{Nsq => NsqSinkConfig}
 
 /**
@@ -39,10 +42,9 @@ class NsqSink(conf: NsqSinkConfig) extends ISink {
   /**
    * Writes a string to NSQ
    *
-   * @param output The string to write
-   * @param key Unused parameter which exists to implement ISink
+   * @param outputs The strings to write
    * @param good Unused parameter which exists to extend ISink
    */
-  override def store(output: String, key: Option[String], good: Boolean): Unit =
-    producer.produce(conf.streamName, output.getBytes(UTF_8))
+  override def store(outputs: List[String], good: Boolean): Unit =
+    producer.produceMulti(conf.streamName, outputs.map(_.getBytes(UTF_8)).asJava)
 }

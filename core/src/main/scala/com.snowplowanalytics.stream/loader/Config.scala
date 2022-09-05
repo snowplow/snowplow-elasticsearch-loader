@@ -147,7 +147,9 @@ object Config {
       final case class Kinesis(
         streamName: String,
         region: Region,
-        customEndpoint: Option[String]
+        customEndpoint: Option[String],
+        recordLimit: Int,
+        byteLimit: Int
       ) extends BadSink
     }
   }

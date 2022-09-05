@@ -77,7 +77,13 @@ class ConfigSpec extends Specification {
             Sink.GoodSink.Elasticsearch.ESChunk(999999, 499)
           ),
           Sink.BadSink
-            .Kinesis("test-kinesis-bad-stream", Region("eu-central-1"), "127.0.0.1:7846".some)
+            .Kinesis(
+              "test-kinesis-bad-stream",
+              Region("eu-central-1"),
+              "127.0.0.1:7846".some,
+              500,
+              5242880
+            )
         ),
         Purpose.Enriched,
         Monitoring(
@@ -123,7 +129,7 @@ class ConfigSpec extends Specification {
             Sink.GoodSink.Elasticsearch.ESCluster("good", None),
             Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
           ),
-          Sink.BadSink.Kinesis("test-kinesis-bad-stream", DefaultTestRegion, None)
+          Sink.BadSink.Kinesis("test-kinesis-bad-stream", DefaultTestRegion, None, 500, 5242880)
         ),
         Purpose.Enriched,
         Monitoring(
@@ -295,7 +301,8 @@ class ConfigSpec extends Specification {
             Sink.GoodSink.Elasticsearch.ESCluster("testindex", None),
             Sink.GoodSink.Elasticsearch.ESChunk(206, 207)
           ),
-          Sink.BadSink.Kinesis("test-kinesis-bad-stream", Region("ca-central-1"), None)
+          Sink.BadSink
+            .Kinesis("test-kinesis-bad-stream", Region("ca-central-1"), None, 500, 5242880)
         ),
         Purpose.Bad,
         Monitoring(
@@ -341,7 +348,7 @@ class ConfigSpec extends Specification {
             Sink.GoodSink.Elasticsearch.ESCluster("good", None),
             Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
           ),
-          Sink.BadSink.Kinesis("test-kinesis-bad-stream", DefaultTestRegion, None)
+          Sink.BadSink.Kinesis("test-kinesis-bad-stream", DefaultTestRegion, None, 500, 5242880)
         ),
         Purpose.Enriched,
         Monitoring(
@@ -387,7 +394,7 @@ class ConfigSpec extends Specification {
             Sink.GoodSink.Elasticsearch.ESCluster("good", None),
             Sink.GoodSink.Elasticsearch.ESChunk(1000000, 500)
           ),
-          Sink.BadSink.Kinesis("test-kinesis-bad-stream", Region("eu-west-2"), None)
+          Sink.BadSink.Kinesis("test-kinesis-bad-stream", Region("eu-west-2"), None, 500, 5242880)
         ),
         Purpose.Enriched,
         Monitoring(
