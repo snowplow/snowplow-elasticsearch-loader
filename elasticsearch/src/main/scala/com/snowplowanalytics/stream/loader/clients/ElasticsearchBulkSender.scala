@@ -210,7 +210,7 @@ class ElasticsearchBulkSender(
     error: Option[String],
     record: EmitterJsonInput
   ): Option[EmitterJsonInput] = {
-    error.foreach(e => log.error("Failed to index record in Elasticsearch", e))
+    error.foreach(e => log.error(s"Failed to index record in Elasticsearch: {}", e))
     error
       .flatMap { e =>
         if (
