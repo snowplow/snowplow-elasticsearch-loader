@@ -51,7 +51,6 @@ case class MockElasticsearchSender(chunkConf: ESChunk) extends BulkSender[Emitte
     List.empty
   }
   override def close() = {}
-  override def logHealth(): Unit             = ()
   override def chunkConfig(): ESChunk        = chunkConf
   override val tracker                       = None
   override val maxConnectionWaitTimeMs: Long = 1000L
@@ -67,7 +66,6 @@ class EmitterSpec extends Specification {
       val fakeSender: BulkSender[EmitterJsonInput] = new BulkSender[EmitterJsonInput] {
         override def send(records: List[EmitterJsonInput]): List[EmitterJsonInput] = List.empty
         override def close(): Unit                                                 = ()
-        override def logHealth(): Unit                                             = ()
         override def chunkConfig(): ESChunk                                        = ESChunk(1L, 1L)
         override val tracker                                                       = None
         override val log: Logger                                                   = null

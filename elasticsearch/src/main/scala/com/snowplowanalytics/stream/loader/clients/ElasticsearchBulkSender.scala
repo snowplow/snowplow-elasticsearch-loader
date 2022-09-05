@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory
 // Scala
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{Failure => SFailure, Success => SSuccess}
 
 import org.elasticsearch.client.RestClient
 
@@ -40,7 +39,7 @@ import org.apache.http.message.BasicHeader
 import cats.Id
 import cats.effect.{IO, Timer}
 import cats.data.Validated
-import cats.syntax.validated._
+import cats.implicits._
 
 import retry.implicits._
 import retry.{RetryDetails, RetryPolicy}
@@ -142,6 +141,15 @@ class ElasticsearchBulkSender(
           onErrorHandler
         )
         .map(extractResult(records))
+        .flatTap { failures =>
+          IO.delay(log.info(s"Emitted ${esObjects.size - failures.size} records to Elasticsearch"))
+        }
+        .flatTap { failures =>
+          if (failures.nonEmpty)
+            BulkSender.futureToTask(logHealth())
+          else
+            IO.unit
+        }
         .attempt
         .unsafeRunSync() match {
         case Right(s) => s
@@ -155,9 +163,6 @@ class ElasticsearchBulkSender(
           Nil
       }
     } else Nil
-
-    log.info(s"Emitted ${esObjects.size - newFailures.size} records to Elasticsearch")
-    if (newFailures.nonEmpty) logHealth()
 
     val allFailures = oldFailures ++ newFailures
 
@@ -195,20 +200,21 @@ class ElasticsearchBulkSender(
   }
 
   /** Logs the cluster health */
-  override def logHealth(): Unit =
+  def logHealth(): Future[Unit] =
     client
       .execute(clusterHealth)
       .flatMap { health =>
         health.fold(failure => Future.failed(failure.error.asException), Future.successful(_))
       }
-      .onComplete {
-        case SSuccess(result) =>
-          result.status match {
-            case "green"  => log.info("Cluster health is green")
-            case "yellow" => log.warn("Cluster health is yellow")
-            case "red"    => log.error("Cluster health is red")
-          }
-        case SFailure(e) => log.error("Couldn't retrieve cluster health", e)
+      .map { result =>
+        result.status match {
+          case "green"  => log.info("Cluster health is green")
+          case "yellow" => log.warn("Cluster health is yellow")
+          case "red"    => log.error("Cluster health is red")
+        }
+      }
+      .recover { case t: Throwable =>
+        log.error("Couldn't retrieve cluster health", t)
       }
 
   /**
