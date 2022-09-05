@@ -27,14 +27,13 @@ import org.slf4j.Logger
 // Scala
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.Random
 
 // cats
 import cats.effect.{ContextShift, IO}
 import scala.concurrent.ExecutionContext
 import cats.{Applicative, Id}
 
-import retry.{PolicyDecision, RetryDetails, RetryPolicy}
+import retry.{RetryDetails, RetryPolicies, RetryPolicy}
 
 // Snowplow
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
@@ -81,28 +80,25 @@ object BulkSender {
   def delayPolicy[M[_]: Applicative](
     maxAttempts: Int,
     maxConnectionWaitTimeMs: Long
-  ): RetryPolicy[M] =
-    RetryPolicy.lift { status =>
-      if (status.retriesSoFar >= maxAttempts) PolicyDecision.GiveUp
-      else {
-        val maxDelay                  = 2.milliseconds * Math.pow(2, status.retriesSoFar.toDouble).toLong
-        val randomDelayNanos          = (maxDelay.toNanos * Random.nextDouble()).toLong
-        val maxConnectionWaitTimeNano = maxConnectionWaitTimeMs * 1000
-        val delayNanos =
-          if (maxConnectionWaitTimeMs >= randomDelayNanos) maxConnectionWaitTimeNano
-          else randomDelayNanos
-        PolicyDecision.DelayAndRetry(new FiniteDuration(delayNanos, TimeUnit.NANOSECONDS))
-      }
-    }
+  ): RetryPolicy[M] = {
+    val basePolicy =
+      RetryPolicies
+        .fullJitter(20.milliseconds)
+        .join(RetryPolicies.limitRetries(maxAttempts))
+    RetryPolicies.limitRetriesByCumulativeDelay(
+      FiniteDuration(maxConnectionWaitTimeMs, TimeUnit.MILLISECONDS),
+      basePolicy
+    )
+  }
 
   def onError(log: Logger, tracker: Option[Tracker[Id]], connectionAttemptStartTime: Long)(
     error: Throwable,
     details: RetryDetails
   ): IO[Unit] = {
-    val duration = (error, details) match {
-      case (error, RetryDetails.GivingUp(_, totalDelay)) =>
+    val duration = details match {
+      case RetryDetails.GivingUp(_, totalDelay) =>
         IO(log.error("Storage threw an unexpected exception. Giving up ", error)).as(totalDelay)
-      case (error, RetryDetails.WillDelayAndRetry(nextDelay, retriesSoFar, cumulativeDelay)) =>
+      case RetryDetails.WillDelayAndRetry(nextDelay, retriesSoFar, cumulativeDelay) =>
         IO(
           log.error(
             s"Storage threw an unexpected exception, after $retriesSoFar retries. Next attempt in $nextDelay ",
@@ -125,12 +121,6 @@ object BulkSender {
         }
       }
     }
-  }
-
-  /** Predicate about whether or not we should retry sending stuff to ES */
-  def exPredicate: Throwable => Boolean = {
-    case _: Exception => true
-    case _            => false
   }
 
   def futureToTask[T](f: => Future[T]): IO[T] =

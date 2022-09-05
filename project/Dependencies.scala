@@ -25,7 +25,7 @@ object Dependencies {
     val netty            = "4.1.67.Final" // Override provided version to fix security vulnerability
     val jackson          = "2.12.7"
     // Scala
-    val catsRetry        = "0.3.2"
+    val catsRetry        = "2.1.1"
     val circe            = "0.14.1"
     val decline          = "2.1.0"
     val snowplowTracker  = "1.0.0"
@@ -51,7 +51,7 @@ object Dependencies {
     val netty            = "io.netty"                         %  "netty-all"                    % V.netty
     val jacksonCbor      = "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor"       % V.jackson // Override provided version to fix security vulnerability
     // Scala
-    val catsRetry        = "com.github.cb372"                 %% "cats-retry-cats-effect"       % V.catsRetry
+    val catsRetry        = "com.github.cb372"                 %% "cats-retry"                   % V.catsRetry
     val circeOptics      = "io.circe"                         %% "circe-optics"                 % V.circe
     val decline          = "com.monovore"                     %% "decline"                      % V.decline
     val jacksonScala     = "com.fasterxml.jackson.module"     %% "jackson-module-scala"         % V.jackson // Compatible version required for elastic4s

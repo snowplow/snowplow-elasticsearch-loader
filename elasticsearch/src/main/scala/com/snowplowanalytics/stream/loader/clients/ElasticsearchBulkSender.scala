@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory
 
 // Scala
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.util.{Failure => SFailure, Success => SSuccess}
 
 import org.elasticsearch.client.RestClient
@@ -43,7 +44,7 @@ import cats.syntax.validated._
 
 import retry.implicits._
 import retry.{RetryDetails, RetryPolicy}
-import retry.CatsEffect._
+import retry._
 
 import com.snowplowanalytics.snowplow.scalatracker.Tracker
 
@@ -116,9 +117,11 @@ class ElasticsearchBulkSender(
 
   override def send(records: List[EmitterJsonInput]): List[EmitterJsonInput] = {
     val connectionAttemptStartTime = System.currentTimeMillis()
-    implicit def onErrorHandler: (Throwable, RetryDetails) => IO[Unit] =
+    val onErrorHandler: (Throwable, RetryDetails) => IO[Unit] =
       BulkSender.onError(log, tracker, connectionAttemptStartTime)
-    implicit def retryPolicy: RetryPolicy[IO] =
+    def onFailureHandler[A](res: Response[A], rd: RetryDetails): IO[Unit] =
+      onErrorHandler(res.error.asException, rd)
+    val retryPolicy: RetryPolicy[IO] =
       BulkSender.delayPolicy[IO](maxAttempts, maxConnectionWaitTimeMs)
 
     // oldFailures - failed at the transformation step
@@ -132,7 +135,12 @@ class ElasticsearchBulkSender(
     val newFailures: List[EmitterJsonInput] = if (actions.nonEmpty) {
       BulkSender
         .futureToTask(client.execute(bulk(actions)))
-        .retryingOnSomeErrors(BulkSender.exPredicate)
+        .retryingOnFailuresAndAllErrors(
+          r => !r.isError,
+          retryPolicy,
+          onFailureHandler,
+          onErrorHandler
+        )
         .map(extractResult(records))
         .attempt
         .unsafeRunSync() match {
@@ -168,12 +176,14 @@ class ElasticsearchBulkSender(
   def extractResult(
     records: List[EmitterJsonInput]
   )(response: Response[BulkResponse]): List[EmitterJsonInput] =
-    response.result.items
-      .zip(records)
-      .flatMap { case (bulkResponseItem, record) =>
-        handleResponse(bulkResponseItem.error.map(_.reason), record)
-      }
-      .toList
+    response.fold(records) { result =>
+      result.items
+        .zip(records)
+        .flatMap { case (bulkResponseItem, record) =>
+          handleResponse(bulkResponseItem.error.map(_.reason), record)
+        }
+        .toList
+    }
 
   def composeObject(jsonRecord: JsonRecord): ElasticsearchObject = {
     val index = jsonRecord.shard match {
@@ -186,18 +196,20 @@ class ElasticsearchBulkSender(
 
   /** Logs the cluster health */
   override def logHealth(): Unit =
-    client.execute(clusterHealth).onComplete {
-      case SSuccess(health) =>
-        health match {
-          case response =>
-            response.result.status match {
-              case "green"  => log.info("Cluster health is green")
-              case "yellow" => log.warn("Cluster health is yellow")
-              case "red"    => log.error("Cluster health is red")
-            }
-        }
-      case SFailure(e) => log.error("Couldn't retrieve cluster health", e)
-    }
+    client
+      .execute(clusterHealth)
+      .flatMap { health =>
+        health.fold(failure => Future.failed(failure.error.asException), Future.successful(_))
+      }
+      .onComplete {
+        case SSuccess(result) =>
+          result.status match {
+            case "green"  => log.info("Cluster health is green")
+            case "yellow" => log.warn("Cluster health is yellow")
+            case "red"    => log.error("Cluster health is red")
+          }
+        case SFailure(e) => log.error("Couldn't retrieve cluster health", e)
+      }
 
   /**
    * Handle the response given for a bulk request, by producing a failure if we failed to insert
