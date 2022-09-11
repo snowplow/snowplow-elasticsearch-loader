@@ -1,3 +1,10 @@
+Version 2.0.7 (2022-09-11)
+--------------------------
+Use PutRecords to batch up failed inserts sent to kinesis (#239)
+Improve use of Futures to avoid suspected deadlocks (#238)
+Fix app from exiting on elasticsearch error responses (#233)
+Fix logging of error message when an event cannot be indexed (#237)
+
 Version 2.0.6 (2022-06-11)
 --------------------------
 Bump jackson to 2.12.7 (#235)
@@ -32,9 +39,9 @@ Update links to docs in README (#212)
 
 Version 2.0.0 (2021-10-08)
 --------------------------
-Bump elastic4s to 7.14.1 (close #175)
-Refactor config structure (close #206)
-Github action to scan docker image with lacework (close #205)
+Bump elastic4s to 7.14.1 (#175)
+Refactor config structure (#206)
+Github action to scan docker image with lacework (#205)
 
 Version 1.0.1 (2021-09-02)
 --------------------------
