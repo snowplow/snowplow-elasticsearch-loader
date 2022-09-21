@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory
 
 // Scala
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 import org.elasticsearch.client.RestClient
 
@@ -144,12 +143,6 @@ class ElasticsearchBulkSender(
         .flatTap { failures =>
           IO.delay(log.info(s"Emitted ${esObjects.size - failures.size} records to Elasticsearch"))
         }
-        .flatTap { failures =>
-          if (failures.nonEmpty)
-            BulkSender.futureToTask(logHealth())
-          else
-            IO.unit
-        }
         .attempt
         .unsafeRunSync() match {
         case Right(s) => s
@@ -198,24 +191,6 @@ class ElasticsearchBulkSender(
     val eventId = utils.extractEventId(jsonRecord.json)
     ElasticsearchObject(index, eventId, jsonRecord.json.noSpaces)
   }
-
-  /** Logs the cluster health */
-  def logHealth(): Future[Unit] =
-    client
-      .execute(clusterHealth)
-      .flatMap { health =>
-        health.fold(failure => Future.failed(failure.error.asException), Future.successful(_))
-      }
-      .map { result =>
-        result.status match {
-          case "green"  => log.info("Cluster health is green")
-          case "yellow" => log.warn("Cluster health is yellow")
-          case "red"    => log.error("Cluster health is red")
-        }
-      }
-      .recover { case t: Throwable =>
-        log.error("Couldn't retrieve cluster health", t)
-      }
 
   /**
    * Handle the response given for a bulk request, by producing a failure if we failed to insert
