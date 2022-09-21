@@ -47,7 +47,8 @@
       # - password (optional, remove if not active): http basic auth password
       # - shardDateFormat (optional, remove if not needed): formatting used for sharding good stream, i.e. _yyyy-MM-dd
       # - shardDateField (optional, if not specified derived_tstamp is used): timestamp field for sharding good stream
-      # - maxTimeout: the maximum attempt time before a client restart
+      # - indexTimeout (optional, default value 60000): the maximum time to wait in milliseconds for a single http transaction when indexing events
+      # - maxTimeout (optional, default value 10000): the maximum time to wait in milliseconds between retries after load failures
       # - maxRetries (optional, default value 6): the maximum number of request attempts before giving up
       # - ssl (optional, default value false): if using the http client, whether to use ssl or not
       "client": {
@@ -57,6 +58,7 @@
         "password": "es-pass"
         "shardDateFormat": "_yyyy-MM-dd"
         "shardDateField": "derived_tstamp"
+        "indexTimeout": 59999
         "maxTimeout": 9999
         "maxRetries": 5
         "ssl": true

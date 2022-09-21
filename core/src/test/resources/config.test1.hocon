@@ -17,6 +17,7 @@
     "good": {
       "client": {
         "endpoint": "localhost"
+        "indexTimeout": 505
         "maxTimeout": 205
         "maxRetries": 7
         "port": 9220

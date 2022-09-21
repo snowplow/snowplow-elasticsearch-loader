@@ -45,6 +45,7 @@ class ElasticsearchBulkSenderSpec extends Specification {
     None,
     index,
     None,
+    30000L,
     10000L,
     None,
     6,

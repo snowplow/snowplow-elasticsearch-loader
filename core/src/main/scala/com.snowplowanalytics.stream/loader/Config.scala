@@ -119,6 +119,7 @@ object Config {
           password: Option[String],
           shardDateFormat: Option[String],
           shardDateField: Option[String],
+          indexTimeout: Long,
           maxTimeout: Long,
           maxRetries: Int,
           ssl: Boolean

@@ -68,6 +68,7 @@ class ConfigSpec extends Specification {
               "es-pass".some,
               "_yyyy-MM-dd".some,
               "derived_tstamp".some,
+              59999,
               9999,
               5,
               true
@@ -121,6 +122,7 @@ class ConfigSpec extends Specification {
               None,
               None,
               None,
+              60000,
               10000,
               6,
               false
@@ -163,6 +165,7 @@ class ConfigSpec extends Specification {
               "es-pass".some,
               "_yyyy-MM-dd".some,
               "derived_tstamp".some,
+              59999,
               9999,
               5,
               true
@@ -205,6 +208,7 @@ class ConfigSpec extends Specification {
               None,
               None,
               None,
+              60000,
               10000,
               6,
               false
@@ -293,6 +297,7 @@ class ConfigSpec extends Specification {
               None,
               None,
               None,
+              505,
               205,
               7,
               true
@@ -340,6 +345,7 @@ class ConfigSpec extends Specification {
               None,
               None,
               None,
+              60000,
               10000,
               6,
               false
@@ -386,6 +392,7 @@ class ConfigSpec extends Specification {
               None,
               None,
               None,
+              60000,
               10000,
               6,
               false

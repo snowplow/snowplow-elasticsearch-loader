@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory
 
 // Scala
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.DurationLong
 
 import org.elasticsearch.client.RestClient
 
@@ -64,9 +65,10 @@ class ElasticsearchBulkSender(
   password: Option[String],
   documentIndex: String,
   documentType: Option[String],
-  val maxConnectionWaitTimeMs: Long,
+  indexTimeoutMs: Long,
+  maxConnectionWaitTimeMs: Long,
   val tracker: Option[Tracker[Id]],
-  val maxAttempts: Int = 6,
+  maxAttempts: Int = 6,
   chunkConf: ESChunk
 ) extends BulkSender[EmitterJsonInput] {
   require(maxAttempts > 0)
@@ -133,6 +135,10 @@ class ElasticsearchBulkSender(
     val newFailures: List[EmitterJsonInput] = if (actions.nonEmpty) {
       BulkSender
         .futureToTask(client.execute(bulk(actions)))
+        .timeout(
+          // see https://github.com/snowplow/snowplow-elasticsearch-loader/issues/242 for why this is needed
+          indexTimeoutMs.millis
+        )
         .retryingOnFailuresAndAllErrors(
           r => r.isSuccess,
           retryPolicy,
@@ -242,6 +248,7 @@ object ElasticsearchBulkSender {
       config.client.password,
       config.cluster.index,
       config.cluster.documentType,
+      config.client.indexTimeout,
       config.client.maxTimeout,
       tracker,
       config.client.maxRetries,

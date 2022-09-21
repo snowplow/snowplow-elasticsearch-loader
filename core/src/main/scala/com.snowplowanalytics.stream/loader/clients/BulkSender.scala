@@ -42,6 +42,8 @@ import Config.Sink.GoodSink.Elasticsearch.ESChunk
 trait BulkSender[A] {
   import BulkSender._
 
+  implicit val contextShift: ContextShift[IO] = globalContextShift
+
   // With previous versions of ES there were hard limits regarding the size of the payload (32768
   // bytes) and since we don't really need the whole payload in those cases we cut it at 20k so that
   // it can be sent to a bad sink. This way we don't have to compute the size of the byte
@@ -50,9 +52,6 @@ trait BulkSender[A] {
 
   val tracker: Option[Tracker[Id]]
   val log: Logger
-
-  val maxConnectionWaitTimeMs: Long
-  val maxAttempts: Int
 
   def send(records: List[A]): List[A]
   def close(): Unit
@@ -74,7 +73,8 @@ trait BulkSender[A] {
 }
 
 object BulkSender {
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+
+  val globalContextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 
   def delayPolicy[M[_]: Applicative](
     maxAttempts: Int,
@@ -122,7 +122,7 @@ object BulkSender {
     }
   }
 
-  def futureToTask[T](f: => Future[T]): IO[T] =
+  def futureToTask[T](f: => Future[T])(implicit cs: ContextShift[IO]): IO[T] =
     IO.fromFuture(IO.delay(f))
 
   /**
