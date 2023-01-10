@@ -24,6 +24,7 @@ object Dependencies {
     val nsqClient        = "1.1.0-rc1"
     val netty            = "4.1.86.Final" // Override provided version to fix security vulnerability
     val jackson          = "2.13.4"
+    val protobuf         = "3.21.12"
     // Scala
     val catsRetry        = "2.1.1"
     val circe            = "0.14.1"
@@ -50,6 +51,7 @@ object Dependencies {
     val nsqClient        = "com.snowplowanalytics"            %  "nsq-java-client_2.10"         % V.nsqClient
     val netty            = "io.netty"                         %  "netty-all"                    % V.netty
     val jacksonCbor      = "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor"       % V.jackson // Override provided version to fix security vulnerability
+    val protobuf         = "com.google.protobuf"              % "protobuf-java"                 % V.protobuf // Override provided version to fix security vulnerability
     // Scala
     val catsRetry        = "com.github.cb372"                 %% "cats-retry"                   % V.catsRetry
     val circeOptics      = "io.circe"                         %% "circe-optics"                 % V.circe
