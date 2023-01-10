@@ -19,7 +19,7 @@ object Dependencies {
     val config           = "1.4.1"
     val slf4j            = "1.7.32"
     val log4j            = "2.17.1"
-    val kinesisClient    = "1.14.8"
+    val kinesisClient    = "1.14.9"
     val kinesisConnector = "1.3.0"
     val nsqClient        = "1.1.0-rc1"
     val netty            = "4.1.67.Final" // Override provided version to fix security vulnerability
