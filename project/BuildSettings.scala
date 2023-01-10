@@ -45,14 +45,6 @@ object BuildSettings {
   lazy val dockerSettings =
     Seq(
       Docker / packageName := "elasticsearch-loader",
-      dockerRepository := Some("snowplow"),
-      dockerBaseImage := "eclipse-temurin:11-jre-focal",
-      Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>",
-      Docker / daemonUser := "daemon",
-      dockerCmd := Seq("--help"),
-      dockerUpdateLatest := true,
-      Docker / daemonUserUid := None,
-      Docker / defaultLinuxInstallLocation := "/opt/snowplow"
     )
 
   // Makes our SBT app settings available from within the app

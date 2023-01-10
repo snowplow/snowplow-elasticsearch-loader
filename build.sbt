@@ -39,6 +39,11 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.circeLiteral
 )
 
+lazy val appDependencies = Seq(
+  Dependencies.Libraries.elastic4sEsJava,
+  Dependencies.Libraries.jacksonScala
+)
+
 lazy val buildSettings = Seq(
   organization := "com.snowplowanalytics",
   name := "snowplow-elasticsearch-loader",
@@ -73,11 +78,16 @@ lazy val core = project
 lazy val elasticsearch = project
   .settings(moduleName := "snowplow-elasticsearch-loader")
   .settings(allSettings)
-  .enablePlugins(JavaAppPackaging)
+  .enablePlugins(JavaAppPackaging, SnowplowDockerPlugin)
   .settings(BuildSettings.dockerSettings)
-  .settings(
-    libraryDependencies ++= Seq(
-      Dependencies.Libraries.elastic4sEsJava,
-      Dependencies.Libraries.jacksonScala
-    ))
+  .settings(libraryDependencies ++= appDependencies)
+  .dependsOn(core)
+
+lazy val elasticsearchDistroless = project
+  .in(file("distroless"))
+  .settings(sourceDirectory := (elasticsearch / sourceDirectory).value)
+  .settings(allSettings)
+  .enablePlugins(SnowplowDistrolessDockerPlugin)
+  .settings(BuildSettings.dockerSettings)
+  .settings(libraryDependencies ++= appDependencies)
   .dependsOn(core)

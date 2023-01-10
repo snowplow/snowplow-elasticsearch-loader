@@ -87,6 +87,9 @@ jobs:
     - name: Stage the Docker build
       run: sbt "project elasticsearch" docker:stage
 
+    - name: Stage the Docker distroless build
+      run: sbt "project elasticsearchDistroless" docker:stage
+
     - name: Docker metadata
       id: meta
       uses: docker/metadata-action@v3
@@ -95,6 +98,17 @@ jobs:
         tags: |
           type=raw,value=latest,enable=${{ !contains(steps.ver.outputs.tag, 'rc') }}
           type=raw,value=${{ steps.ver.outputs.tag }}
+        flavor: |
+          latest=false
+
+    - name: Docker metadata distroless
+      id: distroless-meta
+      uses: docker/metadata-action@v3
+      with:
+        images: snowplow/elasticsearch-loader
+        tags: |
+          type=raw,value=latest-distroless,enable=${{ !contains(steps.ver.outputs.tag, 'rc') }}
+          type=raw,value=${{ steps.ver.outputs.tag }}-distroless
         flavor: |
           latest=false
 
@@ -117,4 +131,13 @@ jobs:
         file: elasticsearch/target/docker/stage/Dockerfile
         platforms: linux/amd64,linux/arm64/v8
         tags: ${{ steps.meta.outputs.tags }}
+        push: true
+
+    - name: Push distroless image
+      uses: docker/build-push-action@v2
+      with:
+        context: distroless/target/docker/stage
+        file: distroless/target/docker/stage/Dockerfile
+        platforms: linux/amd64,linux/arm64/v8
+        tags: ${{ steps.distroless-meta.outputs.tags }}
         push: true
