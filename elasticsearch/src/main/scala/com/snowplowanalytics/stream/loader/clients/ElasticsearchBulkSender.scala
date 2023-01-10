@@ -31,7 +31,6 @@ import com.sksamuel.elastic4s.requests.indexes.IndexRequest
 import com.sksamuel.elastic4s.http.{JavaClient, NoOpHttpClientConfigCallback}
 import com.sksamuel.elastic4s.requests.bulk.{BulkRequest, BulkResponse}
 import com.sksamuel.elastic4s.handlers.bulk.BulkHandlers
-import com.sksamuel.exts.Logging
 
 import org.apache.http.{Header, HttpHost}
 import org.apache.http.message.BasicHeader
@@ -101,7 +100,7 @@ class ElasticsearchBulkSender(
    * This BulkHandler is added to change endpoints of bulk api request to add
    * document type to them. This change is made in order to continue to support ES 6.x
    */
-  implicit object CustomBulkHandler extends Handler[BulkRequest, BulkResponse] with Logging {
+  implicit object CustomBulkHandler extends Handler[BulkRequest, BulkResponse] {
     override def build(t: BulkRequest): ElasticRequest = {
       val req = BulkHandlers.BulkHandler.build(t)
       documentType match {

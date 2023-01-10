@@ -31,7 +31,7 @@ object Dependencies {
     val snowplowTracker  = "1.0.0"
     val analyticsSDK     = "2.1.0"
     val awsSigner        = "0.5.2"
-    val elastic4s        = "7.14.1"
+    val elastic4s        = "7.17.4"
     val pureconfig       = "0.16.0"
     val badRows          = "2.1.1"
     // Scala (test only)
