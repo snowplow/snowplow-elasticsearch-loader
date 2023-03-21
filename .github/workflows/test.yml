@@ -85,10 +85,10 @@ jobs:
     - uses: coursier/cache-action@v6
 
     - name: Stage the Docker build
-      run: sbt "project elasticsearch" docker:stage
+      run: sbt "project elasticsearch" docker:publishLocal
 
     - name: Stage the Docker distroless build
-      run: sbt "project elasticsearchDistroless" docker:stage
+      run: sbt "project elasticsearchDistroless" docker:publishLocal
 
     - name: Docker metadata
       id: meta
@@ -141,3 +141,13 @@ jobs:
         platforms: linux/amd64,linux/arm64/v8
         tags: ${{ steps.distroless-meta.outputs.tags }}
         push: true
+
+    - name: Run Snyk to check for vulnerabilities
+      if: ${{ !contains(github.ref, 'rc') }}
+      uses: snyk/actions/docker@master
+      with:
+        image: "snowplow/elasticsearch-loader:${{ github.ref_name }}-distroless"
+        args: "--app-vulns --org=data-processing-new"
+        command: monitor
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
