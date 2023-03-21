@@ -58,12 +58,8 @@ object Config {
       channelName: String,
       nsqlookupdHost: String,
       nsqlookupdPort: Int,
-      buffer: Nsq.Buffer
+      buffer: Buffer
     ) extends Source
-
-    object Nsq {
-      final case class Buffer(recordLimit: Long)
-    }
 
     final case class Kinesis(
       streamName: String,
@@ -74,7 +70,7 @@ object Config {
       appName: String,
       customEndpoint: Option[String],
       dynamodbCustomEndpoint: Option[String],
-      buffer: Kinesis.Buffer
+      buffer: Buffer
     ) extends Source {
       val timestampEither = initialTimestamp
         .toRight("An initial timestamp needs to be provided when choosing AT_TIMESTAMP")
@@ -91,9 +87,7 @@ object Config {
       val timestamp = timestampEither.right.toOption
     }
 
-    object Kinesis {
-      final case class Buffer(byteLimit: Long, recordLimit: Long, timeLimit: Long)
-    }
+    final case class Buffer(byteLimit: Long, recordLimit: Long, timeLimit: Long)
   }
 
   final case class Sink(good: Sink.GoodSink, bad: Sink.BadSink)
@@ -226,12 +220,10 @@ object Config {
       deriveReader[Source.Stdin.type]
     implicit val sourceNsqConfigReader: ConfigReader[Source.Nsq] =
       deriveReader[Source.Nsq]
-    implicit val sourceNsqBufferConfigReader: ConfigReader[Source.Nsq.Buffer] =
-      deriveReader[Source.Nsq.Buffer]
     implicit val sourceKinesisConfigReader: ConfigReader[Source.Kinesis] =
       deriveReader[Source.Kinesis]
-    implicit val sourceKinesisConfigBufferReader: ConfigReader[Source.Kinesis.Buffer] =
-      deriveReader[Source.Kinesis.Buffer]
+    implicit val sourceConfigBufferReader: ConfigReader[Source.Buffer] =
+      deriveReader[Source.Buffer]
     implicit val sinkConfigReader: ConfigReader[Sink] =
       deriveReader[Sink]
     implicit val sinkGoodConfigReader: ConfigReader[Sink.GoodSink] =

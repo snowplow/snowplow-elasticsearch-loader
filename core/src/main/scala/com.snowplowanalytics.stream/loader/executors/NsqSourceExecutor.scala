@@ -30,6 +30,7 @@ import com.snowplowanalytics.client.nsq.exceptions.NSQException
 
 //Java
 import java.nio.charset.StandardCharsets.UTF_8
+import java.util.concurrent.{Executors, TimeUnit}
 
 // Scala
 import scala.collection.mutable.ListBuffer
@@ -59,12 +60,14 @@ class NsqSourceExecutor(
   badSink: ISink,
   shardDateField: Option[String],
   shardDateFormat: Option[String]
-) extends Runnable {
+) extends Runnable
+    with AutoCloseable {
 
   lazy val log = LoggerFactory.getLogger(getClass())
 
   // nsq messages will be buffered in msgBuffer until buffer size become equal to nsqBufferSize
-  private val msgBuffer = new ListBuffer[EmitterJsonInput]()
+  private val msgBuffer      = new ListBuffer[EmitterJsonInput]()
+  private var msgBufferBytes = 0L
   // ElasticsearchEmitter instance
   private val emitter =
     new Emitter(
@@ -77,46 +80,72 @@ class NsqSourceExecutor(
     case Purpose.Bad      => new BadEventTransformer
   }
 
+  val executorService = Executors.newSingleThreadScheduledExecutor
+
   /**
    * Consumer will be started to wait new message.
    */
-  override def run(): Unit = {
-    val nsqCallback: NSQMessageCallback = new NSQMessageCallback {
-      val nsqBufferSize = nsq.buffer.recordLimit
+  val nsqCallback: NSQMessageCallback = new NSQMessageCallback {
+    val nsqBufferSize = nsq.buffer.recordLimit
 
-      override def message(msg: NSQMessage): Unit = {
-        val msgStr = new String(msg.getMessage(), UTF_8)
-        msgBuffer.synchronized {
-          val emitterInput = transformer.consumeLine(msgStr)
-          msgBuffer += emitterInput
-          msg.finished()
+    override def message(msg: NSQMessage): Unit = {
+      val bytes  = msg.getMessage
+      val msgStr = new String(bytes, UTF_8)
+      msgBuffer.synchronized {
+        val emitterInput = transformer.consumeLine(msgStr)
+        msgBuffer += emitterInput
+        msgBufferBytes += bytes.size
+        msg.finished()
 
-          if (msgBuffer.size == nsqBufferSize) {
-            val rejectedRecords = emitter.attemptEmit(msgBuffer.toList)
-            emitter.fail(rejectedRecords.asJava)
-            msgBuffer.clear()
-          }
+        if (msgBuffer.size == nsqBufferSize || msgBufferBytes > nsq.buffer.byteLimit) {
+          flush()
         }
       }
     }
+  }
 
-    val errorCallback = new NSQErrorCallback {
-      override def error(e: NSQException): Unit =
-        log.error(s"Exception while consuming topic ${nsq.streamName}", e)
+  def flush(): Unit = msgBuffer.synchronized {
+    if (msgBuffer.nonEmpty) {
+      val rejectedRecords = emitter.attemptEmit(msgBuffer.toList)
+      emitter.fail(rejectedRecords.asJava)
+      msgBuffer.clear()
+      msgBufferBytes = 0
     }
+  }
 
-    // use NSQLookupd
-    val lookup = new DefaultNSQLookup
-    lookup.addLookupAddress(nsq.nsqlookupdHost, nsq.nsqlookupdPort)
-    val consumer =
-      new NSQConsumer(
-        lookup,
-        nsq.streamName,
-        nsq.channelName,
-        nsqCallback,
-        new NSQConfig(),
-        errorCallback
-      )
+  val errorCallback = new NSQErrorCallback {
+    override def error(e: NSQException): Unit =
+      log.error(s"Exception while consuming topic ${nsq.streamName}", e)
+  }
+
+  // use NSQLookupd
+  val lookup = new DefaultNSQLookup
+  lookup.addLookupAddress(nsq.nsqlookupdHost, nsq.nsqlookupdPort)
+  val consumer =
+    new NSQConsumer(
+      lookup,
+      nsq.streamName,
+      nsq.channelName,
+      nsqCallback,
+      new NSQConfig(),
+      errorCallback
+    )
+
+  override def run(): Unit = {
+    val flusher = new Runnable {
+      def run(): Unit = flush()
+    }
+    executorService.scheduleWithFixedDelay(
+      flusher,
+      nsq.buffer.timeLimit,
+      nsq.buffer.timeLimit,
+      TimeUnit.MILLISECONDS
+    )
     consumer.start()
+  }
+
+  override def close(): Unit = {
+    consumer.close()
+    executorService.shutdown()
   }
 }

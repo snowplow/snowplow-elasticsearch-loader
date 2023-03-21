@@ -29,7 +29,8 @@ class StdinExecutor(
   config: StreamLoaderConfig,
   goodSink: Either[ISink, BulkSender[EmitterJsonInput]],
   badSink: ISink
-) extends Runnable {
+) extends Runnable
+    with AutoCloseable {
 
   val transformer = config.purpose match {
     case Purpose.Enriched =>
@@ -56,4 +57,6 @@ class StdinExecutor(
         }
     )
   }
+
+  override def close(): Unit = ()
 }

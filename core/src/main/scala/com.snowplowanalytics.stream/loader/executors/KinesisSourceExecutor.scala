@@ -54,7 +54,8 @@ class KinesisSourceExecutor[A, B](
   kinesis: Source.Kinesis,
   metrics: Monitoring.Metrics,
   kinesisConnectorPipeline: IKinesisConnectorPipeline[A, B]
-) extends KinesisConnectorExecutorBase[A, B] {
+) extends KinesisConnectorExecutorBase[A, B]
+    with AutoCloseable {
 
   val LOG = LoggerFactory.getLogger(getClass)
 
@@ -207,4 +208,5 @@ class KinesisSourceExecutor[A, B](
 
   initialize(convertConfig, null)
 
+  override def close(): Unit = ()
 }

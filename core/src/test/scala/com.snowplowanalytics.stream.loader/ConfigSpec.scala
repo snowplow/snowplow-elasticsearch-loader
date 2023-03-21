@@ -57,7 +57,7 @@ class ConfigSpec extends Specification {
           "test-app-name",
           "127.0.0.1".some,
           "http://localhost:4569".some,
-          Source.Kinesis.Buffer(999999, 499, 499)
+          Source.Buffer(999999, 499, 499)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(
@@ -111,7 +111,7 @@ class ConfigSpec extends Specification {
           "snowplow-elasticsearch-loader",
           None,
           None,
-          Source.Kinesis.Buffer(1000000, 500, 500)
+          Source.Buffer(1000000, 500, 500)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(
@@ -154,7 +154,7 @@ class ConfigSpec extends Specification {
           "test-nsq-channel-name",
           "127.0.0.1",
           34189,
-          Source.Nsq.Buffer(499)
+          Source.Buffer(999999, 499, 499)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(
@@ -197,7 +197,7 @@ class ConfigSpec extends Specification {
           "test-nsq-channel-name",
           "127.0.0.1",
           34189,
-          Source.Nsq.Buffer(500)
+          Source.Buffer(1000000, 500, 500)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(
@@ -286,7 +286,7 @@ class ConfigSpec extends Specification {
           "test-app-name",
           None,
           None,
-          Source.Kinesis.Buffer(201, 202, 203)
+          Source.Buffer(201, 202, 203)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(
@@ -334,7 +334,7 @@ class ConfigSpec extends Specification {
           "snowplow-elasticsearch-loader",
           None,
           None,
-          Source.Kinesis.Buffer(1000000, 500, 500)
+          Source.Buffer(1000000, 500, 500)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(
@@ -381,7 +381,7 @@ class ConfigSpec extends Specification {
           "snowplow-elasticsearch-loader",
           None,
           None,
-          Source.Kinesis.Buffer(1000000, 500, 500)
+          Source.Buffer(1000000, 500, 500)
         ),
         Sink(
           Sink.GoodSink.Elasticsearch(

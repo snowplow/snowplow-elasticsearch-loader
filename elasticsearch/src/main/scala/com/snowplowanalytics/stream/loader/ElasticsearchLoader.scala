@@ -61,7 +61,7 @@ object ElasticsearchLoader {
     config.input match {
       case Source.Stdin      => System.exit(1)
       case _: Source.Kinesis => System.exit(1)
-      case _: Source.Nsq     => ()
+      case _: Source.Nsq     => sys.addShutdownHook(executor.close())
     }
   }
 
@@ -70,7 +70,7 @@ object ElasticsearchLoader {
     goodSink: Either[ISink, BulkSender[EmitterJsonInput]],
     badSink: ISink,
     tracker: Option[Tracker[Id]]
-  ): Runnable = {
+  ): Runnable with AutoCloseable = {
     val (shardDateField, shardDateFormat) = config.output.good match {
       case c: GoodSink.Elasticsearch => (c.client.shardDateField, c.client.shardDateFormat)
       case _                         => (None, None)
