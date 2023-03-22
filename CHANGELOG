@@ -1,3 +1,9 @@
+Version 2.1.0 (2023-03-22)
+--------------------------
+Scan docker images with Snyk container monitor (#257)
+NSQ executor should periodically flush buffer (#256)
+Bump sbt-snowplow-release to 0.3.0 (#255)
+
 Version 2.0.9 (2023-01-10)
 --------------------------
 Bump slf4j to 2.0.6 (#253)
