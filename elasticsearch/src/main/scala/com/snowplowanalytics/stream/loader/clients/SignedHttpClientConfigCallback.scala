@@ -34,9 +34,6 @@ import org.elasticsearch.client.RestClientBuilder.HttpClientConfigCallback
 import com.amazonaws.util.IOUtils
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 
-// aws signer
-import io.ticofab.AwsSigner
-
 // Scala
 import scala.util.Try
 

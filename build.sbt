@@ -31,7 +31,6 @@ lazy val commonDependencies = Seq(
   Dependencies.Libraries.snowplowTracker,
   Dependencies.Libraries.snowplowTrackerId,
   Dependencies.Libraries.analyticsSDK,
-  Dependencies.Libraries.awsSigner,
   Dependencies.Libraries.pureconfig,
   Dependencies.Libraries.pureconfigEnum,
   Dependencies.Libraries.badRows,
