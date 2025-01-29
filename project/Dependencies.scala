@@ -19,6 +19,7 @@ object Dependencies {
     val config           = "1.4.1"
     val slf4j            = "2.0.6"
     val log4j            = "2.17.1"
+    val awsSdk           = "1.12.780"
     val kinesisClient    = "1.14.9"
     val kinesisConnector = "1.3.0"
     val nsqClient        = "1.1.0-rc1"
@@ -48,6 +49,7 @@ object Dependencies {
     val log4jApi         = "org.apache.logging.log4j"         %  "log4j-api"                    % V.log4j
     val kinesisClient    = "com.amazonaws"                    %  "amazon-kinesis-client"        % V.kinesisClient exclude("com.fasterxml.jackson.dataformat", "jackson-dataformat-cbor")
     val kinesisConnector = "com.amazonaws"                    %  "amazon-kinesis-connectors"    % V.kinesisConnector exclude("com.fasterxml.jackson.dataformat", "jackson-dataformat-cbor")
+    val sts              = "com.amazonaws"                    %  "aws-java-sdk-sts"             % V.awsSdk % Runtime
     val nsqClient        = "com.snowplowanalytics"            %  "nsq-java-client_2.10"         % V.nsqClient
     val netty            = "io.netty"                         %  "netty-all"                    % V.netty
     val jacksonCbor      = "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor"       % V.jackson // Override provided version to fix security vulnerability
