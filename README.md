@@ -1,7 +1,6 @@
 # Snowplow Elasticsearch Loader
 
-[![Build Status][travis-image]][travis]
-[![GithubRelease][release-image]][releases]
+[![Release][release-image]][releases]
 [![License][license-image]][license]
 
 ## Introduction
@@ -57,26 +56,16 @@ $ java -jar snowplow-elasticsearch-loader-2.1.2.jar --config my.conf
 
 ## Copyright and license
 
-Copyright 2014-2023 Snowplow Analytics Ltd.
+Copyright (c) 2014-present Snowplow Analytics Ltd. All rights reserved.
 
-Licensed under the [Apache License, Version 2.0][license] (the "License");
-you may not use this software except in compliance with the License.
+Licensed under the [Snowplow Limited Use License Agreement][license]. _(If you are uncertain how it applies to your use case, check our answers to [frequently asked questions][faq].)_
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-
-[travis-image]: https://travis-ci.org/snowplow/snowplow-elasticsearch-loader.png?branch=master
-[travis]: http://travis-ci.org/snowplow/snowplow-elasticsearch-loader
 
 [release-image]: https://img.shields.io/github/v/release/snowplow/snowplow-elasticsearch-loader
 [releases]: https://github.com/snowplow/snowplow-elasticsearch-loader/releases
 
-[license-image]: http://img.shields.io/badge/license-Apache--2-blue.svg?style=flat
-[license]: http://www.apache.org/licenses/LICENSE
+[license-image]: https://img.shields.io/badge/license-Snowplow--Limited--Use-blue.svg?style=flat
+[license]: https://docs.snowplow.io/limited-use-license-1.1
 
 [kinesis]: http://aws.amazon.com/kinesis/
 [nsq]: http://nsq.io
@@ -85,7 +74,7 @@ limitations under the License.
 [sbt]: http://www.scala-sbt.org
 
 [setup]: https://docs.snowplowanalytics.com/docs/getting-started-on-snowplow-open-source/
-[roadmap]: https://github.com/snowplow/enrich/issues
+[roadmap]: https://github.com/snowplow/snowplow-elasticsearch-loader/issues
 [techdocs]: https://docs.snowplowanalytics.com/docs/pipeline-components-and-applications/loaders-storage-targets/elasticsearch-loader/
 [contributing]: https://docs.snowplowanalytics.com/docs/contributing/
 
@@ -93,4 +82,5 @@ limitations under the License.
 [setup-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/setup.png
 [roadmap-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/roadmap.png
 [contributing-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/contributing.png
-[license]: http://www.apache.org/licenses/LICENSE-2.0
+
+[faq]: https://docs.snowplow.io/docs/contributing/limited-use-license-faq/
