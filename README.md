@@ -24,7 +24,7 @@ $ sbt compile
 The Snowplow Elasticsearch Loader has the following command-line interface:
 
 ```
-snowplow-elasticsearch-loader 2.1.2
+snowplow-elasticsearch-loader 2.1.3
 
 Usage: snowplow-elasticsearch-loader [options]
 
@@ -44,7 +44,7 @@ Update the configuration to fit your needs.
 Next, start the loader, making sure to specify your new config file:
 
 ```bash
-$ java -jar snowplow-elasticsearch-loader-2.1.2.jar --config my.conf
+$ java -jar snowplow-elasticsearch-loader-2.1.3.jar --config my.conf
 ```
 
 ## Find out more
