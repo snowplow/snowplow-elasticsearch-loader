@@ -27,6 +27,8 @@ jobs:
       with:
         java-version: 11
         distribution: adopt
+    - name: Install sbt
+      uses: sbt/setup-sbt@v1
     - name: Prepare test environment
       run: $GITHUB_WORKSPACE/.github/start_environment.sh
     - name: Run tests
@@ -54,6 +56,8 @@ jobs:
         java-version: 11
         distribution: adopt
 
+    - name: Install sbt
+      uses: sbt/setup-sbt@v1
 
     - name: Build artifacts
       run: sbt 'project elasticsearch' assembly
@@ -83,6 +87,9 @@ jobs:
     - uses: actions/checkout@v2
 
     - uses: coursier/cache-action@v6
+
+    - name: Install sbt
+      uses: sbt/setup-sbt@v1
 
     - name: Stage the Docker build
       run: sbt "project elasticsearch" docker:stage
