@@ -12,9 +12,6 @@ lazy val commonDependencies = Seq(
   // Java
   Dependencies.Libraries.config,
   Dependencies.Libraries.slf4j,
-  Dependencies.Libraries.log4jOverSlf4j,
-  Dependencies.Libraries.log4jApi,
-  Dependencies.Libraries.log4jCore,
   Dependencies.Libraries.kinesisClient,
   Dependencies.Libraries.kinesisConnector,
   Dependencies.Libraries.sts,

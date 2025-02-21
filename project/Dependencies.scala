@@ -16,7 +16,6 @@ object Dependencies {
     // Java
     val config           = "1.4.1"
     val slf4j            = "2.0.6"
-    val log4j            = "2.17.1"
     val awsSdk           = "1.12.780"
     val kinesisClient    = "1.15.2"
     val kinesisConnector = "1.3.0"
@@ -41,9 +40,6 @@ object Dependencies {
     // Java
     val config           = "com.typesafe"                     %  "config"                       % V.config
     val slf4j            = "org.slf4j"                        %  "slf4j-simple"                 % V.slf4j
-    val log4jOverSlf4j   = "org.slf4j"                        %  "log4j-over-slf4j"             % V.slf4j
-    val log4jCore        = "org.apache.logging.log4j"         %  "log4j-core"                   % V.log4j
-    val log4jApi         = "org.apache.logging.log4j"         %  "log4j-api"                    % V.log4j
     val kinesisClient    = "com.amazonaws"                    %  "amazon-kinesis-client"        % V.kinesisClient exclude("com.fasterxml.jackson.dataformat", "jackson-dataformat-cbor")
     val kinesisConnector = "com.amazonaws"                    %  "amazon-kinesis-connectors"    % V.kinesisConnector exclude("com.fasterxml.jackson.dataformat", "jackson-dataformat-cbor")
     val sts              = "com.amazonaws"                    %  "aws-java-sdk-sts"             % V.awsSdk % Runtime
