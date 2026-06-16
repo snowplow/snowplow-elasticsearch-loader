@@ -1,0 +1,27 @@
+{
+  "license": {
+    "accept": true
+  }
+
+  "input": {
+    "streamName": "snowplow-enriched"
+  }
+
+  "output": {
+    "good": {
+      "url": "http://localhost:9200"
+      "index": "snowplow"
+      "auth": {
+        "type": "Basic"
+        "username": "elastic"
+        "password": "changeme"
+      }
+    }
+
+    "bad": {
+      "streamName": "snowplow-bad"
+    }
+  }
+
+  "purpose": "ENRICHED_EVENTS"
+}

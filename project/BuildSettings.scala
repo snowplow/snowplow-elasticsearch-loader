@@ -1,91 +1,63 @@
-/*
- * Copyright (c) 2012-present Snowplow Analytics Ltd.
- * All rights reserved.
- *
- * This software is made available by Snowplow Analytics, Ltd.,
- * under the terms of the Snowplow Limited Use License Agreement, Version 1.1
- * located at https://docs.snowplow.io/limited-use-license-1.1
- * BY INSTALLING, DOWNLOADING, ACCESSING, USING OR DISTRIBUTING ANY PORTION
- * OF THE SOFTWARE, YOU AGREE TO THE TERMS OF SUCH LICENSE AGREEMENT.
- */
-
 // SBT
 import sbt._
+import sbt.io.IO
 import Keys._
 
-import com.typesafe.sbt.packager.Keys._
-import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport.{Docker, dockerExposedPorts, dockerUpdateLatest}
+import org.scalafmt.sbt.ScalafmtPlugin.autoImport._
+import sbtbuildinfo.BuildInfoPlugin.autoImport._
 import sbtdynver.DynVerPlugin.autoImport._
+import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport._
+import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport._
 
 object BuildSettings {
 
-  lazy val compilerOptions = Seq(
-    "-deprecation",
-    "-encoding", "UTF-8",
-    "-feature",
-    "-language:existentials",
-    "-language:higherKinds",
-    "-language:implicitConversions",
-    "-unchecked",
-    "-Yno-adapted-args",
-    "-Ywarn-dead-code",
-    "-Ywarn-numeric-widen",
-    "-Ywarn-unused-import",
-    "-Xfuture",
-    "-Xlint"
-  )
-
-  lazy val javaCompilerOptions = Seq(
-    "-source", "11",
-    "-target", "11"
-  )
-
-  lazy val dockerSettings =
-    Seq(
-      Docker / packageName := "elasticsearch-loader",
-    )
-
-  // Makes our SBT app settings available from within the app
-  lazy val scalifySettings = Seq(
-    Compile / sourceGenerators += Def.task {
-      val dir = (Compile / sourceManaged).value
-      val file = dir / "settings.scala"
-      IO.write(file, """package com.snowplowanalytics.stream.loader.generated
-        |object Settings {
-        |  val organization = "%s"
-        |  val version = "%s"
-        |  val name = "%s"
-        |}
-        |""".stripMargin.format(organization.value, version.value, moduleName.value))
-
-      Seq(file)
-    }.taskValue
-  )
-
-  // sbt-assembly settings for building an executable
-  import sbtassembly.AssemblyPlugin.autoImport._
-  lazy val assemblySettings = Seq(
-    assembly / assemblyJarName := { s"${name.value}-${version.value}.jar" },
-    assembly / test := {},
-    assembly / assemblyMergeStrategy := {
-      case x if x.endsWith("module-info.class") => MergeStrategy.discard // not used by JDK8
-      case "META-INF/io.netty.versions.properties" => MergeStrategy.first
-      case PathList("org", "joda", "time", "base", "BaseDateTime.class") => MergeStrategy.first
-      case x =>
-        val oldStrategy = (assembly / assemblyMergeStrategy).value
-        oldStrategy(x)
-    }
-  )
-
-  lazy val dynVerSettings = Seq(
+  lazy val commonSettings = Seq(
+    organization := "com.snowplowanalytics",
+    scalaVersion := "2.13.17",
+    scalafmtConfig := file(".scalafmt.conf"),
+    scalafmtOnCompile := false,
+    scalacOptions += "-release:21",
+    addCompilerPlugin(Dependencies.betterMonadicFor),
     ThisBuild / dynverVTagPrefix := false, // Otherwise git tags required to have v-prefix
-    ThisBuild / dynverSeparator := "-" // to be compatible with docker
-    )
-
-
-  lazy val addExampleConfToTestCp = Seq(
+    ThisBuild / dynverSeparator := "-", // to be compatible with docker
+    Compile / resourceGenerators += Def.task {
+      val license = (Compile / resourceManaged).value / "META-INF" / "LICENSE"
+      IO.copyFile(file("LICENSE.md"), license)
+      Seq(license)
+    }.taskValue,
+    licenses += ("Snowplow Limited Use License Agreement", url("https://docs.snowplow.io/limited-use-license-1.1")),
+    headerLicense := Some(
+      HeaderLicense.Custom(
+        """|Copyright (c) 2014-present Snowplow Analytics Ltd. All rights reserved.
+           |
+           |This software is made available by Snowplow Analytics, Ltd.,
+           |under the terms of the Snowplow Limited Use License Agreement, Version 1.1
+           |located at https://docs.snowplow.io/limited-use-license-1.1
+           |BY INSTALLING, DOWNLOADING, ACCESSING, USING OR DISTRIBUTING ANY PORTION
+           |OF THE SOFTWARE, YOU AGREE TO THE TERMS OF SUCH LICENSE AGREEMENT.
+           |""".stripMargin
+      )
+    ),
+    headerMappings := headerMappings.value + (HeaderFileType.conf -> HeaderCommentStyle.hashLineComment),
     Test / unmanagedClasspath += {
-      baseDirectory.value.getParentFile / "config"
+      baseDirectory.value / "../../config"
     }
+  )
+
+  lazy val appSettings = commonSettings ++ Seq(
+    buildInfoKeys := Seq[BuildInfoKey](name, version, dockerAlias),
+    buildInfoOptions += BuildInfoOption.Traits("com.snowplowanalytics.snowplow.runtime.AppInfo")
+  )
+
+  lazy val awsSettings = appSettings ++ Seq(
+    name := "elasticsearch-loader",
+    description := "Write the records of a Kinesis stream to Elasticsearch",
+    buildInfoPackage := "com.snowplowanalytics.snowplow.elasticsearch.aws",
+    buildInfoKeys += BuildInfoKey("cloud" -> "AWS")
+  ) ++ Seq(
+    // used in configuration parsing unit tests
+    Test / envVars := Map(
+      "HOSTNAME" -> "testWorkerId"
+    )
   )
 }

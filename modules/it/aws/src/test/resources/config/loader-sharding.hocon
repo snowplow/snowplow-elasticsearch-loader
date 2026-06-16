@@ -1,0 +1,31 @@
+{
+  "license": { "accept": true }
+
+  "input": {
+    "streamName": ${STREAM_GOOD}
+    "appName": ${APP_NAME}
+    "initialPosition": { "type": "TRIM_HORIZON" }
+    "customEndpoint": ${LOCALSTACK_ENDPOINT}
+    "dynamodbCustomEndpoint": ${LOCALSTACK_ENDPOINT}
+    "cloudwatchCustomEndpoint": ${LOCALSTACK_ENDPOINT}
+    "workerIdentifier": "it-worker"
+  }
+
+  "output": {
+    "good": {
+      "url": ${ES_URL}
+      "index": "snowplow"
+      "auth": { "type": "NoAuth" }
+      "sharding": {
+        "dateFormat": "-yyyy-MM-dd"
+        "dateField": "collector_tstamp"
+      }
+    }
+    "bad": {
+      "streamName": ${STREAM_BAD}
+      "customEndpoint": ${LOCALSTACK_ENDPOINT}
+    }
+  }
+
+  "purpose": ${PURPOSE}
+}
