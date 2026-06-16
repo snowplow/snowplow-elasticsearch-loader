@@ -17,4 +17,7 @@ class ElasticsearchV7Spec extends EnrichedSpec {
 
   override val resource: Resource[IO, TestInfrastructure] =
     Containers.allContainers(Containers.elasticsearch(Containers.Images.elasticsearch7))
+
+  // Elasticsearch 7.x doesn't mention field limit error in the error message.
+  override val FieldLimitErrorIdentifier: String = "unstruct_event_com_example_field_limit_1"
 }

@@ -23,6 +23,7 @@ import com.snowplowanalytics.snowplow.runtime.{Metrics => CommonMetrics}
 trait Metrics[F[_]] {
   def addGood(count: Int): F[Unit]
   def addBad(count: Int): F[Unit]
+  def addIndexLimitError(count: Int): F[Unit]
   def setLatency(latency: FiniteDuration): F[Unit]
   def setE2ELatency(latency: FiniteDuration): F[Unit]
   def setElasticsearchLatency(latency: FiniteDuration): F[Unit]
@@ -38,12 +39,14 @@ object Metrics {
       for {
         good <- entries.counter("events_good")
         bad <- entries.counter("events_bad")
+        indexLimitError <- entries.counter("es_index_limit_error")
         latency <- entries.timer("latency_millis", sourceAndAck.currentStreamLatency)
         e2eLatency <- entries.timer("e2e_latency_millis", Sync[F].pure(None))
         elasticsearchLatency <- entries.timer("elasticsearch_latency_millis", Sync[F].pure(None))
       } yield new Metrics[F] {
         def addGood(count: Int): F[Unit]                        = good.add(count.toLong)
         def addBad(count: Int): F[Unit]                         = bad.add(count.toLong)
+        def addIndexLimitError(count: Int): F[Unit]             = indexLimitError.add(count.toLong)
         def setLatency(l: FiniteDuration): F[Unit]              = latency.record(l)
         def setE2ELatency(l: FiniteDuration): F[Unit]           = e2eLatency.record(l)
         def setElasticsearchLatency(l: FiniteDuration): F[Unit] = elasticsearchLatency.record(l)

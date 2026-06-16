@@ -17,7 +17,8 @@ class ElasticsearchV6Spec extends EnrichedSpec {
 
   override val resource: Resource[IO, TestInfrastructure] =
     Containers.allContainers(
-      Containers.elasticsearch(Containers.Images.elasticsearch6),
-      Some(getClass.getClassLoader.getResource("config/loader-doc-type.hocon").getPath)
+      esFactory     = Containers.elasticsearch(Containers.Images.elasticsearch6),
+      optConfigPath = Some(getClass.getClassLoader.getResource("config/loader-doc-type.hocon").getPath),
+      mappingType   = Some("good-doc")
     )
 }

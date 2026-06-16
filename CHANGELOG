@@ -1,3 +1,7 @@
+Version 3.0.1 (2026-05-04)
+--------------------------
+Add metric and error classification for ES index field-limit errors (#22)
+
 Version 3.0.0 (2026-04-28)
 --------------------------
 Add sync workflow for snowplow-elasticsearch-loader (#2)

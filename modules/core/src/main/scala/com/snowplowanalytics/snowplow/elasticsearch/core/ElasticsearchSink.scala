@@ -32,9 +32,10 @@ trait ElasticsearchSink[F[_]] {
 
 object ElasticsearchSink {
 
-  private val BadRowErrorTypes = Set(
+  private val BadRowErrorTypes: Set[String] = Set(
     "mapper_parsing_exception", // ES 6.x / 7.x / OpenSearch: field value incompatible with index mapping
-    "document_parsing_exception" // ES 8.x: replacement for mapper_parsing_exception
+    "document_parsing_exception", // ES 8.x: replacement for mapper_parsing_exception with type error cases and illegal_argument_exception with limit error cases
+    "illegal_argument_exception" // ES 6.x / 7.x / OpenSearch: index mapping limit errors
   )
 
   case class FailedRecord(payload: String, errorMessage: String)
@@ -94,7 +95,7 @@ object ElasticsearchSink {
                      for {
                        start <- Async[F].realTime
                        response <- elasticClient.execute(bulk(requests).timeout(config.indexTimeout))
-                       _ <- handleBulkResponse(retryRecordsRef, failedRecordsRef, config.additionalBadRowErrorTypes)(response)
+                       _ <- handleBulkResponse(retryRecordsRef, failedRecordsRef, config.additionalBadRowErrorTypes, metrics)(response)
                        finish <- Async[F].realTime
                        duration = finish - start
                        _ <- metrics.setElasticsearchLatency(duration)
@@ -144,7 +145,8 @@ object ElasticsearchSink {
   private[core] def handleBulkResponse[F[_]: Async](
     retryRecordsRef: Ref[F, Vector[IndexableRecord]],
     failedRecordsRef: Ref[F, Vector[FailedRecord]],
-    additionalBadRowErrorTypes: Set[String]
+    additionalBadRowErrorTypes: Set[String],
+    metrics: Metrics[F]
   )(
     response: Response[BulkResponse]
   ): F[Unit] =
@@ -157,33 +159,41 @@ object ElasticsearchSink {
         val failedRecords = failedResponses.map(i =>
           FailedRecord(records(i.itemId).record, i.error.map(e => s"${e.`type`}: ${e.reason}").getOrElse("unknown"))
         )
-        failedRecordsRef.update(v => v.appendedAll(failedRecords)) *> {
-          if (retryRecords.isEmpty) {
-            // All failures were bad rows — nothing left to retry.
-            retryRecordsRef.set(Vector.empty)
-          } else {
-            // At least one transient error: update the retry ref and raise so the retry loop fires.
-            // Error messages are capped at 10 to keep the message readable.
-            val retryErrorMessages =
-              retryResponses
-                .map(
-                  _.error
-                    .map(e => s"${e.`type`}: ${e.reason}")
-                    .getOrElse("unknown")
+        val limitErrorCount = failedRecords.count(f => checkIfLimitError(f.errorMessage))
+
+        metrics.addIndexLimitError(limitErrorCount) *>
+          failedRecordsRef.update(v => v.appendedAll(failedRecords)) *> {
+            if (retryRecords.isEmpty) {
+              // All failures were bad rows — nothing left to retry.
+              retryRecordsRef.set(Vector.empty)
+            } else {
+              // At least one transient error: update the retry ref and raise so the retry loop fires.
+              // Error messages are capped at 10 to keep the message readable.
+              val retryErrorMessages =
+                retryResponses
+                  .map(
+                    _.error
+                      .map(e => s"${e.`type`}: ${e.reason}")
+                      .getOrElse("unknown")
+                  )
+                  .take(10)
+                  .mkString(", \n")
+              retryRecordsRef.set(retryRecords) *>
+                Async[F].raiseError(
+                  new RuntimeException(
+                    s"${retryRecords.size} bulk operations failed: $retryErrorMessages"
+                  )
                 )
-                .take(10)
-                .mkString(", \n")
-            retryRecordsRef.set(retryRecords) *>
-              Async[F].raiseError(
-                new RuntimeException(
-                  s"${retryRecords.size} bulk operations failed: $retryErrorMessages"
-                )
-              )
+            }
           }
-        }
       }
     } else retryRecordsRef.set(Vector.empty)
 
   private[core] def shouldBeBadRow(additionalBadRowErrorTypes: Set[String])(response: BulkResponseItem): Boolean =
     response.error.exists(e => BadRowErrorTypes.contains(e.`type`) || additionalBadRowErrorTypes.contains(e.`type`))
+
+  private val LimitErrorPattern = """.*Limit.*has been exceeded.*""".r
+
+  private def checkIfLimitError(errorMsg: String): Boolean =
+    LimitErrorPattern.matches(errorMsg)
 }

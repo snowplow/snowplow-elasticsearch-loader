@@ -66,7 +66,8 @@ object Containers {
   def allContainers(
     esFactory: Network => Resource[IO, EsContainer],
     optConfigPath: Option[String] = None,
-    loaderPurpose: String         = "ENRICHED_EVENTS"
+    loaderPurpose: String         = "ENRICHED_EVENTS",
+    mappingType: Option[String]   = None
   ): Resource[IO, TestInfrastructure] = {
     val uuid       = UUID.randomUUID().toString
     val streamGood = s"good-$uuid"
@@ -78,6 +79,7 @@ object Containers {
       network <- Resource.fromAutoCloseable(IO(Network.newNetwork()))
       kinesisEndpoint <- localstack(network, streamGood, streamBad)
       esContainer <- esFactory(network)
+      _ <- Resource.eval(TestHelpers.createIndexWithFieldLimit(esContainer.externalUrl, "snowplow", 200, mappingType))
       _ <- loader(network, esContainer.internalUrl, streamGood, streamBad, appName, configPath, loaderPurpose)
     } yield TestInfrastructure(kinesisEndpoint, esContainer.externalUrl, streamGood, streamBad)
   }

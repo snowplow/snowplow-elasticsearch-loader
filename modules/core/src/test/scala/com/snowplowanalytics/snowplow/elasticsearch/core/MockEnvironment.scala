@@ -41,6 +41,7 @@ object MockEnvironment {
     case class SentToBad(count: Int) extends Action
     case class AddedGoodCountMetric(count: Int) extends Action
     case class AddedBadCountMetric(count: Int) extends Action
+    case class AddedIndexLimitErrorMetric(count: Int) extends Action
     case class SetE2ELatencyMetric(latency: FiniteDuration) extends Action
     case class SetElasticsearchLatencyMetric(latency: FiniteDuration) extends Action
     case class Checkpointed(tokens: List[Unique.Token]) extends Action
@@ -166,6 +167,8 @@ object MockEnvironment {
         state.update(_ :+ Action.AddedGoodCountMetric(count))
       def addBad(count: Int): IO[Unit] =
         state.update(_ :+ Action.AddedBadCountMetric(count))
+      def addIndexLimitError(count: Int): IO[Unit] =
+        state.update(_ :+ Action.AddedIndexLimitErrorMetric(count))
       def setLatency(latency: FiniteDuration): IO[Unit] = IO.unit
       def setE2ELatency(latency: FiniteDuration): IO[Unit] =
         state.update(_ :+ Action.SetE2ELatencyMetric(latency))

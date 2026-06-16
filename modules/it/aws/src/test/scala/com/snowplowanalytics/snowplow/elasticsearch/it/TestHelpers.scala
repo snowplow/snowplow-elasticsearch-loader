@@ -27,6 +27,8 @@ import io.circe.{JsonObject, parser}
 
 import org.http4s.{Method, Request, Uri}
 import org.http4s.blaze.client.BlazeClientBuilder
+import org.http4s.MediaType
+import org.http4s.headers.`Content-Type`
 
 import com.snowplowanalytics.snowplow.analytics.scalasdk.Event
 import com.snowplowanalytics.snowplow.streams.{EventProcessingConfig, EventProcessor, ListOfList}
@@ -196,6 +198,36 @@ object TestHelpers {
         } yield result
 
       IO.realTimeInstant.flatMap(d => poll(d.plusSeconds(PollTimeoutSeconds)))
+    }
+
+  def createIndexWithFieldLimit(
+    esUrl: String,
+    index: String,
+    fieldLimit: Int,
+    mappingType: Option[String] = None
+  ): IO[Unit] =
+    BlazeClientBuilder[IO].resource.use { http4sClient =>
+      val uri            = Uri.unsafeFromString(s"$esUrl/$index")
+      val propertiesJson = """{"se_action":{"type":"long"}}"""
+      val mappingsJson = mappingType match {
+        case Some(t) => s""""$t":{"properties":$propertiesJson}"""
+        case None    => s""""properties":$propertiesJson"""
+      }
+      val body =
+        s"""{
+           |  "settings":{"index.mapping.total_fields.limit":$fieldLimit},
+           |  "mappings":{$mappingsJson}
+           |}
+           |""".stripMargin
+      val request = Request[IO](Method.PUT, uri)
+        .withEntity(body)
+        .putHeaders(`Content-Type`(MediaType.application.json))
+      http4sClient
+        .run(request)
+        .use { response =>
+          if (response.status.isSuccess) IO.unit
+          else IO.raiseError(new RuntimeException(s"Failed to create index '$index': HTTP ${response.status.code}"))
+        }
     }
 
   def docsToEventMap(docs: List[JsonObject]): Map[String, JsonObject] =

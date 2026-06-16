@@ -10,12 +10,15 @@
  */
 package com.snowplowanalytics.snowplow.elasticsearch.core
 
+import scala.concurrent.duration.FiniteDuration
+
 import cats.effect.IO
 import cats.effect.Ref
 import com.sksamuel.elastic4s.{RequestSuccess, Response}
 import com.sksamuel.elastic4s.requests.bulk.{BulkError, BulkResponse, BulkResponseItems, IndexBulkResponseItem}
 import org.specs2.Specification
 import cats.effect.testing.specs2.CatsEffect
+import fs2.Stream
 import Processing.IndexableRecord
 
 class ElasticsearchSinkSpec extends Specification with CatsEffect {
@@ -30,6 +33,8 @@ class ElasticsearchSinkSpec extends Specification with CatsEffect {
     default error type to 'unknown' when error field is absent           $e5
     include only the first 10 error types in the retry exception message $e6
     treat additionalBadRowErrorTypes as bad rows                         $e7
+    increment addIndexLimitError metric for limit error messages         $e8
+    treat illegal_argument_exception as a bad row                        $e9
   """
 
   def e1 = {
@@ -38,7 +43,7 @@ class ElasticsearchSinkSpec extends Specification with CatsEffect {
       retryRef <- Ref.of[IO, Vector[IndexableRecord]](records)
       failedRef <- Ref.of[IO, Vector[ElasticsearchSink.FailedRecord]](Vector.empty)
       response = mkResponse(Seq(mkItem(0, 200, None)))
-      _ <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty)(response)
+      _ <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty, noopMetrics)(response)
       failed <- failedRef.get
       retry <- retryRef.get
     } yield (failed must beEmpty)
@@ -51,7 +56,7 @@ class ElasticsearchSinkSpec extends Specification with CatsEffect {
       retryRef <- Ref.of[IO, Vector[IndexableRecord]](records)
       failedRef <- Ref.of[IO, Vector[ElasticsearchSink.FailedRecord]](Vector.empty)
       response = mkResponse(Seq(mkItem(0, 400, Some("mapper_parsing_exception"))))
-      _ <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty)(response)
+      _ <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty, noopMetrics)(response)
       failed <- failedRef.get
       retry <- retryRef.get
     } yield (failed must haveSize(1))
@@ -65,7 +70,7 @@ class ElasticsearchSinkSpec extends Specification with CatsEffect {
       retryRef <- Ref.of[IO, Vector[IndexableRecord]](records)
       failedRef <- Ref.of[IO, Vector[ElasticsearchSink.FailedRecord]](Vector.empty)
       response = mkResponse(Seq(mkItem(0, 500, Some("es_rejected_execution_exception"))))
-      result <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty)(response).attempt
+      result <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty, noopMetrics)(response).attempt
       failed <- failedRef.get
       retry <- retryRef.get
     } yield (result must beLeft[Throwable].like { case e => e must beAnInstanceOf[RuntimeException] })
@@ -89,7 +94,7 @@ class ElasticsearchSinkSpec extends Specification with CatsEffect {
                      mkItem(2, 200, None)
                    )
                  )
-      result <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty)(response).attempt
+      result <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty, noopMetrics)(response).attempt
       failed <- failedRef.get
       retry <- retryRef.get
     } yield (result must beLeft[Throwable])
@@ -105,7 +110,7 @@ class ElasticsearchSinkSpec extends Specification with CatsEffect {
       retryRef <- Ref.of[IO, Vector[IndexableRecord]](records)
       failedRef <- Ref.of[IO, Vector[ElasticsearchSink.FailedRecord]](Vector.empty)
       response = mkResponse(Seq(mkItem(0, 500, None)))
-      result <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty)(response).attempt
+      result <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty, noopMetrics)(response).attempt
       retry <- retryRef.get
     } yield (result must beLeft[Throwable].like { case e =>
       e.getMessage must contain("unknown")
@@ -118,7 +123,7 @@ class ElasticsearchSinkSpec extends Specification with CatsEffect {
       retryRef <- Ref.of[IO, Vector[IndexableRecord]](records)
       failedRef <- Ref.of[IO, Vector[ElasticsearchSink.FailedRecord]](Vector.empty)
       response = mkResponse(records.indices.map(i => mkItem(i, 500, Some(s"transient_error_$i"))))
-      result <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty)(response).attempt
+      result <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty, noopMetrics)(response).attempt
     } yield result must beLeft[Throwable].like { case e =>
       // message should contain types 0-9 but not type 10 or 11
       (e.getMessage must contain("transient_error_0"))
@@ -142,7 +147,9 @@ class ElasticsearchSinkSpec extends Specification with CatsEffect {
                      mkItem(1, 500, Some("es_rejected_execution_exception"))
                    )
                  )
-      result <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set("strict_dynamic_mapping_exception"))(response).attempt
+      result <- ElasticsearchSink
+                  .handleBulkResponse[IO](retryRef, failedRef, Set("strict_dynamic_mapping_exception"), noopMetrics)(response)
+                  .attempt
       failed <- failedRef.get
       retry <- retryRef.get
     } yield (result must beLeft[Throwable])
@@ -151,14 +158,83 @@ class ElasticsearchSinkSpec extends Specification with CatsEffect {
       .and(retry must haveSize(1))
       .and(retry.head must beEqualTo(IndexableRecord("record-1", None, None, None)))
   }
+
+  def e8 = {
+    val limitReason = "Limit of total fields [1000] has been exceeded"
+    val records = Vector(
+      IndexableRecord("record-0", None, None, None),
+      IndexableRecord("record-1", None, None, None),
+      IndexableRecord("record-2", None, None, None),
+      IndexableRecord("record-3", None, None, None)
+    )
+    for {
+      retryRef <- Ref.of[IO, Vector[IndexableRecord]](records)
+      failedRef <- Ref.of[IO, Vector[ElasticsearchSink.FailedRecord]](Vector.empty)
+      limitErrorCount <- Ref.of[IO, Int](0)
+      response = mkResponse(
+                   Seq(
+                     mkItem(0, 400, Some("illegal_argument_exception"), limitReason),
+                     mkItem(1, 400, Some("mapper_parsing_exception"), limitReason),
+                     mkItem(2, 400, Some("illegal_argument_exception")),
+                     mkItem(3, 500, Some("es_rejected_execution_exception"))
+                   )
+                 )
+      _ <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty, countingMetrics(limitErrorCount))(response).attempt
+      failed <- failedRef.get
+      retry <- retryRef.get
+      count <- limitErrorCount.get
+    } yield (failed must haveSize(3))
+      .and(retry must haveSize(1))
+      .and[Any](count must beEqualTo(2))
+  }
+  def e9 = {
+    val nonLimitReason = "Request size exceeded"
+    val records        = Vector(IndexableRecord("record-0", None, None, None))
+    for {
+      retryRef <- Ref.of[IO, Vector[IndexableRecord]](records)
+      failedRef <- Ref.of[IO, Vector[ElasticsearchSink.FailedRecord]](Vector.empty)
+      limitErrorCount <- Ref.of[IO, Int](0)
+      response = mkResponse(Seq(mkItem(0, 400, Some("illegal_argument_exception"), nonLimitReason)))
+      _ <- ElasticsearchSink.handleBulkResponse[IO](retryRef, failedRef, Set.empty, countingMetrics(limitErrorCount))(response)
+      failed <- failedRef.get
+      retry <- retryRef.get
+      count <- limitErrorCount.get
+    } yield (failed must haveSize(1))
+      .and(failed.head.errorMessage must beEqualTo(s"illegal_argument_exception: $nonLimitReason"))
+      .and(retry must beEmpty)
+      .and[Any](count must beEqualTo(0))
+  }
 }
 
 object ElasticsearchSinkSpec {
 
+  val noopMetrics: Metrics[IO] = new Metrics[IO] {
+    def addGood(count: Int): IO[Unit]                        = IO.unit
+    def addBad(count: Int): IO[Unit]                         = IO.unit
+    def addIndexLimitError(count: Int): IO[Unit]             = IO.unit
+    def setLatency(l: FiniteDuration): IO[Unit]              = IO.unit
+    def setE2ELatency(l: FiniteDuration): IO[Unit]           = IO.unit
+    def setElasticsearchLatency(l: FiniteDuration): IO[Unit] = IO.unit
+    def scrape: IO[String]                                   = IO.pure("")
+    def report: Stream[IO, Nothing]                          = Stream.never[IO]
+  }
+
+  def countingMetrics(limitErrorCount: Ref[IO, Int]): Metrics[IO] = new Metrics[IO] {
+    def addGood(count: Int): IO[Unit]                        = IO.unit
+    def addBad(count: Int): IO[Unit]                         = IO.unit
+    def addIndexLimitError(count: Int): IO[Unit]             = limitErrorCount.update(_ + count)
+    def setLatency(l: FiniteDuration): IO[Unit]              = IO.unit
+    def setE2ELatency(l: FiniteDuration): IO[Unit]           = IO.unit
+    def setElasticsearchLatency(l: FiniteDuration): IO[Unit] = IO.unit
+    def scrape: IO[String]                                   = IO.pure("")
+    def report: Stream[IO, Nothing]                          = Stream.never[IO]
+  }
+
   def mkItem(
     id: Int,
     status: Int,
-    errorType: Option[String]
+    errorType: Option[String],
+    reason: String = "reason"
   ): BulkResponseItems =
     BulkResponseItems(
       index = Some(
@@ -175,7 +251,7 @@ object ElasticsearchSinkSpec {
           created       = status < 300,
           result        = if (status < 300) "indexed" else "error",
           status        = status,
-          error         = errorType.map(t => BulkError(t, "reason", "uuid", 0, "idx", None)),
+          error         = errorType.map(t => BulkError(t, reason, "uuid", 0, "idx", None)),
           shards        = None
         )
       ),
