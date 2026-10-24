@@ -1,3 +1,9 @@
+Version 3.0.2 (2026-10-24)
+--------------------------
+ITS-2185: chore(ci): remove Snyk steps (#27)
+QA-972: trigger Snowman tests and rollout on release tags (#25)
+add .publishignore (#24)
+
 Version 3.0.1 (2026-05-04)
 --------------------------
 Add metric and error classification for ES index field-limit errors (#22)
