@@ -33,7 +33,7 @@ import com.github.luben.zstd.ZstdOutputStream
 
 import com.snowplowanalytics.snowplow.analytics.scalasdk.Event
 import com.snowplowanalytics.snowplow.streams.TokenedEvents
-import com.snowplowanalytics.snowplow.streams.compression.{Compressor, GzipCompressor, ZstdCompressor}
+import com.snowplowanalytics.snowplow.streams.compression.CompressorFactory
 
 class ProcessingSpec extends Specification with CatsEffect {
 
@@ -378,16 +378,19 @@ class ProcessingSpec extends Specification with CatsEffect {
 
 object ProcessingSpec {
 
-  private val zstdFactory = ZstdCompressor.factory(3)
-  private val gzipFactory = GzipCompressor.factory(6)
+  private val zstdFactory = CompressorFactory.zstd(3)
+  private val gzipFactory = CompressorFactory.gzip(6)
 
-  private def compress(factory: Compressor.Factory, tsvBytes: List[Array[Byte]]): ByteBuffer = {
-    val compressor = factory.buildAndInitialize(1000000, 1)
-    tsvBytes.foreach { bytes =>
-      val _ = compressor.addRecord(bytes, 0, bytes.length)
+  private def compress(factory: CompressorFactory, tsvBytes: List[Array[Byte]]): IO[ByteBuffer] =
+    factory.resource[IO].use { compressor =>
+      IO {
+        compressor.reset(payloadVersion = 1, targetSize = 1000000)
+        tsvBytes.foreach { bytes =>
+          val _ = compressor.addRecord(bytes, 0, bytes.length)
+        }
+        compressor.result
+      }
     }
-    compressor.result
-  }
 
   private def mkEvents(n: Int, optCollectorTstamp: Option[Instant]): IO[(Unique.Token, List[Array[Byte]])] =
     for {
@@ -429,21 +432,21 @@ object ProcessingSpec {
     }
 
   def goodZstdCompressed(optCollectorTstamp: Option[Instant] = None): IO[TokenedEvents] =
-    mkEvents(2, optCollectorTstamp).map { case (ack, bytes) =>
-      TokenedEvents(Chunk(compress(zstdFactory, bytes)), ack)
+    mkEvents(2, optCollectorTstamp).flatMap { case (ack, bytes) =>
+      compress(zstdFactory, bytes).map(compressed => TokenedEvents(Chunk(compressed), ack))
     }
 
   def goodGzipCompressed(optCollectorTstamp: Option[Instant] = None): IO[TokenedEvents] =
-    mkEvents(2, optCollectorTstamp).map { case (ack, bytes) =>
-      TokenedEvents(Chunk(compress(gzipFactory, bytes)), ack)
+    mkEvents(2, optCollectorTstamp).flatMap { case (ack, bytes) =>
+      compress(gzipFactory, bytes).map(compressed => TokenedEvents(Chunk(compressed), ack))
     }
 
   def goodMixed(optCollectorTstamp: Option[Instant] = None): IO[TokenedEvents] =
-    mkEvents(3, optCollectorTstamp).map { case (ack, bytes) =>
-      val plain          = ByteBuffer.wrap(bytes(0))
-      val zstdCompressed = compress(zstdFactory, List(bytes(1)))
-      val gzipCompressed = compress(gzipFactory, List(bytes(2)))
-      TokenedEvents(Chunk(plain, zstdCompressed, gzipCompressed), ack)
+    mkEvents(3, optCollectorTstamp).flatMap { case (ack, bytes) =>
+      for {
+        zstdCompressed <- compress(zstdFactory, List(bytes(1)))
+        gzipCompressed <- compress(gzipFactory, List(bytes(2)))
+      } yield TokenedEvents(Chunk(ByteBuffer.wrap(bytes(0)), zstdCompressed, gzipCompressed), ack)
     }
 
   def corruptZstdCompressed: IO[TokenedEvents] =

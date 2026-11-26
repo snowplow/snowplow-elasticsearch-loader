@@ -1,3 +1,18 @@
+Version 3.0.3 (2026-11-23)
+--------------------------
+Pin guava 33.7.2-jre to clear CVE-2026-102554 (#44)
+Publish only after the tests pass (#42)
+Persist checkout credentials so Claude mentions can fetch (#32)
+Move Docker publishing to the shared two-stage workflow; gate final releases on environment `release` (#28)
+Bump common-streams to 0.29.0 (#41)
+Adopt common-streams 0.29.0-M1 (#40)
+Restructure Dependencies.scala around a securityOverrides Seq (#38)
+Bump jackson-module-scala to 2.22.4 (#36)
+Bump testcontainers-scala to 0.44.1 (#37)
+Fix awsDistroless test config classpath (#34)
+Bump common-streams to 0.27.1 (#33)
+Harden claude.yml workflow against prompt injection
+
 Version 3.0.2 (2026-10-24)
 --------------------------
 ITS-2185: chore(ci): remove Snyk steps (#27)

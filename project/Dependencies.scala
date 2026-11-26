@@ -1,58 +1,98 @@
 import sbt._
 
 object Dependencies {
+
   object V {
-    // Java
-    val slf4j     = "2.0.17"
+    // Snowplow libraries
+    val commonStreams = "0.29.0"
+    val badRows       = "2.3.0"
+    val analyticsSdk  = "3.2.0"
+
+    // Scala and FP core
+    val decline     = "2.1.0"
+    val circeOptics = "0.14.1"
+
+    // Elasticsearch
     val elastic4s = "9.1.1"
-    val awsSdk    = "2.42.41"
 
-    // Scala
-    val betterMonadicFor = "0.3.1"
-    val decline          = "2.1.0"
-    val badRows          = "2.3.0"
-    val analyticsSdk     = "3.2.0"
-    val circeOptics      = "0.14.1"
+    // Cloud SDKs
+    val awsSdk = "2.54.18"
 
-    // Snowplow common-streams
-    val commonStreams = "0.24.0"
+    // Logging
+    val slf4j = "2.0.17"
 
-    // CVE overrides
-    val jacksonCore  = "2.21.2" // Fix CVE SNYK-JAVA-COMFASTERXMLJACKSONCORE-15907551, -15365924
-    val commonsLang3 = "3.18.0" // Fix CVE SNYK-JAVA-ORGAPACHECOMMONS-10734078
-    val netty        = "4.1.132.Final" // Fix CVE SNYK-JAVA-IONETTY-15789756, -15789758
+    // Versions held above what something upstream asks for, to keep a vulnerable copy out of the
+    // images. See securityOverrides below for where each one applies.
+    val jackson = "2.22.4"
+    val guava   = "33.7.2-jre"
 
-    // Tests
+    // Test only
     val catsEffect          = "3.6.1"
     val specs2              = "4.21.0"
     val specs2CE            = "1.6.0"
-    val testcontainersScala = "0.41.4"
+    val testcontainersScala = "0.44.1"
+
+    // Compiler plugins
+    val betterMonadicFor = "0.3.1"
   }
 
-  // Java
-  val slf4j       = "org.slf4j"              % "slf4j-simple"  % V.slf4j
-  val sts         = "software.amazon.awssdk" % "sts"           % V.awsSdk % Runtime
+  // Snowplow libraries
+  val streamsCore  = "com.snowplowanalytics" %% "streams-core"                 % V.commonStreams
+  val runtime      = "com.snowplowanalytics" %% "runtime-common"               % V.commonStreams
+  val kinesis      = "com.snowplowanalytics" %% "kinesis"                      % V.commonStreams
+  val badRows      = "com.snowplowanalytics" %% "snowplow-badrows"             % V.badRows
+  val analyticsSdk = "com.snowplowanalytics" %% "snowplow-scala-analytics-sdk" % V.analyticsSdk
+
+  // Scala and FP core
+  val declineEffect = "com.monovore" %% "decline-effect" % V.decline
+  val circeOptics   = "io.circe"     %% "circe-optics"   % V.circeOptics
+
+  // Elasticsearch
+  val elastic4sClientHttp4s = "nl.gn0s1s" %% "elastic4s-client-http4s" % V.elastic4s
+  val elastic4sJsonCirce    = "nl.gn0s1s" %% "elastic4s-json-circe"    % V.elastic4s
+
+  // Cloud SDKs
   val awsAuth     = "software.amazon.awssdk" % "auth"          % V.awsSdk
   val awsHttpAuth = "software.amazon.awssdk" % "http-auth-aws" % V.awsSdk
+  val sts         = "software.amazon.awssdk" % "sts"           % V.awsSdk % Runtime
 
-  // Scala
-  val betterMonadicFor      = "com.olegpy"            %% "better-monadic-for"           % V.betterMonadicFor
-  val declineEffect         = "com.monovore"          %% "decline-effect"               % V.decline
-  val badRows               = "com.snowplowanalytics" %% "snowplow-badrows"             % V.badRows
-  val analyticsSdk          = "com.snowplowanalytics" %% "snowplow-scala-analytics-sdk" % V.analyticsSdk
-  val circeOptics           = "io.circe"              %% "circe-optics"                 % V.circeOptics
-  val elastic4sClientHttp4s = "nl.gn0s1s"             %% "elastic4s-client-http4s"      % V.elastic4s
-  val elastic4sJsonCirce    = "nl.gn0s1s"             %% "elastic4s-json-circe"         % V.elastic4s
+  // Logging
+  val slf4j = "org.slf4j" % "slf4j-simple" % V.slf4j
 
-  // Snowplow common-streams
-  val streamsCore = "com.snowplowanalytics" %% "streams-core"   % V.commonStreams
-  val runtime     = "com.snowplowanalytics" %% "runtime-common" % V.commonStreams
-  val kinesis     = "com.snowplowanalytics" %% "kinesis"        % V.commonStreams
+  // Artifacts named only to force a version up; grouped into securityOverrides below
+  val jacksonDatabind = "com.fasterxml.jackson.core" % "jackson-databind" % V.jackson
+  val guava           = "com.google.guava"           % "guava"            % V.guava
 
-  // Tests
-  val catsEffectTestkit = "org.typelevel" %% "cats-effect-testkit"        % V.catsEffect % Test
-  val specs2            = "org.specs2"    %% "specs2-core"                % V.specs2     % Test
-  val specs2CE          = "org.typelevel" %% "cats-effect-testing-specs2" % V.specs2CE   % Test
+  // Named to force a version up for binary compatibility rather than security.
+  // elastic4s brings an older jackson-module-scala, which refuses to load against the newer
+  // jackson-databind that runtime-common brings, so it is kept on the same version as jackson-databind.
+  val jacksonModuleScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % V.jackson
+
+  // Test only
+  val catsEffectTestkit  = "org.typelevel" %% "cats-effect-testkit"        % V.catsEffect          % Test
+  val specs2             = "org.specs2"    %% "specs2-core"                % V.specs2              % Test
+  val specs2CE           = "org.typelevel" %% "cats-effect-testing-specs2" % V.specs2CE            % Test
+  val testcontainersCore = "com.dimafeng"  %% "testcontainers-scala-core"  % V.testcontainersScala % Test
+
+  // Compiler plugins
+  val betterMonadicFor = "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor
+
+  // Security overrides. An entry is needed only while it still evicts something: once the upstream
+  // catches up, delete it. To check, drop the line and compare the resolved runtime classpath
+  // before and after; reading the dependency tree for eviction markers is unreliable, because sbt
+  // truncates long lines. Appended to coreDependencies, so they also cover the aws modules, which
+  // depend on core.
+  //
+  // runtime-common brings an older jackson-databind, and iglu-scala-client (via runtime-common) and
+  // elastic4s bring older ones still. Naming it pulls jackson-core up alongside. jackson-module-scala
+  // above shares V.jackson and would carry jackson-databind up on its own, so dropping only this line
+  // shows no change; to check it, compare against what runtime-common asks for instead.
+  //
+  // amazon-kinesis-client (via kinesis) brings guava 32.1.1-jre (CVE-2026-102554).
+  val securityOverrides = Seq(
+    jacksonDatabind,
+    guava
+  )
 
   val coreDependencies = Seq(
     slf4j,
@@ -66,10 +106,11 @@ object Dependencies {
     runtime,
     elastic4sClientHttp4s,
     elastic4sJsonCirce,
+    jacksonModuleScala,
     catsEffectTestkit,
     specs2,
     specs2CE
-  )
+  ) ++ securityOverrides
 
   val awsDependencies = Seq(
     kinesis,
@@ -79,21 +120,10 @@ object Dependencies {
     specs2CE
   )
 
-  // IT
-  val testcontainersCore = "com.dimafeng" %% "testcontainers-scala-core" % V.testcontainersScala % Test
-
   val itDependencies = Seq(
     testcontainersCore,
     catsEffectTestkit,
     specs2,
     specs2CE
-  )
-
-  // Transitive CVE overrides — force safe versions that parents haven't yet adopted
-  val cveOverrides = Seq(
-    "com.fasterxml.jackson.core" % "jackson-core"      % V.jacksonCore,
-    "org.apache.commons"         % "commons-lang3"     % V.commonsLang3,
-    "io.netty"                   % "netty-codec-http"  % V.netty,
-    "io.netty"                   % "netty-codec-http2" % V.netty
   )
 }

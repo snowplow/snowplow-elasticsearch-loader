@@ -215,7 +215,7 @@ object Processing {
     _.parEvalMap(parallelism) { batch =>
       for {
         writeResult <- sink
-                         .write(batch.events.asIterable.toVector)
+                         .write(batch.events.view.toVector)
                          .onError { _ =>
                            appHealth.beUnhealthyForRuntimeService(RuntimeService.ElasticsearchSink)
                          }
@@ -236,7 +236,7 @@ object Processing {
 
   private def updateMetrics[F[_]: Sync](metrics: Metrics[F]): Pipe[F, Batched, Batched] =
     _.evalTap { batch =>
-      val badCount  = batch.failures.asIterable.size
+      val badCount  = batch.failures.size
       val goodCount = batch.countItems - badCount
       val updateE2ELatency = batch.earliestCollectorTstamp.fold(Sync[F].unit) { timestamp =>
         for {
@@ -257,9 +257,9 @@ object Processing {
     _.evalTap { batch =>
       if (batch.failures.nonEmpty) {
         val serialized =
-          batch.failures.mapUnordered(badRow => BadRowsSerializer.withMaxSize(badRow, processor, maxSize))
+          batch.failures.map(badRow => BadRowsSerializer.withMaxSize(badRow, processor, maxSize))
         badSink
-          .sinkSimple(serialized)
+          .sinkSimple(serialized.view)
           .onError { _ =>
             appHealth.beUnhealthyForRuntimeService(RuntimeService.BadSink)
           }

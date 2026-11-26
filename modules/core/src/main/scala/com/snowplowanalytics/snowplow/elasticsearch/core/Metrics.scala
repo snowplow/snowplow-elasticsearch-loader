@@ -10,15 +10,16 @@
  */
 package com.snowplowanalytics.snowplow.elasticsearch.core
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
-import cats.effect.kernel.{Async, Resource, Sync}
+import cats.effect.kernel.{Async, Resource}
 import cats.implicits._
 
 import fs2.Stream
 
 import com.snowplowanalytics.snowplow.streams.SourceAndAck
 import com.snowplowanalytics.snowplow.runtime.{Metrics => CommonMetrics}
+import com.snowplowanalytics.snowplow.runtime.Metrics.Destination.PrometheusAndStatsd
 
 trait Metrics[F[_]] {
   def addGood(count: Int): F[Unit]
@@ -37,12 +38,12 @@ object Metrics {
   def build[F[_]: Async](config: Config.Metrics, sourceAndAck: SourceAndAck[F]): Resource[F, Metrics[F]] =
     CommonMetrics.build[F](config.statsd, config.prometheus).evalMap { entries =>
       for {
-        good <- entries.counter("events_good")
-        bad <- entries.counter("events_bad")
-        indexLimitError <- entries.counter("es_index_limit_error")
-        latency <- entries.timer("latency_millis", sourceAndAck.currentStreamLatency)
-        e2eLatency <- entries.timer("e2e_latency_millis", Sync[F].pure(None))
-        elasticsearchLatency <- entries.timer("elasticsearch_latency_millis", Sync[F].pure(None))
+        good <- entries.counter("events_good", PrometheusAndStatsd)
+        bad <- entries.counter("events_bad", PrometheusAndStatsd)
+        indexLimitError <- entries.counter("es_index_limit_error", PrometheusAndStatsd)
+        latency <- entries.lagGauge("latency", sourceAndAck.currentStreamLatency, PrometheusAndStatsd)
+        e2eLatency <- entries.timer("e2e_latency", 1.second, PrometheusAndStatsd)
+        elasticsearchLatency <- entries.timer("elasticsearch_latency", 1.second, PrometheusAndStatsd)
       } yield new Metrics[F] {
         def addGood(count: Int): F[Unit]                        = good.add(count.toLong)
         def addBad(count: Int): F[Unit]                         = bad.add(count.toLong)

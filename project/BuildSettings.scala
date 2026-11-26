@@ -13,7 +13,7 @@ object BuildSettings {
 
   lazy val commonSettings = Seq(
     organization := "com.snowplowanalytics",
-    scalaVersion := "2.13.17",
+    scalaVersion := "2.13.18",
     scalafmtConfig := file(".scalafmt.conf"),
     scalafmtOnCompile := false,
     scalacOptions += "-release:21",
@@ -38,10 +38,7 @@ object BuildSettings {
            |""".stripMargin
       )
     ),
-    headerMappings := headerMappings.value + (HeaderFileType.conf -> HeaderCommentStyle.hashLineComment),
-    Test / unmanagedClasspath += {
-      baseDirectory.value / "../../config"
-    }
+    headerMappings := headerMappings.value + (HeaderFileType.conf -> HeaderCommentStyle.hashLineComment)
   )
 
   lazy val appSettings = commonSettings ++ Seq(
@@ -49,7 +46,7 @@ object BuildSettings {
     buildInfoOptions += BuildInfoOption.Traits("com.snowplowanalytics.snowplow.runtime.AppInfo")
   )
 
-  lazy val awsSettings = appSettings ++ Seq(
+  lazy val awsSettings = appSettings ++ addExampleConfToTestCp ++ Seq(
     name := "elasticsearch-loader",
     description := "Write the records of a Kinesis stream to Elasticsearch",
     buildInfoPackage := "com.snowplowanalytics.snowplow.elasticsearch.aws",
@@ -59,5 +56,19 @@ object BuildSettings {
     Test / envVars := Map(
       "HOSTNAME" -> "testWorkerId"
     )
+  )
+
+  lazy val addExampleConfToTestCp = Seq(
+    Test / unmanagedClasspath += {
+      if (baseDirectory.value.getPath.contains("distroless")) {
+        // baseDirectory is like 'root/modules/distroless/module',
+        // we're at 'module' and need to get to 'root/config/'
+        baseDirectory.value.getParentFile.getParentFile.getParentFile / "config"
+      } else {
+        // baseDirectory is like 'root/modules/module',
+        // we're at 'module' and need to get to 'root/config/'
+        baseDirectory.value.getParentFile.getParentFile / "config"
+      }
+    }
   )
 }

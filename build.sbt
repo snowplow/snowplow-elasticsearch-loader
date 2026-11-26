@@ -39,4 +39,3 @@ lazy val itAws: Project = project
   .dependsOn(awsDistroless)
 
 ThisBuild / fork := true
-ThisBuild / dependencyOverrides ++= Dependencies.cveOverrides

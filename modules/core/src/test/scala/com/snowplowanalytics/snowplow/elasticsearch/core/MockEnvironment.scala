@@ -20,15 +20,7 @@ import fs2.Stream
 import org.http4s.client.Client
 
 import com.snowplowanalytics.snowplow.runtime.{AppHealth, AppInfo}
-import com.snowplowanalytics.snowplow.streams.{
-  EventProcessingConfig,
-  EventProcessor,
-  ListOfList,
-  Sink,
-  Sinkable,
-  SourceAndAck,
-  TokenedEvents
-}
+import com.snowplowanalytics.snowplow.streams.{EventProcessingConfig, EventProcessor, Sink, Sinkable, SourceAndAck, TokenedEvents}
 import com.snowplowanalytics.snowplow.streams.compression.DecompressionConfig
 
 case class MockEnvironment(state: Ref[IO, Vector[MockEnvironment.Action]], environment: Environment[IO])
@@ -151,10 +143,10 @@ object MockEnvironment {
     response: Either[Throwable, Unit]
   ): Sink[IO] =
     new Sink[IO] {
-      def sink(batch: ListOfList[Sinkable]): IO[Unit] =
+      def sink(batch: Iterable[Sinkable]): IO[Unit] =
         response match {
           case Right(_) =>
-            state.update(_ :+ Action.SentToBad(batch.asIterable.size))
+            state.update(_ :+ Action.SentToBad(batch.size))
           case Left(e) =>
             IO.raiseError(e)
         }

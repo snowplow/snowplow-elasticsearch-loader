@@ -31,7 +31,7 @@ import org.http4s.MediaType
 import org.http4s.headers.`Content-Type`
 
 import com.snowplowanalytics.snowplow.analytics.scalasdk.Event
-import com.snowplowanalytics.snowplow.streams.{EventProcessingConfig, EventProcessor, ListOfList}
+import com.snowplowanalytics.snowplow.streams.{EventProcessingConfig, EventProcessor}
 import com.snowplowanalytics.snowplow.streams.kinesis.{
   BackoffPolicy,
   KinesisFactory,
@@ -60,7 +60,7 @@ object TestHelpers {
     KinesisFactory.resource[IO].use { factory =>
       factory.sink(config).use { sink =>
         payloads.traverse_ { payload =>
-          sink.sinkSimple(ListOfList.ofItems(payload))
+          sink.sinkSimple(List(payload))
         }
       }
     }
